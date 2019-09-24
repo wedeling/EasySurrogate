@@ -255,9 +255,7 @@ class Resampler:
         
         for i in range(n_mc):
             r[i, :, :] = self.r_ip1[self.idx_of_bin[start + I[:, i]]].reshape([self.N, self.N])
-        
-        self.append_covar(c_i)
-        
+       
         return np.mean(r, 0) #, binnumbers_i
     
     #the data-driven model for the unresolved scales

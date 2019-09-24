@@ -18,12 +18,18 @@ def get_data(stepCnt, reference = True):
         x_dot, y_dot, z_dot = lorenz(xs[i], ys[i], zs[i])
         xs[i + 1] = xs[i] + (x_dot * dt)
         ys[i + 1] = ys[i] + (y_dot * dt)
+    
+        covar = np.array([xs[i], ys[i]])
+        surrogate.append_covar(covar)
         
         if reference:
             zs[i + 1] = zs[i] + (z_dot * dt)
         else:
-            covar = np.array([xs[i], ys[i]])
-            zs[i + 1] = surrogate.sample(covar.reshape([1,2]))
+            if i < lag:
+                zs[i + 1] = zs[i] + (z_dot * dt)
+            else:
+                c_i = surrogate.get_covar()            
+                zs[i + 1] = surrogate.sample(c_i)
         
     return xs, ys, zs
 
@@ -60,7 +66,8 @@ xs, ys, zs = get_data(stepCnt)
 plot_lorenz(xs, ys, zs)
 
 covar = np.array([xs, ys]).T
-surrogate = es.methods.Resampler(covar, zs, 1, 30, [1, 1])
+lag = 1
+surrogate = es.methods.Resampler(covar, zs, 1, 30, [lag, lag])
 
 xs, ys, zs = get_data(stepCnt, reference = False)
 plot_lorenz(xs, ys, zs)
