@@ -1,0 +1,9 @@
+setup.py
+easysurrogate/__init__.py
+easysurrogate.egg-info/PKG-INFO
+easysurrogate.egg-info/SOURCES.txt
+easysurrogate.egg-info/dependency_links.txt
+easysurrogate.egg-info/requires.txt
+easysurrogate.egg-info/top_level.txt
+easysurrogate/methods/__init__.py
+easysurrogate/methods/resampling.py
