@@ -10,33 +10,38 @@ Code: W. Edeling
 ===================================================================================
 """
 
+import numpy as np
+from scipy import stats
+from itertools import chain, product
+import matplotlib.pyplot as plt
+import sys
+
 class Resampler:
     
-    def __init__(self, c, r_ip1, N, N_bins, lags, store_frame_rate=1, uniform_bins = True, min_count = 0, verbose = True):
+    def __init__(self, c, r_ip1, N, N_bins, lags, store_frame_rate=1, 
+                 min_count = 0):
         
-        #number of conditional variables
-        N_c = c.shape[1]
+        #total number of conditional variables including lagged terms
+        self.N_c = c.shape[1]
         
-        self.N_c = N_c
+        #number of unique conditioning variables (not including lags)
+        self.N_covar = len(lags)
+        
+        #'spatial' size SHOULD BE FLATTENED???
         self.N = N
         self.r_ip1 = r_ip1
         self.c = c
         self.N_bins = N_bins
+        #FIX THIS:
         self.N_s = r_ip1.size/N**2
         self.lags = lags
-        self.max_lag = np.max(lags)*store_frame_rate
-
+        self.max_lag = np.max(list(chain(*lags)))
         self.covar = {}
         
-        for i in range(N_c):
-            #self.covar[i] = np.zeros([N**2, max_lag])
+        for i in range(self.N_covar):
             self.covar[i] = []
 
-        #compute bins of c_i
-        if uniform_bins == True:
-            bins = self.get_bins(N_bins)
-        else:
-            bins = self.get_bins_same_nsamples(N_bins)
+        bins = self.get_bins(N_bins)
         
         #count = numver of r_ip1 samples in each bin
         #binedges = same as bins
@@ -88,19 +93,18 @@ class Resampler:
         #Note: if 'full' is defined as 1 or more sample, binnumbers_nonempty is 
         #the same as binnumbers_unique
         x_idx_nonempty = np.where(count > min_count)
-        x_idx_nonempty_p1 = [x_idx_nonempty[i] + 1 for i in range(N_c)]
+        x_idx_nonempty_p1 = [x_idx_nonempty[i] + 1 for i in range(self.N_c)]
         binnumbers_nonempty = np.ravel_multi_index(x_idx_nonempty_p1, [len(b) + 1 for b in bins]) 
         N_nonempty = binnumbers_nonempty.size
         
         #mid points of the bins
-        x_mid = [0.5*(bins[i][1:] + bins[i][0:-1]) for i in range(N_c)]
+        x_mid = [0.5*(bins[i][1:] + bins[i][0:-1]) for i in range(self.N_c)]
 
         #mid points of the non-empty bins
-        midpoints = np.zeros([N_nonempty, N_c])
-        for i in range(N_c):
+        midpoints = np.zeros([N_nonempty, self.N_c])
+        for i in range(self.N_c):
             midpoints[:, i] = x_mid[i][x_idx_nonempty[i]]
 
-        self.verbose = verbose
         self.bins = bins
         self.count = count
         self.binnumber = binnumber
@@ -131,8 +135,8 @@ class Resampler:
             outliers_idx = np.in1d(binnumbers_i, unique_binnumbers_i[idx]).nonzero()[0]
             N_outliers = outliers_idx.size
             
-            if self.verbose == True:
-                print(N_outlier_bins, ' bins with', N_outliers ,'outlier samples found')
+#            if self.verbose == True:
+#                print(N_outlier_bins, ' bins with', N_outliers ,'outlier samples found')
         
             #x location of outliers
             x_outliers = np.copy(c_i[outliers_idx])
@@ -155,8 +159,8 @@ class Resampler:
             #overwrite outliers in binnumbers_i with nearest non-empty binnumber
             binnumbers_closest = self.binnumbers_nonempty[closest_idx]
 
-            if self.verbose == True:
-                print('Moving', binnumbers_i[outliers_idx], '-->', binnumbers_closest)
+#            if self.verbose == True:
+#                print('Moving', binnumbers_i[outliers_idx], '-->', binnumbers_closest)
 
             binnumbers_i[outliers_idx] = binnumbers_closest
             
@@ -185,6 +189,9 @@ class Resampler:
         mapping = np.zeros(self.max_binnumber).astype('int')
         
         for i in range(self.max_binnumber):
+            
+            if np.mod(i, 10) == 0:
+                progress(i, self.max_binnumber)
             
             #bin is nonempty, just use current idx
             if np.in1d(i, self.unique_binnumbers) == True:
@@ -218,7 +225,7 @@ class Resampler:
         #plot the mapping
         for i in range(self.max_binnumber):
             ax.plot([self.x_mid_pad_tensor[i][0], self.x_mid_pad_tensor[self.mapping[i]][0]], \
-                    [self.x_mid_pad_tensor[i][1], self.x_mid_pad_tensor[self.mapping[i]][1]], 'b', alpha=0.4)
+                    [self.x_mid_pad_tensor[i][1], self.x_mid_pad_tensor[self.mapping[i]][1]], 'b', alpha=0.6)
 
         ax.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
         ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
@@ -282,7 +289,7 @@ class Resampler:
     #Note: use list to dynamically append, array is very slow
     def append_covar(self, c_i):
        
-        for i in range(self.N_c):
+        for i in range(self.N_covar):
             self.covar[i].append(c_i[:,i])
             
             #if max number of covariates is reached, remove first item
@@ -291,19 +298,18 @@ class Resampler:
 
     #return lagged covariates, assumes constant lag
     #Note: typecast to array if spatially varying lag is required
-    def get_covar(self, lags):
+    def get_covar(self):
         
-        c_i = np.zeros([self.N**2, self.N_c])
+        c_i = np.zeros([self.N, self.N_c])
 
-        for i in range(self.N_c):
+        idx = 0
+        
+        for i in range(self.N_covar):
+            for lag in self.lags[i]:
+                c_i[:, idx] = self.covar[i][-lag]    
+                idx += 1
             
-            if lags[i] <= self.max_lag:
-                c_i[:, i] = self.covar[i][-lags[i]]
-            else:
-                print('Warning, max lag exceeded')
-                import sys; sys.exit()
-            
-        return c_i       
+        return c_i
            
     def print_bin_info(self):
         print('-------------------------------')
@@ -323,8 +329,16 @@ class Resampler:
     
         return bins
     
-import numpy as np
-from scipy import stats
-from itertools import chain, product
-import matplotlib.pyplot as plt
-#import itertools
+def progress(count, total, status=''):
+    """
+    progress bar for the command line
+    Source: https://gist.github.com/vladignatyev/06860ec2040cb497f0f3
+    """
+    bar_len = 60
+    filled_len = int(round(bar_len * count / float(total)))
+
+    percents = round(100.0 * count / float(total), 1)
+    bar = '=' * filled_len + '-' * (bar_len - filled_len)
+
+    sys.stdout.write('[%s] %s%s ...%s\r' % (bar, percents, '%', status))
+    sys.stdout.flush()  # As suggested by Rom Ruben (see: http://stackoverflow.com/questions/3173320/text-progress-bar-in-the-console/27871113#comment50529068_27871113)
