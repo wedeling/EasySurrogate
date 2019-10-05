@@ -5,7 +5,7 @@ def predict(x_i, y_i, z_i):
     y_ip1 = y_i + (y_dot * dt)
     z_ip1 = z_i + (z_dot * dt)
     
-    return x_ip1, y_ip1, z_ip1
+    return x_ip1, y_ip1, z_ip1, x_dot, y_dot, z_dot
 
 def predict_with_surrogate(x_i, y_i, z_i):
     # Derivatives of the X, Y, Z state
@@ -14,12 +14,12 @@ def predict_with_surrogate(x_i, y_i, z_i):
     y_ip1 = y_i + (y_dot * dt)
     
     c_i = surrogate.get_covar()
-    z_ip1 = surrogate.sample(c_i)
+    z_ip1 = surrogate.get_sample(c_i)
 
     covar_ip1 = np.array([x_ip1, y_ip1, z_ip1])
     surrogate.append_covar(covar_ip1.reshape([1,3])) 
     
-    return x_ip1, y_ip1, z_ip1
+    return x_ip1, y_ip1, z_ip1, x_dot, y_dot, z_dot
 
 def lorenz(x, y, z, s=10, r=28, b=2.667):
     """
@@ -90,63 +90,67 @@ from sklearn.neighbors.kde import KernelDensity
 
 plt.close('all')
 
-n_steps = 100000
+n_steps = 10000
 dt = 0.01
 X = np.zeros(n_steps); Y = np.zeros(n_steps); Z = np.zeros(n_steps) 
+X_dot = np.zeros(n_steps); Y_dot = np.zeros(n_steps); Z_dot = np.zeros(n_steps) 
 
 #initial condition
 x_i = 0.0; y_i = 1.0; z_i = 1.05
 
 for n in range(n_steps):
-    x_i, y_i, z_i = predict(x_i, y_i, z_i)
+    x_i, y_i, z_i, x_dot, y_dot, z_dot = predict(x_i, y_i, z_i)
     X[n] = x_i
     Y[n] = y_i
     Z[n] = z_i
+    X_dot[n] = x_dot
+    Y_dot[n] = y_dot
+    Z_dot[n] = z_dot
     
 plot_lorenz(X, Y, Z)
     
 lags = [[1], [1], [1]]
 max_lag = np.max(list(chain(*lags)))
-n_bins = 20
 N = 1
 
-c = np.array([X, Y, Z]).T
-r = Z
-C, R = init_condvar_data(c, r, lags)
+feat = np.array([X, Y]).T
 
-surrogate = es.methods.Resampler(C, R, N, n_bins, lags)
-surrogate.print_bin_info()
-surrogate.plot_2D_binning_object()
+surrogate = es.methods.ANN(X=feat, y=Z, n_layers=3, n_neurons=32, 
+                           activation='hard_tanh', batch_size=128)
+
+surrogate.get_n_weights()
+
+surrogate.train(50000, store_loss=True)
+
+if len(surrogate.loss_vals) > 0:
+    fig_loss = plt.figure()
+    plt.yscale('log')
+    plt.plot(surrogate.loss_vals)
+
+Z_surr = np.zeros(n_steps)
+
+for n in range(n_steps):
+    Z_surr[n] = surrogate.feed_forward(surrogate.X[n].reshape([1,2]))
+
+#plot 1-way coupled surrogate result
+plt.figure()
+plt.plot(Z_surr, '--')
+plt.plot((Z - np.mean(Z))/np.std(Z))
+
+#plot_lorenz(X_surr, Y_surr, Z_surr)
 #
-#initial condition
-x_i = 0.0; y_i = 1.0; z_i = 1.05
-
-n_steps = 100000
-X_surr = np.zeros(n_steps); Y_surr = np.zeros(n_steps); Z_surr = np.zeros(n_steps) 
-
-#initialize the conditional variables by running the full model max_lag
-#times
-for n in range(max_lag):
-    x_i, y_i, z_i = predict(x_i, y_i, z_i)
-    covar_i = np.array([x_i, y_i, z_i])
-    surrogate.append_covar(covar_i.reshape([1,3]))
-    X_surr[n] = x_i
-    Y_surr[n] = y_i
-    Z_surr[n] = z_i
-    
-for n in range(max_lag, n_steps):
-    x_i, y_i, z_i = predict_with_surrogate(x_i, y_i, z_i)
-    X_surr[n] = x_i
-    Y_surr[n] = y_i
-    Z_surr[n] = z_i
-
-plot_lorenz(X_surr, Y_surr, Z_surr)
-
-dom_surr, X_pde_surr = get_pde(X_surr[0:-1:10])
-dom, X_pde = get_pde(X[0:-1:10])
-    
-fig = plt.figure()
-plt.plot(dom_surr, X_pde_surr)
-plt.plot(dom, X_pde, '--k')
-
-plt.show()
+#X_dom_surr, X_pde_surr = get_pde(X_surr[0:-1:10])
+#X_dom, X_pde = get_pde(X[0:-1:10])
+#
+#Y_dom_surr, Y_pde_surr = get_pde(Y_surr[0:-1:10])
+#Y_dom, Y_pde = get_pde(Y[0:-1:10])
+#    
+#fig = plt.figure()
+#ax = fig.add_subplot(121)
+#ax.plot(X_dom_surr, X_pde_surr)
+#ax.plot(X_dom, X_pde, '--k')
+#ax = fig.add_subplot(122)
+#ax.plot(Y_dom_surr, Y_pde_surr)
+#ax.plot(Y_dom, Y_pde, '--k')
+#
+#plt.show()

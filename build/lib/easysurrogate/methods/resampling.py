@@ -234,7 +234,7 @@ class Resampler:
         
     #the data-driven model for the unresolved scales
     #Given c_i return r at time i+1 (r_ip1)
-    def sample(self, c_i, n_mc=1):
+    def get_sample(self, c_i, n_mc=1):
     
         #find in which bins the c_i samples fall
         _, _, binnumbers_i = stats.binned_statistic_dd(c_i, np.zeros(self.N**2), bins=self.bins)
@@ -330,6 +330,10 @@ class Resampler:
         return bins
     
 def progress(count, total, status=''):
+    """
+    progress bar for the command line
+    Source: https://gist.github.com/vladignatyev/06860ec2040cb497f0f3
+    """
     bar_len = 60
     filled_len = int(round(bar_len * count / float(total)))
 

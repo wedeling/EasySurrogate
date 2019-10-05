@@ -1,4 +1,4 @@
-"""
+e"""
 ===================================================================================
 CLASS FOR THE BINNING SURROGATE PROCEDURE
 -----------------------------------------------------------------------------------
@@ -234,7 +234,7 @@ class Resampler:
         
     #the data-driven model for the unresolved scales
     #Given c_i return r at time i+1 (r_ip1)
-    def get_sample(self, c_i, n_mc=1):
+    def sample(self, c_i, n_mc=1):
     
         #find in which bins the c_i samples fall
         _, _, binnumbers_i = stats.binned_statistic_dd(c_i, np.zeros(self.N**2), bins=self.bins)
