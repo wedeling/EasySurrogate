@@ -7,7 +7,7 @@ class ANN:
     def __init__(self, X, y, alpha = 0.001, decay_rate = 1.0, decay_step = 10**5, beta1 = 0.9, beta2 = 0.999, lamb = 0.0, \
                  phi = 0.0, lamb_J = 0.0, n_out = 1, \
                  param_specific_learn_rate = True, loss = 'squared', activation = 'tanh', activation_out = 'linear', \
-                 n_softmax = 1, n_layers = 2, n_neurons = 16, \
+                 n_softmax = 0, n_layers = 2, n_neurons = 16, \
                  bias = True, neuron_based_compute = False, batch_size = 1, save = True, load=False, name='ANN', on_gpu = False, \
                  standardize_X = True, standardize_y = True, aux_vars = {}):
 

@@ -8,5 +8,6 @@ easysurrogate.egg-info/top_level.txt
 easysurrogate/methods/Layer.py
 easysurrogate/methods/NN.py
 easysurrogate/methods/Neuron.py
+easysurrogate/methods/SimpleBin.py
 easysurrogate/methods/__init__.py
 easysurrogate/methods/resampling.py
