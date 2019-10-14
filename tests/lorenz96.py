@@ -115,7 +115,7 @@ Y = np.zeros(J*K)
 U_init = list(chain(*[X, Y]))
 
 #time param
-t_end = 10.0
+t_end = 30.0
 dt = 0.01
 t = np.arange(0.0, t_end, dt)
 
@@ -148,5 +148,14 @@ if make_movie:
 else:
     ax.plot(theta, np.append(sol[-1, 0:K], sol[-1, 0]), label='X')    
     ax.plot(theta_Y, np.append(sol[-1, K:], sol[-1, K]), label='y')    
-
+    
+#plot X_k vs B_k
+fig = plt.figure()
+burn = 500
+all_X = sol[:, 0:K]
+all_Y = sol[:, K:].reshape([sol.shape[0], J, K])
+idx = 0
+X_idx = all_X[burn:, idx]
+B_idx = h_x*np.mean(all_Y[burn:, :, idx], axis=1)
+plt.plot(X_idx, B_idx, '.')
 plt.show()
