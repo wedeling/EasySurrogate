@@ -1,5 +1,5 @@
 import numpy as np
-import os, pickle
+import pickle
 import tkinter as tk
 from tkinter import filedialog
 
