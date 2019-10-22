@@ -95,7 +95,7 @@ std_Z = np.std(Z, axis=0)
 
 n_feat = feat.shape[1]
 
-surrogate = es.methods.ANN(X=feat, y=Z[n_lags:], n_layers=3, n_neurons=64, 
+surrogate = es.methods.ANN(X=feat, y=Z[n_lags:], n_layers=3, n_neurons=64, n_out=1, 
                            activation='hard_tanh', batch_size=128,
                            lamb=0.01, decay_step=10**5, decay_rate=0.9)
 

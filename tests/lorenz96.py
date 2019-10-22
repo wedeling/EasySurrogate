@@ -7,9 +7,6 @@ def animate(s):
 
     print('Processing frame', s, 'of', sol.shape[0])
     #add the periodic BC to current sample to create a closed plot
-#    line.set_data(theta, np.append(sol[s, 0:K], sol[s, 0:K]))    
-#    line_Y.set_data(theta_Y, np.append(sol[s, K:], sol[s, K]))
-    
     xlist = [theta, theta_Y]
     ylist = [np.append(sol[s, 0:K], sol[s, 0]), np.append(sol[s, K:], sol[s, K])]
 
@@ -19,7 +16,29 @@ def animate(s):
 
     return lines
 
+#store samples in hierarchical data format, when sample size become very large
+def store_samples_hdf5():
+  
+    fname = HOME + '/samples/' + store_ID + '.hdf5'
+    
+    print('Storing samples in ', fname)
+    
+    if os.path.exists(HOME + '/samples') == False:
+        os.makedirs(HOME + '/samples')
+    
+    #create HDF5 file
+    h5f = h5py.File(fname, 'w')
+    
+    #store numpy sample arrays as individual datasets in the hdf5 file
+    for q in QoI:
+        h5f.create_dataset(q, data = samples[q])
+        
+    h5f.close()    
+
 #def lorenz96(X, t):
+#    """
+#    Lorenz96 one-layer model
+#    """
 #    
 #    rhs_X = np.zeros(K)
 #    
@@ -95,6 +114,9 @@ import matplotlib.pyplot as plt
 from scipy.integrate import odeint
 from matplotlib.animation import FuncAnimation
 from itertools import chain
+import h5py, os
+
+HOME = os.path.abspath(os.path.dirname(__file__))
 
 plt.close('all')
 
@@ -104,7 +126,7 @@ J = 20
 F = 10.0
 h_x = -1.0
 h_y = 1.0
-epsilon = 0.5 
+epsilon = 0.5
 
 #equilibrium initial condition for X, zero IC for Y
 X = np.ones(K)*F
@@ -115,7 +137,7 @@ Y = np.zeros(J*K)
 U_init = list(chain(*[X, Y]))
 
 #time param
-t_end = 30.0
+t_end = 1000.0
 dt = 0.01
 t = np.arange(0.0, t_end, dt)
 
@@ -132,12 +154,12 @@ ax.set_rorigin(-22)
 ax.set_rgrids([-10, 0, 10], labels=['', '', ''])[0][1]
 ax.legend(loc=1)
 
-#if True make a movie of sthe solution, if not just plot final solution
-make_movie = True
+#if True make a movie of the solution, if not just plot final solution
+make_movie = False
 if make_movie:
 
     lines = []
-    legends = ['X', 'y']
+    legends = ['X', 'Y']
     for i in range(2):
         lobj = ax.plot([],[],lw=2, label=legends[i])[0]
         lines.append(lobj)
@@ -147,15 +169,28 @@ if make_movie:
     anim.save('demo.gif', writer='imagemagick')
 else:
     ax.plot(theta, np.append(sol[-1, 0:K], sol[-1, 0]), label='X')    
-    ax.plot(theta_Y, np.append(sol[-1, K:], sol[-1, K]), label='y')    
+    ax.plot(theta_Y, np.append(sol[-1, K:], sol[-1, K]), label='Y')    
     
 #plot X_k vs B_k
 fig = plt.figure()
 burn = 500
-all_X = sol[:, 0:K]
-all_Y = sol[:, K:].reshape([sol.shape[0], J, K])
-idx = 0
-X_idx = all_X[burn:, idx]
-B_idx = h_x*np.mean(all_Y[burn:, :, idx], axis=1)
-plt.plot(X_idx, B_idx, '.')
+X_data = sol[burn:, 0:K]
+Y_data = sol[burn:, K:].reshape([X_data.shape[0], J, K])
+B_data = np.zeros([X_data.shape[0], K])
+
+for k in range(K):
+    B_data[:, k] = h_x*np.mean(Y_data[:, :, k], axis=1)
+
+plt.plot(X_data[:, 0], B_data[:, 0], '.')
+
+#store results
+samples = {}
+store_ID = 'L96'
+QoI = {'X_data', 'B_data'}
+
+for q in QoI:
+    samples[q] = eval(q)
+
+store_samples_hdf5()
+
 plt.show()
