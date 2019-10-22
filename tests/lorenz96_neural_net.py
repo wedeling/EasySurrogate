@@ -175,29 +175,26 @@ for q in QoI:
     print(q)
     vars()[q] = h5f[q][:]
 
-#n_lags = 1
-#feat = np.append(X_data[0:-n_lags,:], B_data[0:-n_lags, :], axis=1)
-#y = B_data[n_lags:, :]
+feat_eng = es.methods.Feature_Engineering(X_data, B_data)
 
-feat = X_data
-y = B_data
+lags = [[1]]
+X_train, y_train = feat_eng.lag_training_data([X_data], lags = lags)
 
-mean_feat = np.mean(feat, axis=0)
-std_feat = np.std(feat, axis=0)
-mean_y = np.mean(y, axis=0)
-std_y = np.std(y, axis=0)
+mean_feat = np.mean(X_train, axis=0)
+std_feat = np.std(X_train, axis=0)
+mean_y = np.mean(y_train, axis=0)
+std_y = np.std(y_train, axis=0)
 
-train = False
+train = True
 if train:
     
-    surrogate = es.methods.ANN(X=feat, y=B_data, n_layers=6, n_neurons=32, n_out=K,
+    surrogate = es.methods.ANN(X=X_train, y=y_train, n_layers=2, n_neurons=128, n_out=K,
                                activation='hard_tanh', batch_size=128,
                                lamb=0.0, decay_step=10**5, decay_rate=0.9, standardize_X=False,
                                standardize_y=False)
     surrogate.train(3000, store_loss=True)
-else:
-    
-    surrogate = es.methods.ANN(X=X_data, y=B_data)
+else:    
+    surrogate = es.methods.ANN(X=X_train, y=y_train)
     surrogate.load_ANN()
 
 surrogate.get_n_weights()
