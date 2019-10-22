@@ -5,6 +5,7 @@ easysurrogate.egg-info/SOURCES.txt
 easysurrogate.egg-info/dependency_links.txt
 easysurrogate.egg-info/requires.txt
 easysurrogate.egg-info/top_level.txt
+easysurrogate/methods/Feature_Engineering.py
 easysurrogate/methods/Layer.py
 easysurrogate/methods/NN.py
 easysurrogate/methods/Neuron.py

@@ -1,5 +1,8 @@
 import numpy as np
 import os, pickle
+import tkinter as tk
+from tkinter import filedialog
+
 from .Layer import Layer
 
 class ANN:
@@ -334,31 +337,36 @@ class ANN:
             self.save_ANN()
 
     #save using pickle (maybe too slow for very large ANNs?)
-    def save_ANN(self):
+    def save_ANN(self, file_path = ""):
         
-        #absolute path
-        home = os.path.abspath(os.path.dirname(__file__))
-        path = home + '/../saved_networks/'
+        if len(file_path) == 0:
+
+            root = tk.Tk()
+            root.withdraw()
+            
+            file = filedialog.asksaveasfile(mode='wb', defaultextension=".pickle")
+        else:
+            file = open(file_path, 'wb')
+
+        print('Saving ANN to', file.name)        
         
-        print('Saving ANN to', path + self.name + '.pickle')
-        
-        if os.path.exists(path) == False:
-            os.makedirs(path)
-        
-        file = open(path + self.name + '.pickle', 'wb')
         pickle.dump(self.__dict__, file)
         file.close()
 
     #load using pickle
-    def load_ANN(self, name):
+    def load_ANN(self, file_path = ""):
+      
+        #select file via GUI is file_path is not specified
+        if len(file_path) == 0:
 
-        #absolute path
-        home = os.path.abspath(os.path.dirname(__file__))
-        path = home + '/../saved_networks/'
+            root = tk.Tk()
+            root.withdraw()
+            
+            file_path = filedialog.askopenfilename()
 
-        print('Loading ANN from', path + name + '.pickle')
+        print('Loading ANN from', file_path)
 
-        file = open(path + name + '.pickle', 'rb')
+        file = open(file_path, 'rb')
         self.__dict__ = pickle.load(file)
         file.close()
         
