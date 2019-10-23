@@ -33,101 +33,44 @@ def lorenz96(X, t):
     for k in range(2, K-1):
         rhs_X[k] = -X[k-2]*X[k-1] + X[k-1]*X[k+1] - X[k] + F
         
-    feat = X
+    feat = feat_eng.get_feat_history()
 #    feat = (feat - mean_feat)/std_feat
-#        
-    B = surrogate.feed_forward(feat.reshape([1, K]))[0]
+#
+#    feat = X        
+    B = surrogate.feed_forward(feat.reshape([1, feat.size])).flatten()
 #    B = B*std_y + mean_y
 #   
+    feat_eng.append_feat([X])
+   
     rhs_X += B
         
     return rhs_X
 
-###################################
-# FEATURE ENGINEERING SUBROUTINES #
-###################################
 
-def lag_training_data(X, y, lags):
-    """    
-    Feature engineering: create time-lagged supervised training data X, y
+def ACF(X, max_lag_time):
     
-    Parameters:
-        X: features. Either an array of dimension (n_samples, n_features)
-           or a list of arrays of dimension (n_samples, n_features)
-           
-        y: training target. Array of dimension (n_samples, n_outputs)
-        
-        lags: list of lists, containing the integer values of lags
-              Example: if X=[X_1, X_2] and lags = [[1], [1, 2]], the first 
-              feature array X_1 is lagged by 1 (time) step and the second
-              by 1 and 2 (time) steps.
-              
-    Returns:
-        X_train, y_trains (arrays), of lagged features and target data. Every
-        row of X_train is one (time) lagged feature vector. Every row of y_train
-        is a target vector at the next (time) step
-    """
+    lags = np.arange(1, max_lag)
+    R = np.zeros(lags.size)
     
-    #compute the max number of lags in lags
-    lags_flattened = list(chain(*lags))
-    max_lag = np.max(lags_flattened)
-    
-    #total number of data samples
-    n_samples = y.shape[0]
-    
-    #if X is one array, add it to a list anyway
-    if type(X) == np.ndarray:
-        tmp = []
-        tmp.append(X)
-        X = tmp
-    
-    #compute target data at next (time) step
-    if y.ndim == 2:
-        y_train = y[max_lag:, :]
-    elif y.ndim == 1:
-        y_train = y[max_lag:]
-    else:
-        print("Error: y must be of dimension (n_samples, ) or (n_samples, n_outputs)")
-        return
-    
-    #a lag list must be specified for every feature in X
-    if len(lags) != len(X):
-        print('Error: no specified lags for one of the featutes in X')
-        return
-    
-    #compute the lagged features
-    C = []
     idx = 0
-    for X_i in X:
-       
-        for lag in lags[idx]:
-            begin = max_lag - lag
-            end = n_samples - lag
-            
-            if X_i.ndim == 2:
-                C.append(X_i[begin:end, :])
-            elif X_i.ndim == 1:
-                C.append(X_i[begin:end])
-            else:
-                print("Error: X must contains features of dimension (n_samples, ) or (n_samples, n_features)")
-                return
-            idx += 1
-            
-    #C is a list of lagged features, turn into a single array X_train
-    X_train = C[0]
     
-    if X_train.ndim == 1:
-        X_train = X_train.reshape([y_train.shape[0], 1])    
+    #for every lag, compute autocorrelation:
+    # R = E[(X_t - mu_t)*(X_s - mu_s)]/(std_t*std_s)
+    for lag in lags:
     
-    for X_i in C[1:]:
-        
-        if X_i.ndim == 1:
-            X_i = X_i.reshape([y_train.shape[0], 1])
-        
-        X_train = np.append(X_train, X_i, axis=1)
-            
-    return X_train, y_train
+        X_t = X[0:-lag]
+        X_s = X[lag:]
     
+        mu_t = np.mean(X_t)
+        std_t = np.std(X_t)
+        mu_s = np.mean(X_s)
+        std_s = np.std(X_s)
+    
+        R[idx] = np.mean((X_t - mu_t)*(X_s - mu_s))/(std_t*std_s)
+        idx += 1
+
+    return R
+   
 def get_pde(X, Npoints = 100):
 
 #    kernel = stats.gaussian_kde(X, bw_method='scott')
@@ -177,8 +120,12 @@ for q in QoI:
 
 feat_eng = es.methods.Feature_Engineering(X_data, B_data)
 
-lags = [[1]]
+lags = [[1, 10]]
+max_lag = np.max(list(chain(*lags)))
 X_train, y_train = feat_eng.lag_training_data([X_data], lags = lags)
+
+#X_train = X_data
+#y_train = B_data
 
 mean_feat = np.mean(X_train, axis=0)
 std_feat = np.std(X_train, axis=0)
@@ -188,11 +135,11 @@ std_y = np.std(y_train, axis=0)
 train = True
 if train:
     
-    surrogate = es.methods.ANN(X=X_train, y=y_train, n_layers=2, n_neurons=128, n_out=K,
+    surrogate = es.methods.ANN(X=X_train, y=y_train, n_layers=3, n_neurons=128, n_out=K,
                                activation='hard_tanh', batch_size=128,
-                               lamb=0.0, decay_step=10**5, decay_rate=0.9, standardize_X=False,
+                               lamb=0.01, decay_step=10**5, decay_rate=0.9, standardize_X=False,
                                standardize_y=False)
-    surrogate.train(3000, store_loss=True)
+    surrogate.train(20000, store_loss=True)
 else:    
     surrogate = es.methods.ANN(X=X_train, y=y_train)
     surrogate.load_ANN()
@@ -200,15 +147,20 @@ else:
 surrogate.get_n_weights()
 
 #time param
-t_end = 10.0
+t_end = 1000.0
 burn = 500
 dt = 0.01
 t = np.arange(burn*dt, t_end, dt)
 
-X = X_data[0]
+for i in range(max_lag):
+    feat_eng.append_feat([X_data[i]])
+
+X = X_data[max_lag]
 
 #solve system
 sol = odeint(lorenz96, X, t)
+
+post_proc = es.methods.Post_Processing()
 
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='polar')
