@@ -120,17 +120,9 @@ for q in QoI:
 
 feat_eng = es.methods.Feature_Engineering(X_data, B_data)
 
-lags = [[1, 10]]
+lags = [[1]]
 max_lag = np.max(list(chain(*lags)))
 X_train, y_train = feat_eng.lag_training_data([X_data], lags = lags)
-
-#X_train = X_data
-#y_train = B_data
-
-mean_feat = np.mean(X_train, axis=0)
-std_feat = np.std(X_train, axis=0)
-mean_y = np.mean(y_train, axis=0)
-std_y = np.std(y_train, axis=0)
 
 train = True
 if train:
@@ -186,15 +178,39 @@ if make_movie:
     anim.save('demo_ann.gif', writer='imagemagick')
 else:
     ax.plot(theta, np.append(sol[-1, 0:K], sol[-1, 0]), label='X')
+ 
+#############   
+# Plot PDEs #
+#############
     
 fig = plt.figure()
+ax = fig.add_subplot(111)
 
-for k in range(K):
-    ax = fig.add_subplot(3, 6, k+1)
-    X_dom_surr, X_pde_surr = get_pde(sol[:, k])
-    X_dom, X_pde = get_pde(X_data[:, k])
-    
-    ax.plot(X_dom_surr, X_pde_surr)
-    ax.plot(X_dom, X_pde, '--k')
-    
+X_dom_surr, X_pde_surr = post_proc.get_pde(sol.flatten())
+X_dom, X_pde = post_proc.get_pde(X_data.flatten()[0:-1:10])
+
+ax.plot(X_dom_surr, X_pde_surr)
+ax.plot(X_dom, X_pde, '--k')
+
+plt.tight_layout()
+
+#############   
+# Plot ACFs #
+#############
+
+fig = plt.figure()
+ax = fig.add_subplot(111, ylabel='ACF', xlabel='time')
+
+R_data = post_proc.auto_correlation_function(X_data[:,0], max_lag=1000)
+R_sol = post_proc.auto_correlation_function(sol[:, 0], max_lag=1000)
+
+dom = np.arange(R_data.size)*dt
+
+ax.plot(dom, R_data, '--k', label='L96')
+ax.plot(dom, R_sol, label='ANN')
+
+leg = plt.legend(loc=0)
+
+plt.tight_layout()
+
 plt.show()
