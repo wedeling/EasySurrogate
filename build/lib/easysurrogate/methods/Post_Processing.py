@@ -21,7 +21,7 @@ class Post_Processing:
         Compute the autocorrelation of X over max_lag time steps
         
         Parameters:
-            - X (array): the samples from which to compute the ACF 
+            - X (array, size (N,)): the samples from which to compute the ACF 
             - max_lag (int): the max number of time steps, determines max 
               lead time
               
@@ -32,6 +32,8 @@ class Post_Processing:
         R = np.zeros(lags.size)
         
         idx = 0
+        
+        print('Computing auto-correlation function')
         
         #for every lag, compute autocorrelation:
         # R = E[(X_t - mu_t)*(X_s - mu_s)]/(std_t*std_s)
@@ -47,9 +49,40 @@ class Post_Processing:
         
             R[idx] = np.mean((X_t - mu_t)*(X_s - mu_s))/(std_t*std_s)
             idx += 1
+            
+        print('done')
     
         return R
+
+    def cross_correlation_function(self, X, Y, max_lag):
+        """
+        """
+        lags = np.arange(1, max_lag)
+        C = np.zeros(lags.size)
+        
+        idx = 0
+        
+        print('Computing cross-correlation function')
+
+        #for every lag, compute cross correlation:
+        # R = E[(X_t - mu_Xt)*(Y_s - mu_Ys)]/(std_Xt*std_Ys)
+        for lag in lags:
+        
+            X_t = X[0:-lag]
+            Y_s = Y[lag:]
+        
+            mu_t = np.mean(X_t)
+            std_t = np.std(X_t)
+            mu_s = np.mean(Y_s)
+            std_s = np.std(Y_s)
+        
+            C[idx] = np.mean((X_t - mu_t)*(Y_s - mu_s))/(std_t*std_s)
+            idx += 1
     
+        print('done')
+ 
+        return C
+
     def get_pde(self, X, Npoints = 100):
         """
         Computes a kernel density estimate of the samples in X   
@@ -94,18 +127,18 @@ class Post_Processing:
             samples = tmp
             
         if names == []:
-            for i in len(samples):
+            for i in range(len(samples)):
                 names.append('sample_' + str(i))
         
         if len(file_path) == 0:
-
+    
             root = tk.Tk()
             root.withdraw()
             
-            file = filedialog.asksaveasfile(mode='wb', defaultextension=".pickle")
+            file = filedialog.asksaveasfile(mode='wb', defaultextension=".hdf5")
         else:
             file = open(file_path, 'wb')
-
+    
         print('Saving samples in', file.name) 
         
         #create HDF5 file
@@ -123,6 +156,6 @@ class Post_Processing:
         else:
             print("Error: samples must be a dict or a list")
             return
-
+    
         h5f.close()
         print('done')

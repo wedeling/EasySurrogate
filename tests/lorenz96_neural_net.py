@@ -99,18 +99,26 @@ from itertools import chain
 
 plt.close('all')
 
-#Lorenz96 parameters
-K = 18
-J = 20
-F = 10.0
-h_x = -1.0
+##unimodal Lorenz96 parameters
+#K = 18
+#J = 20
+#F = 10.0
+#h_x = -1.0
+#h_y = 1.0
+#epsilon = 0.5
+
+#trimodal Lorenz96 parameters
+K = 32
+J = 16
+F = 18.0
+h_x = -3.2
 h_y = 1.0
 epsilon = 0.5
 
 HOME = os.path.abspath(os.path.dirname(__file__))
 
 #load training data
-store_ID = 'L96'
+store_ID = 'L96_trimodal'
 QoI = ['X_data', 'B_data']
 h5f = h5py.File(HOME + '/samples/' + store_ID + '.hdf5', 'r')
 
@@ -128,7 +136,7 @@ train = True
 if train:
     
     surrogate = es.methods.ANN(X=X_train, y=y_train, n_layers=3, n_neurons=128, n_out=K,
-                               activation='hard_tanh', batch_size=128,
+                               activation='hard_tanh', batch_size=256,
                                lamb=0.01, decay_step=10**5, decay_rate=0.9, standardize_X=False,
                                standardize_y=False)
     surrogate.train(20000, store_loss=True)
@@ -139,7 +147,7 @@ else:
 surrogate.get_n_weights()
 
 #time param
-t_end = 1000.0
+t_end = 10.0
 burn = 500
 dt = 0.01
 t = np.arange(burn*dt, t_end, dt)
@@ -184,13 +192,17 @@ else:
 #############
     
 fig = plt.figure()
-ax = fig.add_subplot(111)
+ax = fig.add_subplot(111, xlabel=r'$X_k$')
 
 X_dom_surr, X_pde_surr = post_proc.get_pde(sol.flatten())
 X_dom, X_pde = post_proc.get_pde(X_data.flatten()[0:-1:10])
 
-ax.plot(X_dom_surr, X_pde_surr)
-ax.plot(X_dom, X_pde, '--k')
+ax.plot(X_dom, X_pde, '--k', label='L96')
+ax.plot(X_dom_surr, X_pde_surr, label='ANN')
+
+plt.yticks([])
+
+plt.legend(loc=0)
 
 plt.tight_layout()
 
@@ -208,6 +220,25 @@ dom = np.arange(R_data.size)*dt
 
 ax.plot(dom, R_data, '--k', label='L96')
 ax.plot(dom, R_sol, label='ANN')
+
+leg = plt.legend(loc=0)
+
+plt.tight_layout()
+
+#############   
+# Plot CCFs #
+#############
+
+fig = plt.figure()
+ax = fig.add_subplot(111, ylabel='CCF', xlabel='time')
+
+C_data = post_proc.cross_correlation_function(X_data[:,0], X_data[:,1], max_lag=1000)
+C_sol = post_proc.cross_correlation_function(sol[:, 0], sol[:, 1], max_lag=1000)
+
+dom = np.arange(C_data.size)*dt
+
+ax.plot(dom, C_data, '--k', label='L96')
+ax.plot(dom, C_sol, label='ANN')
 
 leg = plt.legend(loc=0)
 

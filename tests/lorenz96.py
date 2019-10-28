@@ -1,14 +1,9 @@
-def init_movie():
-    for line in lines:
-        line.set_data([],[])
-    return lines
-
 def animate(s):
 
     print('Processing frame', s, 'of', sol.shape[0])
     #add the periodic BC to current sample to create a closed plot
     xlist = [theta, theta_Y]
-    ylist = [np.append(sol[s, 0:K], sol[s, 0]), np.append(sol[s, K:], sol[s, K])]
+    ylist = [np.append(sol[s, :], sol[s, 0]), np.append(sol_Y[s].flatten(), sol_Y[s][0,0])]
 
     #for index in range(0,1):
     for lnum,line in enumerate(lines):
@@ -16,75 +11,46 @@ def animate(s):
 
     return lines
 
-#store samples in hierarchical data format, when sample size become very large
-def store_samples_hdf5():
-  
-    fname = HOME + '/samples/' + store_ID + '.hdf5'
+def rhs_X(X, B):
+    """
+    Compute the right-hand side of X
     
-    print('Storing samples in ', fname)
-    
-    if os.path.exists(HOME + '/samples') == False:
-        os.makedirs(HOME + '/samples')
-    
-    #create HDF5 file
-    h5f = h5py.File(fname, 'w')
-    
-    #store numpy sample arrays as individual datasets in the hdf5 file
-    for q in QoI:
-        h5f.create_dataset(q, data = samples[q])
+    Parameters:
+        - X (array, size K): large scale variables
+        - B (array, size K): SGS term
         
-    h5f.close()    
-
-#def lorenz96(X, t):
-#    """
-#    Lorenz96 one-layer model
-#    """
-#    
-#    rhs_X = np.zeros(K)
-#    
-#    #first treat boundary cases (k=1, k=2 and k=K)
-#    rhs_X[0] = -X[K-2]*X[K-1] + X[K-1]*X[1] - X[0] + F
-#    rhs_X[1] = -X[K-1]*X[0] + X[0]*X[2] - X[1] + F
-#    rhs_X[K-1] = -X[K-3]*X[K-2] + X[K-2]*X[0] - X[K-1] + F
-#    
-#    #treat interior points
-#    for k in range(2, K-1):
-#        rhs_X[k] = -X[k-2]*X[k-1] + X[k-1]*X[k+1] - X[k] + F
-#        
-#    return rhs_X
-
-def lorenz96_2layer(U, t):
+    returns:
+        - rhs_X (array, size K): right-hand side of X
     """
-    Lorenz96 two-layer model
-    """
-    
-    X = np.array(U[0:K])
-    Y = np.array(U[K:])    
-    Y = Y.reshape([J, K])
     
     rhs_X = np.zeros(K)
-    rhs_Y = np.zeros([J, K])
     
     #first treat boundary cases (k=1, k=2 and k=K)
-    rhs_Y[:, 0] = rhs_Y_k(Y, X[0], 0)
-    rhs_X[0] = -X[K-2]*X[K-1] + X[K-1]*X[1] - X[0] + F + h_x*np.mean(Y[:, 0])
+    rhs_X[0] = -X[K-2]*X[K-1] + X[K-1]*X[1] - X[0] + F
     
-    rhs_Y[:, 1] = rhs_Y_k(Y, X[1], 1)
-    rhs_X[1] = -X[K-1]*X[0] + X[0]*X[2] - X[1] + F + h_x*np.mean(Y[:, 1])
-
-    rhs_Y[:, K-1] = rhs_Y_k(Y, X[K-1], K-1)
-    rhs_X[K-1] = -X[K-3]*X[K-2] + X[K-2]*X[0] - X[K-1] + F + h_x*np.mean(Y[:, K-1])
+    rhs_X[1] = -X[K-1]*X[0] + X[0]*X[2] - X[1] + F
+    
+    rhs_X[K-1] = -X[K-3]*X[K-2] + X[K-2]*X[0] - X[K-1] + F
     
     #treat interior points
     for k in range(2, K-1):
-        rhs_Y[:, k] = rhs_Y_k(Y, X[k], k)
-        rhs_X[k] = -X[k-2]*X[k-1] + X[k-1]*X[k+1] - X[k] + F + h_x*np.mean(Y[:, k])
+        rhs_X[k] = -X[k-2]*X[k-1] + X[k-1]*X[k+1] - X[k] + F
         
-    return list(chain(*[rhs_X, rhs_Y.flatten()]))
+    rhs_X += B
+        
+    return rhs_X
 
 def rhs_Y_k(Y, X_k, k):
     """
     Compute the right-hand side of Y for fixed k
+    
+    Parameters:
+        - Y (array, size (J,K)): small scale variables
+        - X_k (float): large scale variable X_k
+        - k (int): index k
+        
+    returns:
+        - rhs_Yk (array, size J): right-hand side of Y for fixed k
     """
     
     rhs_Yk = np.zeros(J)
@@ -109,14 +75,54 @@ def rhs_Y_k(Y, X_k, k):
         
     return rhs_Yk
 
+def step_X(X_n, f_nm1, B):
+    """
+    Time step for X equation, using Adams-Bashforth
+    
+    Parameters:
+        - X_n (array, size K): large scale variables at time n
+        - f_nm1 (array, size K): right-hand side of X at time n-1
+        - B (array, size K): SGS term
+        
+    Returns:
+        - X_np1 (array, size K): large scale variables at time n+1
+        - f_nm1 (array, size K): right-hand side of X at time n
+    """
+    
+    #right-hand side at time n
+    f_n = rhs_X(X_n, B)
+    
+    #adams bashforth
+    X_np1 = X_n + dt*(3.0/2.0*f_n - 0.5*f_nm1)
+    
+    return X_np1, f_n
+
+def step_Y(Y_n, g_nm1, X_n):
+    """
+    Time step for Y equation, using Adams-Bashforth
+    
+    Parameters:
+        - Y_n (array, size (J,K)): small scale variables at time n
+        - g_nm1 (array, size (J, K)): right-hand side of Y at time n-1
+        - X_n (array, size K): large scale variables at time n
+        
+    Returns:
+        - Y_np1 (array, size (J,K)): small scale variables at time n+1
+        - g_nm1 (array, size (J,K)): right-hand side of Y at time n
+    """
+
+    g_n = np.zeros([J, K])
+    for k in range(K):
+        g_n[:, k] = rhs_Y_k(Y_n, X_n[k], k)
+        
+    Y_np1 = Y_n + dt*(3.0/2.0*g_n - 0.5*g_nm1)
+    
+    return Y_np1, g_n
+
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.integrate import odeint
 from matplotlib.animation import FuncAnimation
-from itertools import chain
-import h5py, os
-
-HOME = os.path.abspath(os.path.dirname(__file__))
+import easysurrogate as es
 
 plt.close('all')
 
@@ -128,22 +134,50 @@ h_x = -1.0
 h_y = 1.0
 epsilon = 0.5
 
-#equilibrium initial condition for X, zero IC for Y
-X = np.ones(K)*F
-X[10] += 0.01 # add small perturbation to 10th variable
-Y = np.zeros(J*K)
-
-#initial condition
-U_init = list(chain(*[X, Y]))
-
-#time param
-t_end = 1000.0
 dt = 0.01
+t_end = 1000.0
 t = np.arange(0.0, t_end, dt)
 
-#solve system
-sol = odeint(lorenz96_2layer, U_init, t)
+make_movie = False
+store = True
 
+#equilibrium initial condition for X, zero IC for Y
+X_n = np.ones(K)*F
+X_n[10] += 0.01 #add small perturbation to 10th variable
+
+#initial condition small-scale variables
+Y_n = np.zeros([J, K])
+B = h_x*np.mean(Y_n, axis=0)
+
+#initial right-hand sides
+f_nm1 = rhs_X(X_n, B)
+
+g_nm1 = np.zeros([J, K])
+for k in range(K):
+    g_nm1[:, k] = rhs_Y_k(Y_n, X_n[k], k)
+
+#allocate memory for solutions
+sol = np.zeros([t.size, K])
+sol_Y = np.zeros([t.size, J, K])
+
+#start time integration
+idx = 0
+for t_i in t:
+    #solve small-scale equation
+    Y_n, g_nm1 = step_Y(Y_n, g_nm1, X_n)
+    #compute SGS term
+    B = h_x*np.mean(Y_n, axis=0)
+    #solve large-scale equation
+    X_n, f_nm1 = step_X(X_n, f_nm1, B)
+    #store solutions
+    sol[idx, :] = X_n
+    sol_Y[idx, :] = Y_n
+    idx += 1
+    
+    if np.mod(idx, 1000) == 0:
+        print('t =', np.around(t_i, 1))
+    
+#plot results
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='polar')
 theta = np.linspace(0.0, 2.0*np.pi, K+1)
@@ -154,8 +188,20 @@ ax.set_rorigin(-22)
 ax.set_rgrids([-10, 0, 10], labels=['', '', ''])[0][1]
 ax.legend(loc=1)
 
+#store results
+if store == True:
+    #store results
+    samples = {}
+    store_ID = 'L96'
+    QoI = {'X_data', 'B_data'}
+    
+    for q in QoI:
+        samples[q] = eval(q)
+
+    post_proc = es.methods.Post_Processing()
+    post_proc.store_samples_hdf5(samples)
+
 #if True make a movie of the solution, if not just plot final solution
-make_movie = False
 if make_movie:
 
     lines = []
@@ -164,33 +210,17 @@ if make_movie:
         lobj = ax.plot([],[],lw=2, label=legends[i])[0]
         lines.append(lobj)
     
-    anim = FuncAnimation(fig, animate, init_func=init_movie,
-                         frames=np.arange(0, sol.shape[0], 10), blit=True)    
+    anim = FuncAnimation(fig, animate, frames=np.arange(0, sol.shape[0], 100), blit=True)    
     anim.save('demo.gif', writer='imagemagick')
 else:
-    ax.plot(theta, np.append(sol[-1, 0:K], sol[-1, 0]), label='X')    
-    ax.plot(theta_Y, np.append(sol[-1, K:], sol[-1, K]), label='Y')    
+    ax.plot(theta, np.append(sol[-1, :], sol[-1, 0]), label='X')    
+    ax.plot(theta_Y, np.append(sol_Y[-1, :].flatten(), sol_Y[-1, 0, 0]), label='Y')    
     
 #plot X_k vs B_k
 fig = plt.figure()
 burn = 500
-X_data = sol[burn:, 0:K]
-Y_data = sol[burn:, K:].reshape([X_data.shape[0], J, K])
-B_data = np.zeros([X_data.shape[0], K])
-
-for k in range(K):
-    B_data[:, k] = h_x*np.mean(Y_data[:, :, k], axis=1)
-
+X_data = sol[burn:, :]
+B_data = h_x*np.mean(sol_Y[burn:, :], axis=1)
 plt.plot(X_data[:, 0], B_data[:, 0], '.')
-
-#store results
-samples = {}
-store_ID = 'L96'
-QoI = {'X_data', 'B_data'}
-
-for q in QoI:
-    samples[q] = eval(q)
-
-store_samples_hdf5()
 
 plt.show()
