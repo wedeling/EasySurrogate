@@ -126,11 +126,19 @@ import easysurrogate as es
 
 plt.close('all')
 
-#Lorenz96 parameters
-K = 18
-J = 20
-F = 10.0
-h_x = -1.0
+##Lorenz96 parameters
+#K = 18
+#J = 20
+#F = 10.0
+#h_x = -1.0
+#h_y = 1.0
+#epsilon = 0.5
+
+#trimodal Lorenz96 parameters
+K = 32
+J = 16
+F = 18.0
+h_x = -3.2
 h_y = 1.0
 epsilon = 0.5
 
@@ -188,6 +196,10 @@ ax.set_rorigin(-22)
 ax.set_rgrids([-10, 0, 10], labels=['', '', ''])[0][1]
 ax.legend(loc=1)
 
+burn = 500
+X_data = sol[burn:, :]
+B_data = h_x*np.mean(sol_Y[burn:, :], axis=1)
+
 #store results
 if store == True:
     #store results
@@ -218,9 +230,6 @@ else:
     
 #plot X_k vs B_k
 fig = plt.figure()
-burn = 500
-X_data = sol[burn:, :]
-B_data = h_x*np.mean(sol_Y[burn:, :], axis=1)
 plt.plot(X_data[:, 0], B_data[:, 0], '.')
 
 plt.show()
