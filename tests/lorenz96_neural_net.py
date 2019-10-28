@@ -1,14 +1,9 @@
-def init_movie():
-    for line in lines:
-        line.set_data([],[])
-    return lines
-
 def animate(s):
 
     print('Processing frame', s, 'of', sol.shape[0])
     #add the periodic BC to current sample to create a closed plot
-    xlist = [theta, theta]
-    ylist = [np.append(sol[s, 0:K], sol[s, 0]), np.append(X_data[s, 0:K], X_data[s, 0])]
+    xlist = [theta, theta_Y]
+    ylist = [np.append(sol[s, :], sol[s, 0]), np.append(sol_Y[s].flatten(), sol_Y[s][0,0])]
 
     #for index in range(0,1):
     for lnum,line in enumerate(lines):
@@ -16,90 +11,124 @@ def animate(s):
 
     return lines
 
-def lorenz96(X, t):
-    
+def rhs_X(X, B):
     """
-    Lorenz96 one-layer model + neural net prediction for B
+    Compute the right-hand side of X
+    
+    Parameters:
+        - X (array, size K): large scale variables
+        - B (array, size K): SGS term
+        
+    returns:
+        - rhs_X (array, size K): right-hand side of X
     """
     
     rhs_X = np.zeros(K)
     
     #first treat boundary cases (k=1, k=2 and k=K)
     rhs_X[0] = -X[K-2]*X[K-1] + X[K-1]*X[1] - X[0] + F
+    
     rhs_X[1] = -X[K-1]*X[0] + X[0]*X[2] - X[1] + F
+    
     rhs_X[K-1] = -X[K-3]*X[K-2] + X[K-2]*X[0] - X[K-1] + F
     
     #treat interior points
     for k in range(2, K-1):
         rhs_X[k] = -X[k-2]*X[k-1] + X[k-1]*X[k+1] - X[k] + F
         
-    feat = feat_eng.get_feat_history()
-#    feat = (feat - mean_feat)/std_feat
-#
-#    feat = X        
-    B = surrogate.feed_forward(feat.reshape([1, feat.size])).flatten()
-#    B = B*std_y + mean_y
-#   
-    feat_eng.append_feat([X])
-   
     rhs_X += B
         
     return rhs_X
 
+def rhs_Y_k(Y, X_k, k):
+    """
+    Compute the right-hand side of Y for fixed k
+    
+    Parameters:
+        - Y (array, size (J,K)): small scale variables
+        - X_k (float): large scale variable X_k
+        - k (int): index k
+        
+    returns:
+        - rhs_Yk (array, size J): right-hand side of Y for fixed k
+    """
+    
+    rhs_Yk = np.zeros(J)
+    
+    #first treat boundary cases (j=1, j=J-1, j=J-2)
+    if k > 0:
+        idx = k-1
+    else:
+        idx = K-1
+    rhs_Yk[0] = (Y[1, k]*(Y[J-1, idx] - Y[2, k]) - Y[0, k] + h_y*X_k)/epsilon
 
-def ACF(X, max_lag_time):
-    
-    lags = np.arange(1, max_lag)
-    R = np.zeros(lags.size)
-    
-    idx = 0
-    
-    #for every lag, compute autocorrelation:
-    # R = E[(X_t - mu_t)*(X_s - mu_s)]/(std_t*std_s)
-    for lag in lags:
-    
-        X_t = X[0:-lag]
-        X_s = X[lag:]
-    
-        mu_t = np.mean(X_t)
-        std_t = np.std(X_t)
-        mu_s = np.mean(X_s)
-        std_s = np.std(X_s)
-    
-        R[idx] = np.mean((X_t - mu_t)*(X_s - mu_s))/(std_t*std_s)
-        idx += 1
+    if k < K-1:
+        idx = k+1
+    else:
+        idx = 0
+    rhs_Yk[J-2] = (Y[J-1, k]*(Y[J-3, k] - Y[0, idx]) - Y[J-2, k] + h_y*X_k)/epsilon
+    rhs_Yk[J-1] = (Y[0, idx]*(Y[J-2, k] - Y[1, idx]) - Y[J-1, k] + h_y*X_k)/epsilon
 
-    return R
-   
-def get_pde(X, Npoints = 100):
+    #treat interior points
+    for j in range(1, J-2):
+        rhs_Yk[j] = (Y[j+1, k]*(Y[j-1, k] - Y[j+2, k]) - Y[j, k] + h_y*X_k)/epsilon
+        
+    return rhs_Yk
 
-#    kernel = stats.gaussian_kde(X, bw_method='scott')
-#    x = np.linspace(np.min(X), np.max(X), Npoints)
-#    pde = kernel.evaluate(x)
-#    return x, pde
+def step_X(X_n, f_nm1, B):
+    """
+    Time step for X equation, using Adams-Bashforth
     
-    X_min = np.min(X)
-    X_max = np.max(X)
-    bandwidth = (X_max-X_min)/40
+    Parameters:
+        - X_n (array, size K): large scale variables at time n
+        - f_nm1 (array, size K): right-hand side of X at time n-1
+        - B (array, size K): SGS term
+        
+    Returns:
+        - X_np1 (array, size K): large scale variables at time n+1
+        - f_nm1 (array, size K): right-hand side of X at time n
+    """
     
-    kde = KernelDensity(kernel='gaussian', bandwidth=bandwidth).fit(X.reshape(-1, 1))
-    domain = np.linspace(X_min, X_max, Npoints).reshape(-1, 1)
-    log_dens = kde.score_samples(domain)
+    #right-hand side at time n
+    f_n = rhs_X(X_n, B)
     
-    return domain, np.exp(log_dens)   
+    #adams bashforth
+    X_np1 = X_n + dt*(3.0/2.0*f_n - 0.5*f_nm1)
+    
+    return X_np1, f_n
+
+def step_Y(Y_n, g_nm1, X_n):
+    """
+    Time step for Y equation, using Adams-Bashforth
+    
+    Parameters:
+        - Y_n (array, size (J,K)): small scale variables at time n
+        - g_nm1 (array, size (J, K)): right-hand side of Y at time n-1
+        - X_n (array, size K): large scale variables at time n
+        
+    Returns:
+        - Y_np1 (array, size (J,K)): small scale variables at time n+1
+        - g_nm1 (array, size (J,K)): right-hand side of Y at time n
+    """
+
+    g_n = np.zeros([J, K])
+    for k in range(K):
+        g_n[:, k] = rhs_Y_k(Y_n, X_n[k], k)
+        
+    Y_np1 = Y_n + dt*(3.0/2.0*g_n - 0.5*g_nm1)
+    
+    return Y_np1, g_n
 
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
 import easysurrogate as es
 import h5py, os
-from scipy.integrate import odeint
-from matplotlib.animation import FuncAnimation
-from sklearn.neighbors.kde import KernelDensity
 from itertools import chain
 
 plt.close('all')
 
-##unimodal Lorenz96 parameters
+##Lorenz96 parameters
 #K = 18
 #J = 20
 #F = 10.0
@@ -115,9 +144,20 @@ h_x = -3.2
 h_y = 1.0
 epsilon = 0.5
 
+dt = 0.01
+t_end = 1000.0
+t = np.arange(0.0, t_end, dt)
+
+make_movie = False
+store = False
+train = True
+exact = False
+
 HOME = os.path.abspath(os.path.dirname(__file__))
 
 #load training data
+
+#NOTE IS NOT TRIMODAL, PROBABLY OVERWRITTEN
 store_ID = 'L96_trimodal'
 QoI = ['X_data', 'B_data']
 h5f = h5py.File(HOME + '/samples/' + store_ID + '.hdf5', 'r')
@@ -132,7 +172,6 @@ lags = [[1]]
 max_lag = np.max(list(chain(*lags)))
 X_train, y_train = feat_eng.lag_training_data([X_data], lags = lags)
 
-train = True
 if train:
     
     surrogate = es.methods.ANN(X=X_train, y=y_train, n_layers=3, n_neurons=128, n_out=K,
@@ -146,47 +185,97 @@ else:
 
 surrogate.get_n_weights()
 
-#time param
-t_end = 10.0
-burn = 500
-dt = 0.01
-t = np.arange(burn*dt, t_end, dt)
+##equilibrium initial condition for X, zero IC for Y
+#X_n = np.ones(K)*F
+#X_n[10] += 0.01 #add small perturbation to 10th variable
 
 for i in range(max_lag):
     feat_eng.append_feat([X_data[i]])
 
-X = X_data[max_lag]
+X_n = X_data[max_lag]
 
-#solve system
-sol = odeint(lorenz96, X, t)
+#initial condition small-scale variables
+Y_n = np.zeros([J, K])
+B = h_x*np.mean(Y_n, axis=0)
 
-post_proc = es.methods.Post_Processing()
+#initial right-hand sides
+f_nm1 = rhs_X(X_n, B)
 
+g_nm1 = np.zeros([J, K])
+for k in range(K):
+    g_nm1[:, k] = rhs_Y_k(Y_n, X_n[k], k)
+
+#allocate memory for solutions
+sol = np.zeros([t.size, K])
+sol_Y = np.zeros([t.size, J, K])
+
+#start time integration
+idx = 0
+for t_i in t[max_lag:]:
+    
+    if exact:
+        #solve small-scale equation
+        Y_n, g_nm1 = step_Y(Y_n, g_nm1, X_n)
+        #compute SGS term
+        B = h_x*np.mean(Y_n, axis=0)
+    else:
+        feat = feat_eng.get_feat_history()
+        B = surrogate.feed_forward(feat.reshape([1, feat.size])).flatten()
+        feat_eng.append_feat([X_n])
+
+    #solve large-scale equation
+    X_n, f_nm1 = step_X(X_n, f_nm1, B)
+    #store solutions
+    sol[idx, :] = X_n
+    sol_Y[idx, :] = Y_n
+    idx += 1
+    
+    if np.mod(idx, 1000) == 0:
+        print('t =', np.around(t_i, 1))
+    
+#plot results
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='polar')
 theta = np.linspace(0.0, 2.0*np.pi, K+1)
+theta_Y = np.linspace(0.0, 2.0*np.pi, J*K+1)
 #create a while in the middle to the plot, scales plot better
 ax.set_rorigin(-22)
 #remove set radial tickmarks, no labels
 ax.set_rgrids([-10, 0, 10], labels=['', '', ''])[0][1]
 ax.legend(loc=1)
 
+burn = 500
+X_data = sol[burn:, :]
+B_data = h_x*np.mean(sol_Y[burn:, :], axis=1)
+
+#store results
+if store == True:
+    #store results
+    samples = {}
+    store_ID = 'L96'
+    QoI = {'X_data', 'B_data'}
+    
+    for q in QoI:
+        samples[q] = eval(q)
+
+    post_proc = es.methods.Post_Processing()
+    post_proc.store_samples_hdf5(samples)
+
 #if True make a movie of the solution, if not just plot final solution
-make_movie = False
 if make_movie:
 
     lines = []
-    legends = ['X', 'X_data']
+    legends = ['X', 'Y']
     for i in range(2):
         lobj = ax.plot([],[],lw=2, label=legends[i])[0]
         lines.append(lobj)
     
-    anim = FuncAnimation(fig, animate, init_func=init_movie,
-                         frames=np.arange(0, sol.shape[0], 10), blit=True)    
-    anim.save('demo_ann.gif', writer='imagemagick')
+    anim = FuncAnimation(fig, animate, frames=np.arange(0, sol.shape[0], 100), blit=True)    
+    anim.save('demo.gif', writer='imagemagick')
 else:
-    ax.plot(theta, np.append(sol[-1, 0:K], sol[-1, 0]), label='X')
- 
+    ax.plot(theta, np.append(sol[-1, :], sol[-1, 0]), label='X')    
+    ax.plot(theta_Y, np.append(sol_Y[-1, :].flatten(), sol_Y[-1, 0, 0]), label='Y')    
+    
 #############   
 # Plot PDEs #
 #############

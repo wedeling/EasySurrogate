@@ -115,7 +115,7 @@ class Post_Processing:
         
         return domain, np.exp(log_dens)
     
-    def store_samples_hdf5(samples, names = [], file_path = ""):
+    def store_samples_hdf5(self, samples, names = [], file_path = ""):
         """
         store samples in hierarchical data format
         """
@@ -143,7 +143,7 @@ class Post_Processing:
         
         #create HDF5 file
         h5f = h5py.File(file, 'w')
-        
+       
         #store numpy sample arrays as individual datasets in the hdf5 file
         if type(samples) == list:
             idx = 0
@@ -154,7 +154,7 @@ class Post_Processing:
             for name in samples.keys():
                 h5f.create_dataset(name, data = samples[name])
         else:
-            print("Error: samples must be a dict or a list")
+            print("Error: samples must be in a dict or a list")
             return
     
         h5f.close()
