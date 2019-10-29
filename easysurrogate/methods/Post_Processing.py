@@ -82,6 +82,14 @@ class Post_Processing:
         print('done')
  
         return C
+    
+    def wave_variance(self, X):
+        
+        X_hat = np.fft.fft(X, axis=0)
+        X_hat_mean = np.mean(X_hat, axis=0)
+        X_hat_var = np.mean(np.abs(X_hat - X_hat_mean)**2, axis=0)
+        
+        return X_hat_var
 
     def get_pde(self, X, Npoints = 100):
         """

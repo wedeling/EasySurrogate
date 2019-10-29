@@ -126,21 +126,21 @@ import easysurrogate as es
 
 plt.close('all')
 
-##Lorenz96 parameters
-#K = 18
-#J = 20
-#F = 10.0
-#h_x = -1.0
-#h_y = 1.0
-#epsilon = 0.5
-
-#trimodal Lorenz96 parameters
-K = 32
-J = 16
-F = 18.0
-h_x = -3.2
+#Lorenz96 parameters
+K = 18
+J = 20
+F = 10.0
+h_x = -1.0
 h_y = 1.0
 epsilon = 0.5
+
+##trimodal Lorenz96 parameters
+#K = 32
+#J = 16
+#F = 18.0
+#h_x = -3.2
+#h_y = 1.0
+#epsilon = 0.5
 
 dt = 0.01
 t_end = 1000.0
@@ -173,17 +173,18 @@ idx = 0
 for t_i in t:
     #solve small-scale equation
     Y_n, g_nm1 = step_Y(Y_n, g_nm1, X_n)
-    #compute SGS term
-    B = h_x*np.mean(Y_n, axis=0)
     #solve large-scale equation
     X_n, f_nm1 = step_X(X_n, f_nm1, B)
+    #compute SGS term
+    B = h_x*np.mean(Y_n, axis=0)
+
     #store solutions
     sol[idx, :] = X_n
     sol_Y[idx, :] = Y_n
     idx += 1
     
     if np.mod(idx, 1000) == 0:
-        print('t =', np.around(t_i, 1))
+        print('t =', np.around(t_i, 1), 'of', t_end)
     
 #plot results
 fig = plt.figure()
@@ -198,19 +199,20 @@ ax.legend(loc=1)
 
 burn = 500
 X_data = sol[burn:, :]
+Y_data = sol_Y[burn:, :]
 B_data = h_x*np.mean(sol_Y[burn:, :], axis=1)
+
+post_proc = es.methods.Post_Processing()
 
 #store results
 if store == True:
     #store results
     samples = {}
-    store_ID = 'L96'
     QoI = {'X_data', 'B_data'}
     
     for q in QoI:
         samples[q] = eval(q)
 
-    post_proc = es.methods.Post_Processing()
     post_proc.store_samples_hdf5(samples)
 
 #if True make a movie of the solution, if not just plot final solution
@@ -230,6 +232,24 @@ else:
     
 #plot X_k vs B_k
 fig = plt.figure()
-plt.plot(X_data[:, 0], B_data[:, 0], '.')
+burn = 500
+plt.plot(X_data[burn:, 0], B_data[burn:, 0], '.')
+
+#############   
+# Plot PDEs #
+#############
+    
+fig = plt.figure()
+ax = fig.add_subplot(111, xlabel=r'$X_k$')
+
+X_dom, X_pde = post_proc.get_pde(X_data.flatten()[0:-1:10])
+
+ax.plot(X_dom, X_pde, 'ko', label='L96')
+
+plt.yticks([])
+
+plt.legend(loc=0)
+
+plt.tight_layout()
 
 plt.show()
