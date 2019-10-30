@@ -123,21 +123,21 @@ from itertools import chain
 
 plt.close('all')
 
-#Lorenz96 parameters
-K = 18
-J = 20
-F = 10.0
-h_x = -1.0
-h_y = 1.0
-epsilon = 0.5
-
-##trimodal Lorenz96 parameters
-#K = 32
-#J = 16
-#F = 18.0
-#h_x = -3.2
+##Lorenz96 parameters
+#K = 18
+#J = 20
+#F = 10.0
+#h_x = -1.0
 #h_y = 1.0
 #epsilon = 0.5
+
+#trimodal Lorenz96 parameters
+K = 32
+J = 16
+F = 18.0
+h_x = -3.2
+h_y = 1.0
+epsilon = 0.5
 
 dt = 0.01
 t_end = 1000.0
@@ -150,9 +150,7 @@ train = True
 HOME = os.path.abspath(os.path.dirname(__file__))
 
 #load training data
-
-#NOTE IS NOT TRIMODAL, PROBABLY OVERWRITTEN
-store_ID = 'L96'
+store_ID = 'L96_trimodal'
 QoI = ['X_data', 'B_data']
 h5f = h5py.File(HOME + '/samples/' + store_ID + '.hdf5', 'r')
 
@@ -164,8 +162,9 @@ for q in QoI:
     
 feat_eng = es.methods.Feature_Engineering(X_data, B_data)
 
-lags = [[0]]
+lags = [[1, 10, 20, 30]]
 max_lag = np.max(list(chain(*lags)))
+
 X_train, y_train = feat_eng.lag_training_data([X_data], lags = lags)
 
 if train:
@@ -182,13 +181,13 @@ else:
 surrogate.get_n_weights()
 
 for i in range(max_lag):
-    feat_eng.append_feat([X_data[i]])
+    feat_eng.append_feat([X_data[i]], max_lag)
 
-X_n = X_data[max_lag+1]
-B = B_data[max_lag+1]
+X_n = X_data[max_lag]
+B_n = B_data[max_lag]
 
-X_nm1 = X_data[max_lag]
-B_nm1 = B_data[max_lag]
+X_nm1 = X_data[max_lag-1]
+B_nm1 = B_data[max_lag-1]
 
 #initial right-hand sides
 f_nm1 = rhs_X(X_nm1, B_nm1)
@@ -199,21 +198,25 @@ sol = np.zeros([t.size, K])
 #start time integration
 idx = 0
 for t_i in t[max_lag:]:
-    
-    #solve large-scale equation
-    X_n, f_nm1 = step_X(X_n, f_nm1, B)
-    feat_eng.append_feat([X_n])
 
     #ANN SGS solve
     feat = feat_eng.get_feat_history()
-    B = surrogate.feed_forward(feat.reshape([1, feat.size])).flatten()
+    B_n = surrogate.feed_forward(feat.reshape([1, feat.size])).flatten()
+    
+    #solve large-scale equation
+    X_np1, f_n = step_X(X_n, f_nm1, B_n)
+    feat_eng.append_feat([X_np1, B_n], max_lag)
 
     #store solutions
     sol[idx, :] = X_n
     idx += 1
+
+    #update variables
+    X_n = X_np1
+    f_nm1 = f_n
     
     if np.mod(idx, 1000) == 0:
-        print('t =', np.around(t_i, 1))
+        print('t =', np.around(t_i, 1), 'of', t_end)
     
 #############   
 # Plot PDEs #

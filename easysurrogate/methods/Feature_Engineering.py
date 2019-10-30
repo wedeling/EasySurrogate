@@ -79,7 +79,7 @@ class Feature_Engineering:
         C = []
         idx = 0
         for X_i in X:
-           
+          
             for lag in lags[idx]:
                 begin = max_lag - lag
                 end = n_samples - lag
@@ -91,7 +91,7 @@ class Feature_Engineering:
                 else:
                     print("Error: X must contains features of dimension (n_samples, ) or (n_samples, n_features)")
                     return
-                idx += 1
+            idx += 1
                 
         #C is a list of lagged features, turn into a single array X_train
         X_train = C[0]
@@ -124,7 +124,13 @@ class Feature_Engineering:
                   by 1 and 2 (time) steps.
         """
         self.lags = lags
-        self.max_lag = np.max(list(chain(*lags)))
+#        self.max_lag = np.max(list(chain(*lags)))
+#        
+#        #if there is no lag (feratures at the same time level as the data)
+#        #set max_lag = 1 manually in order to use append_feat and get_feat_history
+#        #subroutines
+#        if self.max_lag == 0:
+#            self.max_lag = 1
                 
         self.feat_history = {}
         
@@ -134,7 +140,7 @@ class Feature_Engineering:
         for i in range(self.n_feat_arrays):
             self.feat_history[i] = []
             
-    def append_feat(self, X):
+    def append_feat(self, X, max_lag):
         """
         Append the feature vectors in X to feat_history dict
         
@@ -154,7 +160,7 @@ class Feature_Engineering:
             self.feat_history[i].append(X[i])
                         
             #if max number of features is reached, remove first item
-            if len(self.feat_history[i]) > self.max_lag:
+            if len(self.feat_history[i]) > max_lag:
                 self.feat_history[i].pop(0)
                 
     def get_feat_history(self):
