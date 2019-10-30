@@ -93,7 +93,7 @@ def step_X(X_n, f_nm1, B):
     f_n = rhs_X(X_n, B)
     
     #adams bashforth
-    X_np1 = X_n + dt*(3.0/2.0*f_n - 0.5*f_nm1)
+    X_np1 = X_n + dt*(1.5*f_n - 0.5*f_nm1)
     
     return X_np1, f_n
 
@@ -115,9 +115,11 @@ def step_Y(Y_n, g_nm1, X_n):
     for k in range(K):
         g_n[:, k] = rhs_Y_k(Y_n, X_n[k], k)
         
-    Y_np1 = Y_n + dt*(3.0/2.0*g_n - 0.5*g_nm1)
+    multistep_rhs = dt*(1.5*g_n - 0.5*g_nm1)
+        
+    Y_np1 = Y_n + multistep_rhs
     
-    return Y_np1, g_n
+    return Y_np1, g_n, multistep_rhs
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -134,7 +136,7 @@ h_x = -1.0
 h_y = 1.0
 epsilon = 0.5
 
-##trimodal Lorenz96 parameters
+##trimodal Lorenz96 parameters (!NEEDS dt=1e-3)
 #K = 32
 #J = 16
 #F = 18.0
@@ -143,11 +145,11 @@ epsilon = 0.5
 #epsilon = 0.5
 
 dt = 0.01
-t_end = 1000.0
+t_end = 100.0
 t = np.arange(0.0, t_end, dt)
 
 make_movie = False
-store = True
+store = False
 
 #equilibrium initial condition for X, zero IC for Y
 X_n = np.ones(K)*F
@@ -155,10 +157,10 @@ X_n[10] += 0.01 #add small perturbation to 10th variable
 
 #initial condition small-scale variables
 Y_n = np.zeros([J, K])
-B = h_x*np.mean(Y_n, axis=0)
+B_n = h_x*np.mean(Y_n, axis=0)
 
 #initial right-hand sides
-f_nm1 = rhs_X(X_n, B)
+f_nm1 = rhs_X(X_n, B_n)
 
 g_nm1 = np.zeros([J, K])
 for k in range(K):
@@ -167,21 +169,31 @@ for k in range(K):
 #allocate memory for solutions
 sol = np.zeros([t.size, K])
 sol_Y = np.zeros([t.size, J, K])
+pinn_data = np.zeros([t.size, K])
 
 #start time integration
 idx = 0
 for t_i in t:
     #solve small-scale equation
-    Y_n, g_nm1 = step_Y(Y_n, g_nm1, X_n)
+    Y_np1, g_n, multistep_n = step_Y(Y_n, g_nm1, X_n)
+    
     #solve large-scale equation
-    X_n, f_nm1 = step_X(X_n, f_nm1, B)
+    X_np1, f_n = step_X(X_n, f_nm1, B_n)
+    
     #compute SGS term
-    B = h_x*np.mean(Y_n, axis=0)
+    B_n = h_x*np.mean(Y_n, axis=0)
 
     #store solutions
-    sol[idx, :] = X_n
-    sol_Y[idx, :] = Y_n
+    sol[idx, :] = X_np1
+    sol_Y[idx, :] = Y_np1
+    pinn_data[idx, :] = h_x*np.mean(multistep_n, axis=0)
     idx += 1
+    
+    #update variables
+    X_n = X_np1
+    Y_n = Y_np1
+    f_nm1 = f_n
+    g_nm1 = g_n
     
     if np.mod(idx, 1000) == 0:
         print('t =', np.around(t_i, 1), 'of', t_end)
