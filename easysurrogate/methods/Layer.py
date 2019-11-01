@@ -90,7 +90,7 @@ class Layer:
             
     #compute the output of the current layer in one shot using matrix - vector/matrix multiplication    
     def compute_output(self, batch_size):
-        
+     
         a = xp.dot(self.W.T, self.layer_rm1.h)
        
         #apply activation to a
@@ -160,10 +160,12 @@ class Layer:
                 [o_i.append(xp.exp(h_i)/xp.sum(np.exp(h_i), axis=0)) for h_i in np.split(h, self.n_softmax)]
                 o_i = np.concatenate(o_i)
                 self.L_i = -xp.sum(y_i*np.log(o_i))
+            elif self.loss == 'user_def_squared':
+                self.L_i = (y_i - self.udh)**2
             else:
                 print('Cannot compute loss: unknown loss and/or activation function')
                 import sys; sys.exit()
-        
+                
     #compute the gradient of the output wrt the activation functions of this layer
     def compute_delta_hy(self):
 
@@ -212,7 +214,11 @@ class Layer:
                 o_i = np.concatenate(o_i)
                 
                 #(see eq. 3.22 of Aggarwal book)
-                self.delta_ho = o_i - y_i               
+                self.delta_ho = o_i - y_i
+                
+            elif self.loss == 'user_def_squared':
+                
+                self.delta_ho = -0.03*(y_i - self.udh) 
                 
         else:
             print('Can only initialize delta_oo in output layer')
@@ -266,4 +272,9 @@ class Layer:
             else:
                 for i in range(self.n_neurons):
                     self.neurons[i].compute_delta_ho()
-                    self.neurons[i].compute_L_grad_W()            
+                    self.neurons[i].compute_L_grad_W()
+                    
+    #set a user defined h (alongside the layer output h). To be used in the
+    #output layer for custom loss functions and lossd function gradients
+    def set_user_defined_h(self, h):
+        self.udh = h

@@ -145,11 +145,11 @@ epsilon = 0.5
 #epsilon = 0.5
 
 dt = 0.01
-t_end = 100.0
+t_end = 1000.0
 t = np.arange(0.0, t_end, dt)
 
 make_movie = False
-store = False
+store = True
 
 #equilibrium initial condition for X, zero IC for Y
 X_n = np.ones(K)*F
@@ -186,7 +186,7 @@ for t_i in t:
     #store solutions
     sol[idx, :] = X_np1
     sol_Y[idx, :] = Y_np1
-    pinn_data[idx, :] = h_x*np.mean(multistep_n, axis=0)
+    pinn_data[idx, :] = B_n + h_x*np.mean(multistep_n, axis=0)
     idx += 1
     
     #update variables
@@ -220,7 +220,7 @@ post_proc = es.methods.Post_Processing()
 if store == True:
     #store results
     samples = {}
-    QoI = {'X_data', 'B_data'}
+    QoI = {'X_data', 'B_data', 'pinn_data'}
     
     for q in QoI:
         samples[q] = eval(q)

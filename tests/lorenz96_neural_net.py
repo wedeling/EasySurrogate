@@ -123,24 +123,24 @@ from itertools import chain
 
 plt.close('all')
 
-##Lorenz96 parameters
-#K = 18
-#J = 20
-#F = 10.0
-#h_x = -1.0
-#h_y = 1.0
-#epsilon = 0.5
-
-#trimodal Lorenz96 parameters
-K = 32
-J = 16
-F = 18.0
-h_x = -3.2
+#Lorenz96 parameters
+K = 18
+J = 20
+F = 10.0
+h_x = -1.0
 h_y = 1.0
 epsilon = 0.5
 
+##trimodal Lorenz96 parameters
+#K = 32
+#J = 16
+#F = 18.0
+#h_x = -3.2
+#h_y = 1.0
+#epsilon = 0.5
+
 dt = 0.01
-t_end = 1000.0
+t_end = 10.0
 t = np.arange(0.0, t_end, dt)
 
 make_movie = False
@@ -150,8 +150,8 @@ train = True
 HOME = os.path.abspath(os.path.dirname(__file__))
 
 #load training data
-store_ID = 'L96_trimodal'
-QoI = ['X_data', 'B_data']
+store_ID = 'L96'
+QoI = ['X_data', 'B_data', 'pinn_data']
 h5f = h5py.File(HOME + '/samples/' + store_ID + '.hdf5', 'r')
 
 print('Loading', HOME + '/samples/' + store_ID + '.hdf5')
@@ -162,17 +162,25 @@ for q in QoI:
     
 feat_eng = es.methods.Feature_Engineering(X_data, B_data)
 
-lags = [[1, 10, 20, 30]]
+lags = [[1]]
 max_lag = np.max(list(chain(*lags)))
 
 X_train, y_train = feat_eng.lag_training_data([X_data], lags = lags)
 
 if train:
     
-    surrogate = es.methods.ANN(X=X_train, y=y_train, n_layers=3, n_neurons=128, n_out=K,
-                               activation='hard_tanh', batch_size=256,
-                               lamb=0.01, decay_step=10**5, decay_rate=0.9, standardize_X=False,
-                               standardize_y=False)
+#    #standard regression neural net
+#    surrogate = es.methods.ANN(X=X_train, y=y_train, n_layers=3, n_neurons=128, n_out=K,
+#                               activation='hard_tanh', batch_size=256,
+#                               lamb=0.01, decay_step=10**5, decay_rate=0.9, standardize_X=False,
+#                               standardize_y=False, save=False)
+
+    #physics-informed neural net
+    surrogate = es.methods.ANN(X=X_train, y=y_train, n_layers=2, n_neurons=256, n_out=K, alpha=0.001,
+                               activation='tanh', batch_size=512, loss='user_def_squared',
+                               lamb=0.01, decay_step=10**4, decay_rate=0.9, standardize_X=False,
+                               standardize_y=False, save=True)
+
     surrogate.train(20000, store_loss=True)
 else:    
     surrogate = es.methods.ANN(X=X_train, y=y_train)
@@ -180,6 +188,27 @@ else:
 
 surrogate.get_n_weights()
 
+fig = plt.figure()
+ax = fig.add_subplot(111)
+c1 = dt*h_x*1.5
+c2 = dt*h_x*0.5
+B_n = B_data[1]
+g_surr_nm1 = surrogate.feed_forward(X_train[0].reshape([1,K])).flatten()
+
+B_surr = np.zeros([X_train.shape[0]-1, K])
+
+for i in range(1, X_train.shape[0]):
+    g_surr_n = surrogate.feed_forward(X_train[i].reshape([1,K])).flatten()
+    B_np1 = B_n + c1*g_surr_n - c2*g_surr_nm1
+    B_surr[i-1, :] = B_np1
+    
+    B_n = B_np1
+    g_surr_nm1 = g_surr_n    
+
+ax.plot(B_surr[:, 0], 'ro')
+ax.plot(B_data[:, 0], 'b+')
+
+"""
 for i in range(max_lag):
     feat_eng.append_feat([X_data[i]], max_lag)
 
@@ -275,5 +304,5 @@ ax.plot(dom, C_sol, label='ANN')
 leg = plt.legend(loc=0)
 
 plt.tight_layout()
-
+"""
 plt.show()

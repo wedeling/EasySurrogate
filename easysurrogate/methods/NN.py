@@ -152,7 +152,7 @@ class ANN:
               
         #set the features at the output of in the input layer
         if self.bias == False:
-            self.layers[0].h = X_i
+            self.layers[0].h = X_i.T
         else:
             self.layers[0].h = xp.ones([self.n_in + 1, batch_size])
             self.layers[0].h[0:self.n_in, :] = X_i.T
@@ -230,8 +230,22 @@ class ANN:
     #update step of the weights
     def batch(self, X_i, y_i, alpha=0.001, beta1=0.9, beta2=0.999, t=0):
         
-        self.feed_forward(X_i, self.batch_size)
-        self.back_prop(y_i)
+        if self.loss != 'user_def_squared':
+            self.feed_forward(X_i, self.batch_size)
+            self.back_prop(y_i)
+        else:
+            #select a random training instance (X, y)
+            rand_idx = np.random.randint(1, self.n_train-1, self.batch_size)
+            X_n = self.X[rand_idx]
+            X_nm1 = self.X[rand_idx - 1]
+            y_n = self.y[rand_idx].T
+#            y_np1 = self.y[rand_idx + 1].T
+
+            h_nm1 = self.feed_forward(X_nm1, self.batch_size)
+            h_n = self.feed_forward(X_n, self.batch_size)
+            self.layers[-1].set_user_defined_h(0.015*h_n - 0.005*h_nm1)
+            
+            self.back_prop(y_n)
 
         #if Jacobian regularization is used
         if self.phi > 0.0:
