@@ -1,11 +1,12 @@
 from .Neuron import Neuron
 import numpy as np
+from scipy.stats import norm
 
 class Layer:
     
     def __init__(self, n_neurons, r, n_layers, activation, loss, bias = False, \
                  neuron_based_compute = False, batch_size = 1, lamb = 0.0, on_gpu = False, \
-                 n_softmax = 0):
+                 n_softmax = 0, **kwargs):
         
         self.n_neurons = n_neurons
         self.r = r
@@ -34,6 +35,12 @@ class Layer:
         self.h = xp.zeros([n_neurons + self.n_bias, batch_size])
         self.delta_ho = xp.zeros([n_neurons, batch_size])
         self.grad_Phi = xp.zeros([n_neurons, batch_size])
+        
+        #if a kernel mixture network is used and this is the last layer: 
+        #store kernel means and standard deviations
+        if loss == 'kvm' and r == n_layers:
+            self.kernel_means = kwargs['kernel_means']
+            self.kernel_stds = kwargs['kernel_stds']
         
     #connect this layer to its neighbors
     def meet_the_neighbors(self, layer_rm1, layer_rp1):
@@ -98,6 +105,11 @@ class Layer:
             self.h = a
         elif self.activation == 'relu':
             self.h = xp.maximum(xp.zeros([a.shape[0], a.shape[1]]), a)
+        elif self.activation == 'leaky_relu':
+            aa = xp.copy(a)
+            idx_lt0 = np.where(a <= 0.0)
+            aa[idx_lt0[0], idx_lt0[1]] *= -0.01
+            self.h = aa
         elif self.activation == 'tanh':
             self.h = xp.tanh(a)
         elif self.activation == 'hard_tanh':
@@ -131,6 +143,10 @@ class Layer:
             idx_lt0 = xp.where(self.a < 0.0)
             self.grad_Phi = xp.ones([self.n_neurons, self.batch_size])
             self.grad_Phi[idx_lt0[0], idx_lt0[1]] = 0.0
+        elif self.activation == 'leaky_relu':
+            idx_lt0 = xp.where(self.a < 0.0)
+            self.grad_Phi = xp.ones([self.n_neurons, self.batch_size])
+            self.grad_Phi[idx_lt0[0], idx_lt0[1]] = -0.01            
         elif self.activation == 'tanh':
             self.grad_Phi = 1.0 - self.h[0:self.n_neurons]**2
         elif self.activation == 'hard_tanh':
@@ -159,9 +175,17 @@ class Layer:
                 o_i = []
                 [o_i.append(xp.exp(h_i)/xp.sum(np.exp(h_i), axis=0)) for h_i in np.split(h, self.n_softmax)]
                 o_i = np.concatenate(o_i)
+                
                 self.L_i = -xp.sum(y_i*np.log(o_i))
-            elif self.loss == 'user_def_squared':
-                self.L_i = (y_i - self.udh)**2
+            elif self.loss == 'kvm':
+                #NOTE: norm.pdf will not be on the GPU
+                self.kernels = norm.pdf(y_i, self.kernel_means, self.kernel_stds)
+                self.sum_kernels_w = xp.sum(self.h*self.kernels, axis=0)
+                self.sum_w = xp.sum(self.h, axis=0)
+                self.L_i = -xp.log(self.sum_kernels_w) + xp.log(self.sum_w)
+            elif self.loss == 'custom':
+                alpha = 0.95
+                self.L_i = (1.0-alpha)*(y_i - h)**2 + alpha*(h + self.udv)**2
             else:
                 print('Cannot compute loss: unknown loss and/or activation function')
                 import sys; sys.exit()
@@ -200,7 +224,7 @@ class Layer:
 
                 self.delta_ho = -y_i*xp.exp(-y_i*h)/(1.0 + xp.exp(-y_i*h))
 
-            elif self.loss == 'squared' and self.activation == 'linear':
+            elif self.loss == 'squared':# and self.activation == 'linear':
                 
                 self.delta_ho = -2.0*(y_i - h)
                 
@@ -216,9 +240,18 @@ class Layer:
                 #(see eq. 3.22 of Aggarwal book)
                 self.delta_ho = o_i - y_i
                 
-            elif self.loss == 'user_def_squared':
+            elif self.loss == 'kvm':
                 
-                self.delta_ho = -0.03*(y_i - self.udh) 
+                self.delta_ho = -self.kernels/self.sum_kernels_w + 1.0/self.sum_w
+                
+            elif self.loss == 'custom':
+                
+                alpha = 0.95
+                self.delta_ho = -2.0*(1.0-alpha)*(y_i - h) + 2.0*alpha*(h + self.udv)
+
+#                #Raissi's example                
+#                dt = 0.01; 
+#                self.delta_ho = -3.0*dt*(y_i - self.udh) 
                 
         else:
             print('Can only initialize delta_oo in output layer')
@@ -274,7 +307,7 @@ class Layer:
                     self.neurons[i].compute_delta_ho()
                     self.neurons[i].compute_L_grad_W()
                     
-    #set a user defined h (alongside the layer output h). To be used in the
-    #output layer for custom loss functions and lossd function gradients
-    def set_user_defined_h(self, h):
-        self.udh = h
+    #set a user defined value. To be used in the
+    #output layer for custom loss functions and loss function gradients
+    def set_user_defined_value(self, val):
+        self.udv = val

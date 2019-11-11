@@ -145,7 +145,7 @@ epsilon = 0.5
 #epsilon = 0.5
 
 dt = 0.01
-t_end = 1000.0
+t_end = 25.0
 t = np.arange(0.0, t_end, dt)
 
 make_movie = False
@@ -167,8 +167,10 @@ for k in range(K):
     g_nm1[:, k] = rhs_Y_k(Y_n, X_n[k], k)
 
 #allocate memory for solutions
-sol = np.zeros([t.size, K])
-sol_Y = np.zeros([t.size, J, K])
+X_data = np.zeros([t.size, K])
+Y_data = np.zeros([t.size, J, K])
+rhs_Y = np.zeros([t.size, J, K])
+B_data = np.zeros([t.size, K])
 pinn_data = np.zeros([t.size, K])
 
 #start time integration
@@ -177,6 +179,8 @@ for t_i in t:
     #solve small-scale equation
     Y_np1, g_n, multistep_n = step_Y(Y_n, g_nm1, X_n)
     
+    rhs_Y[idx,:] = multistep_n
+    
     #solve large-scale equation
     X_np1, f_n = step_X(X_n, f_nm1, B_n)
     
@@ -184,16 +188,17 @@ for t_i in t:
     B_n = h_x*np.mean(Y_n, axis=0)
 
     #store solutions
-    sol[idx, :] = X_np1
-    sol_Y[idx, :] = Y_np1
-    pinn_data[idx, :] = B_n + h_x*np.mean(multistep_n, axis=0)
+    X_data[idx, :] = X_np1
+    Y_data[idx, :] = Y_np1
+    pinn_data[idx, :] = h_x*np.mean(multistep_n, axis=0)
+    B_data[idx, :] = B_n
     idx += 1
-    
+   
     #update variables
-    X_n = X_np1
-    Y_n = Y_np1
-    f_nm1 = f_n
-    g_nm1 = g_n
+    X_n = np.copy(X_np1)
+    Y_n = np.copy(Y_np1)
+    f_nm1 = np.copy(f_n)
+    g_nm1 = np.copy(g_n)
     
     if np.mod(idx, 1000) == 0:
         print('t =', np.around(t_i, 1), 'of', t_end)
@@ -210,9 +215,6 @@ ax.set_rgrids([-10, 0, 10], labels=['', '', ''])[0][1]
 ax.legend(loc=1)
 
 burn = 500
-X_data = sol[burn:, :]
-Y_data = sol_Y[burn:, :]
-B_data = h_x*np.mean(sol_Y[burn:, :], axis=1)
 
 post_proc = es.methods.Post_Processing()
 
@@ -220,10 +222,11 @@ post_proc = es.methods.Post_Processing()
 if store == True:
     #store results
     samples = {}
-    QoI = {'X_data', 'B_data', 'pinn_data'}
+    QoI = {'X_data', 'B_data', 'pinn_data', 'Y_data', 'rhs_Y'}
     
     for q in QoI:
-        samples[q] = eval(q)
+        print('Saving', q)
+        samples[q] = eval(q)[burn:,:]
 
     post_proc.store_samples_hdf5(samples)
 
@@ -239,8 +242,8 @@ if make_movie:
     anim = FuncAnimation(fig, animate, frames=np.arange(0, sol.shape[0], 100), blit=True)    
     anim.save('demo.gif', writer='imagemagick')
 else:
-    ax.plot(theta, np.append(sol[-1, :], sol[-1, 0]), label='X')    
-    ax.plot(theta_Y, np.append(sol_Y[-1, :].flatten(), sol_Y[-1, 0, 0]), label='Y')    
+    ax.plot(theta, np.append(X_data[-1, :], X_data[-1, 0]), label='X')    
+    ax.plot(theta_Y, np.append(Y_data[-1, :].flatten(), Y_data[-1, 0, 0]), label='Y')    
     
 #plot X_k vs B_k
 fig = plt.figure()

@@ -2,6 +2,7 @@ import numpy as np
 import pickle
 import tkinter as tk
 from tkinter import filedialog
+from scipy.stats import rv_discrete
 
 from .Layer import Layer
 
@@ -12,7 +13,7 @@ class ANN:
                  param_specific_learn_rate = True, loss = 'squared', activation = 'tanh', activation_out = 'linear', \
                  n_softmax = 0, n_layers = 2, n_neurons = 16, \
                  bias = True, neuron_based_compute = False, batch_size = 1, save = True, load=False, name='ANN', on_gpu = False, \
-                 standardize_X = True, standardize_y = True, aux_vars = {}):
+                 standardize_X = True, standardize_y = True, aux_vars = {}, **kwargs):
 
         #the features
         self.X = X
@@ -131,7 +132,7 @@ class ANN:
         #add the output layer
         self.layers.append(Layer(self.n_out, self.n_layers, self.n_layers, self.activation_out, \
                                  self.loss, batch_size=batch_size, lamb = lamb, n_softmax=n_softmax, \
-                                 neuron_based_compute = neuron_based_compute, on_gpu=on_gpu))
+                                 neuron_based_compute = neuron_based_compute, on_gpu=on_gpu, **kwargs))
         
         self.connect_layers()
         
@@ -182,7 +183,23 @@ class ANN:
         
         #return values and index of highest probability
         return o_i.flatten(), idx_max
-   
+    
+    #treat the neural net output as a discrete random variable, return 
+    #output idx drawn from the discrete distribution
+    def sample_pmf(self, X_i, feed_forward = True):
+        
+        if feed_forward:
+            #feed forward features X_i
+            h = self.feed_forward(X_i, batch_size = 1)
+        else:
+            h = self.layers[-1].h
+
+        #construct the pmf
+        pmf = rv_discrete(values=(self.out_idx, h/np.sum(h)))
+        
+        #return random output idx
+        return pmf.rvs()
+        
     #compute jacobian of the neural net via back propagation
     def jacobian(self, X_i, batch_size = 1, feed_forward = False):
         
@@ -230,20 +247,26 @@ class ANN:
     #update step of the weights
     def batch(self, X_i, y_i, alpha=0.001, beta1=0.9, beta2=0.999, t=0):
         
-        if self.loss != 'user_def_squared':
+        if self.loss != 'custom':
             self.feed_forward(X_i, self.batch_size)
             self.back_prop(y_i)
         else:
             #select a random training instance (X, y)
-            rand_idx = np.random.randint(1, self.n_train-1, self.batch_size)
+            rand_idx = np.random.randint(1, self.n_train, self.batch_size)
             X_n = self.X[rand_idx]
             X_nm1 = self.X[rand_idx - 1]
             y_n = self.y[rand_idx].T
-#            y_np1 = self.y[rand_idx + 1].T
+            
+            constaint_n = self.aux_vars['constraint'][rand_idx-1].T
 
             h_nm1 = self.feed_forward(X_nm1, self.batch_size)
-            h_n = self.feed_forward(X_n, self.batch_size)
-            self.layers[-1].set_user_defined_h(0.015*h_n - 0.005*h_nm1)
+            self.feed_forward(X_n, self.batch_size)
+            
+            self.layers[-1].set_user_defined_value(-h_nm1 + constaint_n)
+            
+            #for Raissi's example
+#            dt = 0.01; 
+#            self.layers[-1].set_user_defined_value(dt*(1.5*h_n - 0.5*h_nm1))
             
             self.back_prop(y_n)
 

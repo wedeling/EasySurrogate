@@ -71,12 +71,12 @@ if train:
                                lamb=0.0, decay_step=10**4, decay_rate=0.9, standardize_X=False,
                                standardize_y=False, save=False, bias=True)
 
-    surrogate.train(30000, store_loss=True)
+    surrogate.train(10000, store_loss=True)
 else:    
     surrogate = es.methods.ANN(X=X_train, y=y_train)
     surrogate.load_ANN()
 
-n_steps = 2*X_train.shape[0]
+n_steps = X_train.shape[0]
 sol = np.zeros([n_steps, 2])
 sol[0, :] = X_train[0]
 
