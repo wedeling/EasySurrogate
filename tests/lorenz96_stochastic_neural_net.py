@@ -27,6 +27,40 @@ def rhs_X(X, B):
         
     return rhs_X
 
+def rhs_Y_k(Y, X_k, k):
+    """
+    Compute the right-hand side of Y for fixed k
+    
+    Parameters:
+        - Y (array, size (J,K)): small scale variables
+        - X_k (float): large scale variable X_k
+        - k (int): index k
+        
+    returns:
+        - rhs_Yk (array, size J): right-hand side of Y for fixed k
+    """
+    
+    rhs_Yk = np.zeros(J)
+    
+    #first treat boundary cases (j=1, j=J-1, j=J-2)
+    if k > 0:
+        idx = k-1
+    else:
+        idx = K-1
+    rhs_Yk[0] = (Y[1, k]*(Y[J-1, idx] - Y[2, k]) - Y[0, k] + h_y*X_k)/epsilon
+
+    if k < K-1:
+        idx = k+1
+    else:
+        idx = 0
+    rhs_Yk[J-2] = (Y[J-1, k]*(Y[J-3, k] - Y[0, idx]) - Y[J-2, k] + h_y*X_k)/epsilon
+    rhs_Yk[J-1] = (Y[0, idx]*(Y[J-2, k] - Y[1, idx]) - Y[J-1, k] + h_y*X_k)/epsilon
+
+    #treat interior points
+    for j in range(1, J-2):
+        rhs_Yk[j] = (Y[j+1, k]*(Y[j-1, k] - Y[j+2, k]) - Y[j, k] + h_y*X_k)/epsilon
+        
+    return rhs_Yk
 
 def step_X(X_n, f_nm1, B):
     """
@@ -49,6 +83,28 @@ def step_X(X_n, f_nm1, B):
     X_np1 = X_n + dt*(3.0/2.0*f_n - 0.5*f_nm1)
     
     return X_np1, f_n
+
+def step_Y(Y_n, g_nm1, X_n):
+    """
+    Time step for Y equation, using Adams-Bashforth
+    
+    Parameters:
+        - Y_n (array, size (J,K)): small scale variables at time n
+        - g_nm1 (array, size (J, K)): right-hand side of Y at time n-1
+        - X_n (array, size K): large scale variables at time n
+        
+    Returns:
+        - Y_np1 (array, size (J,K)): small scale variables at time n+1
+        - g_nm1 (array, size (J,K)): right-hand side of Y at time n
+    """
+
+    g_n = np.zeros([J, K])
+    for k in range(K):
+        g_n[:, k] = rhs_Y_k(Y_n, X_n[k], k)
+        
+    Y_np1 = Y_n + dt*(3.0/2.0*g_n - 0.5*g_nm1)
+    
+    return Y_np1, g_n
 
 def wave_variance(X):
     
@@ -83,8 +139,8 @@ epsilon = 0.5
 #h_y = 1.0
 #epsilon = 0.5
 
-dt = 0.01
-t_end = 1000.0
+dt = 0.001
+t_end = 100.0
 t = np.arange(0.0, t_end, dt)
 
 make_movie = False
@@ -95,7 +151,7 @@ HOME = os.path.abspath(os.path.dirname(__file__))
 
 #load training data
 store_ID = 'L96'
-QoI = ['X_data', 'B_data', 'pinn_data', 'Y_data', 'rhs_Y']
+QoI = ['X_data', 'B_data', 'Y_data']
 h5f = h5py.File(HOME + '/samples/' + store_ID + '.hdf5', 'r')
 
 print('Loading', HOME + '/samples/' + store_ID + '.hdf5')
@@ -104,33 +160,40 @@ for q in QoI:
     print(q)
     vars()[q] = h5f[q][:]
 
-feat_eng = es.methods.Feature_Engineering(X_data, B_data)
+n_bins = 10
+sampler = es.methods.SimpleBin(B_data, n_bins)
 
 lags = [[1, 10, 20, 30]]
 max_lag = np.max(list(chain(*lags)))
 
+feat_eng = es.methods.Feature_Engineering(X_data, sampler.bin_data)
 X_train, y_train = feat_eng.lag_training_data([X_data], lags = lags)
 
 if train:
-   
     #standard regression neural net
-    surrogate = es.methods.ANN(X=X_train, y=y_train, n_layers=3, n_neurons=128, n_out=K,
-                               activation='hard_tanh', activation_out='linear',
-                               batch_size=256, loss = 'squared',
-                               lamb=0.0, decay_step=10**5, decay_rate=0.9, standardize_X=False,
-                               standardize_y=False, save=True)
+    surrogate = es.methods.ANN(X=X_train, y=y_train, n_layers=4, n_neurons=256, 
+                               n_softmax = K, n_out=K*n_bins, loss = 'cross_entropy',
+                               activation='hard_tanh', batch_size=512,
+                               lamb=0.0, decay_step=10**4, decay_rate=0.9, 
+                               standardize_X=False, standardize_y=False, save=True)
     
-    surrogate.train(10000, store_loss = True)
+    surrogate.train(50000, store_loss = True)
+
+    surrogate.get_n_weights()
+    surrogate.compute_misclass_softmax()
+
 else:    
     surrogate = es.methods.ANN(X=X_train, y=y_train)
     surrogate.load_ANN()
 
-surrogate.get_n_weights()
-
-n_feat = surrogate.n_in
-
 for i in range(max_lag):
     feat_eng.append_feat([X_data[i]], max_lag)
+    
+####################
+# make predictions #
+####################
+    
+n_feat = surrogate.n_in
 
 X_n = X_data[max_lag]
 B_n = B_data[max_lag]
@@ -150,7 +213,8 @@ for t_i in t[max_lag:]:
 
     #ANN SGS solve
     feat = feat_eng.get_feat_history()
-    B_n = surrogate.feed_forward(feat.reshape([1, feat.size])).flatten()
+    _, bin_idx = surrogate.get_softmax(feat.reshape([1, n_feat]))
+    B_n = sampler.draw(bin_idx)
     
     #solve large-scale equation
     X_np1, f_n = step_X(X_n, f_nm1, B_n)
@@ -166,6 +230,47 @@ for t_i in t[max_lag:]:
     
     if np.mod(idx, 1000) == 0:
         print('t =', np.around(t_i, 1), 'of', t_end)
+
+#######################
+# plot classification #
+#######################
+
+plot_class = False
+if plot_class:
+    predicted_bin = np.zeros(surrogate.n_train)
+    
+    for i in range(surrogate.n_train):
+        o_i, idx_max = surrogate.get_softmax(surrogate.X[i].reshape([1, surrogate.n_in]))
+        predicted_bin[i] = idx_max[0]
+    
+    fig = plt.figure(figsize=[10,5])
+    ax1 = fig.add_subplot(121, title=r'data classification', xlabel=r'$X_i$', ylabel=r'$X_j$')
+    ax2 = fig.add_subplot(122, title=r'neural net prediction', xlabel=r'$X_i$', ylabel=r'$X_j$')
+    
+    for j in range(n_bins):
+        idx_pred = np.where(predicted_bin == j)[0]
+        idx_data = np.where(y_train[:, 0:n_bins][:, j] == 1.0)[0]
+        ax1.plot(surrogate.X[idx_data, 0], surrogate.X[idx_data, 1], 'o', label=r'$\mathrm{bin}\;'+str(j+1)+'$')
+        ax2.plot(surrogate.X[idx_pred, 0], surrogate.X[idx_pred, 1], 'o')
+    
+    ax1.legend()
+    plt.tight_layout()
+
+plot_1way = True
+if plot_1way:
+
+    B_surr = np.zeros(X_train.shape[0])
+    idx = 0
+    
+    for X_i in X_train:
+        _, bin_idx = surrogate.get_softmax(X_i.reshape([1, n_feat]))
+        B_n = sampler.draw(bin_idx)
+        B_surr[idx] = B_n[0]
+        
+        idx += 1
+               
+    plt.plot(B_surr)
+    plt.plot(B_data[:, 0])
     
 #############   
 # Plot PDEs #
