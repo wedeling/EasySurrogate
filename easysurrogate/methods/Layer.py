@@ -30,6 +30,10 @@ class Layer:
             self.n_bias = 1
         else:
             self.n_bias = 0
+            
+        #the number of classes in each softmax layer
+        if self.n_softmax > 0:
+            self.n_bins = int(self.n_neurons/self.n_softmax)
        
         self.a = xp.zeros([n_neurons, batch_size])
         self.h = xp.zeros([n_neurons + self.n_bias, batch_size])
@@ -41,6 +45,10 @@ class Layer:
         if loss == 'kvm' and r == n_layers:
             self.kernel_means = kwargs['kernel_means']
             self.kernel_stds = kwargs['kernel_stds']
+            
+        #if parametric relu activation is used, set the value of a (x if x>0; a*x otherwise)
+        if activation == 'parametric_relu':
+            self.relu_a = kwargs['relu_a']
         
     #connect this layer to its neighbors
     def meet_the_neighbors(self, layer_rm1, layer_rp1):
@@ -108,8 +116,15 @@ class Layer:
         elif self.activation == 'leaky_relu':
             aa = xp.copy(a)
             idx_lt0 = np.where(a <= 0.0)
-            aa[idx_lt0[0], idx_lt0[1]] *= -0.01
+            aa[idx_lt0[0], idx_lt0[1]] *= 0.01
             self.h = aa
+        elif self.activation == 'parametric_relu':
+            aa = xp.copy(a)
+            idx_lt0 = np.where(a <= 0.0)
+            aa[idx_lt0[0], idx_lt0[1]] *= self.relu_a
+            self.h = aa
+        elif self.activation == 'softplus':
+            self.h = xp.log(1.0 + xp.exp(a))
         elif self.activation == 'tanh':
             self.h = xp.tanh(a)
         elif self.activation == 'hard_tanh':
@@ -146,7 +161,13 @@ class Layer:
         elif self.activation == 'leaky_relu':
             idx_lt0 = xp.where(self.a < 0.0)
             self.grad_Phi = xp.ones([self.n_neurons, self.batch_size])
-            self.grad_Phi[idx_lt0[0], idx_lt0[1]] = -0.01            
+            self.grad_Phi[idx_lt0[0], idx_lt0[1]] = 0.01            
+        elif self.activation == 'parametric_relu':
+            idx_lt0 = xp.where(self.a < 0.0)
+            self.grad_Phi = xp.ones([self.n_neurons, self.batch_size])
+            self.grad_Phi[idx_lt0[0], idx_lt0[1]] = self.relu_a
+        elif self.activation == 'softplus':
+            self.grad_Phi = 1.0/(1.0 + xp.exp(-self.a))
         elif self.activation == 'tanh':
             self.grad_Phi = 1.0 - self.h[0:self.n_neurons]**2
         elif self.activation == 'hard_tanh':
@@ -173,16 +194,56 @@ class Layer:
                 #compute values of the softmax layer
                 #more than 1 (independent) softmax layer can be placed at the output
                 o_i = []
-                [o_i.append(xp.exp(h_i)/xp.sum(np.exp(h_i), axis=0)) for h_i in np.split(h, self.n_softmax)]
-                o_i = np.concatenate(o_i)
+                [o_i.append(xp.exp(h_i)/xp.sum(np.exp(h_i), axis=0)) for h_i in xp.split(h, self.n_softmax)]
+                self.o_i = xp.concatenate(o_i)
                 
                 self.L_i = -xp.sum(y_i*np.log(o_i))
-            elif self.loss == 'kvm':
+            elif self.loss == 'kvm' and self.n_softmax == 0:
                 #NOTE: norm.pdf will not be on the GPU
                 self.kernels = norm.pdf(y_i, self.kernel_means, self.kernel_stds)
                 self.sum_kernels_w = xp.sum(self.h*self.kernels, axis=0)
                 self.sum_w = xp.sum(self.h, axis=0)
                 self.L_i = -xp.log(self.sum_kernels_w) + xp.log(self.sum_w)
+            elif self.loss == 'kvm' and self.n_softmax > 0:
+#                #compute values of the softmax layer
+#                #more than 1 (independent) softmax layer can be placed at the output
+#                o_i = []
+#                [o_i.append(xp.exp(h_i)/xp.sum(np.exp(h_i), axis=0)) for h_i in np.split(h, self.n_softmax)]
+#                self.o_i = np.concatenate(o_i)
+#                
+#                #in the case of multiple softmax layers, spread the data over the layers
+#                #(constant value per softmax)
+#                if self.n_softmax > 1:
+#                    y_i = np.repeat(y_i, self.n_bins, axis=0)
+#                
+#                self.kernels = norm.pdf(y_i, self.kernel_means, self.kernel_stds)
+#
+#                self.sum_kernels_Pr = xp.sum(self.o_i*self.kernels, axis=0)
+#
+#                self.L_i = -xp.log(self.sum_kernels_Pr)
+
+                if y_i.ndim == 1:
+                    y_i = y_i.reshape([1, y_i.size])
+                
+                self.L_i = 0.0
+                idx = 0
+                self.o_i = []
+                self.p_i = []
+                for h_i in np.split(h, self.n_softmax):
+                    o_i = xp.exp(h_i)/xp.sum(np.exp(h_i), axis=0)
+                    K_i = norm.pdf(y_i[idx], self.kernel_means, self.kernel_stds)
+                    p_i = K_i*xp.exp(h_i)/xp.sum(K_i*xp.exp(h_i), axis=0)
+#                    p_i = K_i*o_i/xp.sum(K_i*o_i, axis=0)
+                    self.L_i += -xp.log(np.sum(o_i*K_i, axis=0))
+                    
+                    self.o_i.append(o_i)
+                    self.p_i.append(p_i)                    
+                    
+                    idx += 1
+                    
+                self.o_i = xp.concatenate(self.o_i)
+                self.p_i = xp.concatenate(self.p_i)
+                
             elif self.loss == 'custom':
                 alpha = 0.95
                 self.L_i = (1.0-alpha)*(y_i - h)**2 + alpha*(h + self.udv)**2
@@ -233,17 +294,22 @@ class Layer:
                 
                 #compute values of the softmax layer
                 #more than 1 (independent) softmax layer can be placed at the output
-                o_i = []
-                [o_i.append(xp.exp(h_i)/xp.sum(np.exp(h_i), axis=0)) for h_i in np.split(h, self.n_softmax)]
-                o_i = np.concatenate(o_i)
+#                o_i = []
+#                [o_i.append(xp.exp(h_i)/xp.sum(np.exp(h_i), axis=0)) for h_i in np.split(h, self.n_softmax)]
+#                o_i = np.concatenate(o_i)
                 
                 #(see eq. 3.22 of Aggarwal book)
-                self.delta_ho = o_i - y_i
+                self.delta_ho = self.o_i - y_i
                 
-            elif self.loss == 'kvm':
+            elif self.loss == 'kvm' and self.n_softmax == 0:
                 
                 self.delta_ho = -self.kernels/self.sum_kernels_w + 1.0/self.sum_w
                 
+            elif self.loss == 'kvm' and self.n_softmax > 0:
+                
+#                self.delta_ho = self.o_i*(1.0 - self.kernels/self.sum_kernels_Pr) 
+                self.delta_ho = self.o_i - self.p_i
+                                
             elif self.loss == 'custom':
                 
                 alpha = 0.95
