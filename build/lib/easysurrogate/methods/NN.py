@@ -169,36 +169,52 @@ class ANN:
         return self.layers[-1].h
     
     #get the output of the softmax layer (so far: only works for batch_size = 1)
-    def get_softmax(self, X_i):
-        
-        h = self.feed_forward(X_i, batch_size = 1)
-        
-        #soft max values
-        o_i = []
-        [o_i.append(xp.exp(h_i)/xp.sum(np.exp(h_i), axis=0)) for h_i in np.split(h, self.n_softmax)]
-        o_i = np.concatenate(o_i)
-        
-        #find max index for each softmax layer independently
-        idx_max = np.array([np.argmax(o_j) for o_j in np.split(o_i, self.n_softmax)])
-        
-        #return values and index of highest probability
-        return o_i.flatten(), idx_max
-    
-    #treat the neural net output as a discrete random variable, return 
-    #output idx drawn from the discrete distribution
-    def sample_pmf(self, X_i, feed_forward = True):
+    def get_softmax(self, X_i, feed_forward = True):
         
         if feed_forward:
             #feed forward features X_i
             h = self.feed_forward(X_i, batch_size = 1)
         else:
             h = self.layers[-1].h
-
-        #construct the pmf
-        pmf = rv_discrete(values=(self.out_idx, h/np.sum(h)))
         
-        #return random output idx
-        return pmf.rvs()
+        #soft max values
+#        o_i = []
+#        [o_i.append(xp.exp(h_i)/xp.sum(np.exp(h_i), axis=0)) for h_i in np.split(h, self.n_softmax)]
+#        o_i = np.concatenate(o_i)
+        
+        probs = []
+        idx_max = []
+        rvs = []        
+        
+        for h_i in np.split(h, self.n_softmax):
+            o_i = xp.exp(h_i)/xp.sum(np.exp(h_i), axis=0)
+            probs.append(o_i)
+            
+            idx_max.append(np.argmax(o_i))
+        
+            pmf = rv_discrete(values=(np.arange(o_i.size), o_i))
+            rvs.append(pmf.rvs())
+            
+#        o_i = np.concatenate(o_i)
+                
+        #return values and index of highest probability and random samples from pmf
+        return probs, idx_max, rvs
+    
+#    #treat the neural net output as a discrete random variable, return 
+#    #output idx drawn from the discrete distribution
+#    def sample_pmf(self, X_i, feed_forward = True):
+#        
+#        if feed_forward:
+#            #feed forward features X_i
+#            h = self.feed_forward(X_i, batch_size = 1)
+#        else:
+#            h = self.layers[-1].h
+#
+#        #construct the pmf
+#        pmf = rv_discrete(values=(self.out_idx, h/np.sum(h)))
+#        
+#        #return random output idx
+#        return pmf.rvs()
         
     #compute jacobian of the neural net via back propagation
     def jacobian(self, X_i, batch_size = 1, feed_forward = False):
@@ -529,4 +545,5 @@ class ANN:
         print('Activation hidden layers =', self.activation)
         print('Activation output layer =', self.activation_out)
         print('On GPU =', self.on_gpu)
+        self.get_n_weights()
         print('===============================')
