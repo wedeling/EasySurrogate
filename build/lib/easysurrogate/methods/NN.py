@@ -191,7 +191,7 @@ class ANN:
             probs.append(o_i)
             
             idx_max.append(np.argmax(o_i))
-        
+       
             pmf = rv_discrete(values=(np.arange(o_i.size), o_i))
             rvs.append(pmf.rvs())
             

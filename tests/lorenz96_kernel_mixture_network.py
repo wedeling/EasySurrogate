@@ -7,13 +7,14 @@ def animate(s):
 #    for lnum,line in enumerate(lines):
 #        line.set_data(xlist[lnum], ylist[lnum]) # set data for each line separately. 
 
-    for i in range(n_softmax):
+    I = 2
+    for i in range(I):
         lines[2*i].set_data(dom, kde[s, :, i]/np.max(kde[s, :, i]))
         lines[2*i + 1].set_data(y_train[s, i], 0.0)
         
-    lines[2*n_softmax].set_data(dom_full, pdf_full)
-    lines[2*n_softmax+1].set_data(np.arange(s), y_train[0:s, 0])
-    lines[2*n_softmax+2].set_data(np.arange(s), samples[0:s, 0])
+    lines[2*I].set_data(dom_full, pdf_full)
+    lines[2*I+1].set_data(np.arange(s), y_train[0:s, 0])
+    lines[2*I+2].set_data(np.arange(s), samples[0:s, 0])
 
     ax2.relim()            # reset intern limits of the current axes
     ax2.autoscale_view()   # reset axes limits
@@ -172,7 +173,7 @@ epsilon = 0.5
 #epsilon = 0.5
 
 dt = 0.01
-t_end = 100.0
+t_end = 1000.0
 t = np.arange(0.0, t_end, dt)
 
 make_movie = True
@@ -192,18 +193,17 @@ for q in QoI:
     print(q)
     vars()[q] = h5f[q][:]
 
-n_bins = 14
+n_bins = 20
 
-lags = [[1, 10, 20, 30]]
+lags = [[1]]
 max_lag = np.max(list(chain(*lags)))
 
-I = 10;
 feat_eng = es.methods.Feature_Engineering(X_data, B_data)
 X_train, y_train = feat_eng.lag_training_data([X_data], lags = lags)
 
 #anchor points kernels
 x_p = np.linspace(np.min(y_train), np.max(y_train), n_bins+1)
-sigma_j = np.linspace(0.2, 0.2, 1)
+sigma_j = np.linspace(0.2, 0.3, 3)
 kernel_props = np.array(list(chain(product(x_p, sigma_j))))
 
 mu = kernel_props[:, 0]
@@ -217,17 +217,15 @@ n_bins = kernel_props.shape[0]
 #if n_softmax > 1:
 #    mu = np.tile(mu, n_softmax)
 #    sigma = np.tile(sigma, n_softmax)
-    
+
 if train:
-    #standard regression neural net
-    surrogate = es.methods.ANN(X=X_train, y=y_train, n_layers=6, n_neurons=128, 
+    surrogate = es.methods.ANN(X=X_train, y=y_train, n_layers=3, n_neurons=256, 
                                n_out=n_bins*n_softmax, loss='kvm', bias = True,
                                activation='tanh', activation_out='linear', n_softmax=n_softmax,
                                batch_size=512,
                                lamb=0.0, decay_step=10**4, decay_rate=0.9, alpha=0.001,
-                               standardize_X=False, standardize_y=False, save=False,
+                               standardize_X=False, standardize_y=False, save=True,
                                kernel_means = mu, kernel_stds = sigma, relu_a = -0.01)
-
     surrogate.train(10000, store_loss = True)
 
 else:    
@@ -241,17 +239,20 @@ if make_movie:
     dom_full, pdf_full = post_proc.get_pde(y_train[0:-1:10])
     
     n_kde = 100
+    n_train = np.int(0.1*X_train.shape[0])
     dom = np.linspace(np.min(B_data), np.max(B_data), n_kde)
     n_feat = surrogate.n_in
     kde = np.zeros([X_train.shape[0], n_kde, n_softmax])    
-    samples = np.zeros([X_train.shape[0], n_softmax])
+    samples = np.zeros([n_train, n_softmax])
     
-    for i in range(X_train.shape[0]):
+    for i in range(n_train):
         #w = surrogate.feed_forward(X_train[i].reshape([1, n_feat]))
         w, _, idx = surrogate.get_softmax(X_train[i].reshape([1, n_feat]))
         for j in range(n_softmax):
             kde[i, :, j] = compute_kde(dom, w[j])
-            samples[i, j] = norm.rvs(mu[idx[j]], sigma[idx[j]])        
+            samples[i, j] = norm.rvs(mu[idx[j]], sigma[idx[j]])
+        if np.mod(i, 1000) == 0:
+            print('i =', i, 'of', n_train)
     
     fig = plt.figure(figsize=[10,5])
     ax = fig.add_subplot(121)
@@ -267,7 +268,7 @@ if make_movie:
 #    symbols = ['-b', 'ro', '--k']
 #    labels = [r'$\mathrm{Kernel\;Mixture\;Network}\;p\left(B_k|{\bf X}\right)$', 
 #              r'$\mathrm{SGS\;data}\;B_k$', '']
-    for i in range(n_softmax):
+    for i in range(2):
         lobj = ax.plot([], [], '-')[0]
         lines.append(lobj)
         lobj = ax.plot([], [], 'o')[0]
@@ -288,15 +289,7 @@ if make_movie:
     Writer = writers['ffmpeg']
     writer = Writer(fps=15, bitrate=1800)
     anim.save('demo.mp4', writer = writer)
-else:
-    idx = 10
-    n_kde = 100
-    dom = np.linspace(np.min(B_data), np.max(B_data), n_kde)
-    w = surrogate.feed_forward(X_train[idx].reshape([1, surrogate.n_in]))
-    kde = compute_kde(dom, w)
-    plt.plot(dom, kde)
-    plt.plot(y_train[idx], 0, 'ro')
-"""
+
 for i in range(max_lag):
     feat_eng.append_feat([X_data[i]], max_lag)
     
@@ -324,8 +317,9 @@ for t_i in t[max_lag:]:
 
     #ANN SGS solve
     feat = feat_eng.get_feat_history()
-    idx = surrogate.sample_pmf(feat.reshape([1, n_feat]))
-    B_n = norm.rvs(mu[idx], sigma[idx])  
+    _, _, rvs = surrogate.get_softmax(feat.reshape([1, n_feat]))
+    B_n = norm.rvs(mu[rvs], sigma[rvs])  
+    B_n = B_n.flatten()
     
     #solve large-scale equation
     X_np1, f_n = step_X(X_n, f_nm1, B_n)
@@ -399,5 +393,5 @@ ax.plot(dom, C_sol, label='ANN')
 leg = plt.legend(loc=0)
 
 plt.tight_layout()
-"""
+
 plt.show()
