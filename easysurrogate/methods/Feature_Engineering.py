@@ -14,7 +14,7 @@ class Feature_Engineering:
         self.X = X
         self. y = y
         
-    def standardize_data(self):
+    def standardize_data(self, X_only = False, y_only = False):
         """
         Normalize the training data
         """
@@ -25,7 +25,15 @@ class Feature_Engineering:
         y_mean = np.mean(self.y, axis = 0)
         y_std = np.std(self.y, axis = 0)
         
-        return (self.X - X_mean)/X_std, (self.y - y_mean)/y_std
+        if X_only:
+            self.X = (self.X - X_mean)/X_std
+        elif y_only:
+            self.y = (self.y - y_mean)/y_std
+        else:
+            self.X = (self.X - X_mean)/X_std
+            self.y = (self.y - y_mean)/y_std
+       
+        return self.X, self.y
 
     def lag_training_data(self, X, lags):
         """    
