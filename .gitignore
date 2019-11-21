@@ -2,3 +2,5 @@
 ./tests/samples
 ./tests/figures
 ./easysurrogate.egg-info
+dist/
+build/
