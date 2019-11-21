@@ -15,6 +15,10 @@ class ANN:
                  bias = True, neuron_based_compute = False, batch_size = 1, save = True, load=False, name='ANN', on_gpu = False, \
                  standardize_X = True, standardize_y = True, aux_vars = {}, **kwargs):
 
+        if load == True:
+            self.load_ANN()
+            return
+
         #the features
         self.X = X
         
