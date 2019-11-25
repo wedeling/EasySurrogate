@@ -1,5 +1,8 @@
 import numpy as np
 from itertools import chain
+import h5py
+import tkinter as tk
+from tkinter import filedialog
 
 """
 ===============================================================================
@@ -9,31 +12,99 @@ CLASS FOR FEATURE ENGINEERING SUBROUTINES
 
 class Feature_Engineering:
         
-    def __init__(self, X, y):
+    def __init__(self, feat_names, target, **kwargs):
         
-        self.X = X
-        self. y = y
+        root = tk.Tk()
+        root.withdraw()
+        file_path = filedialog.askopenfilename(title="Open data file", 
+                                               filetypes=(('HDF5 files', '*.hdf5'), 
+                                                          ('All files', '*.*')))
+        h5f = h5py.File(file_path, 'r')
+        
+        X  = []
+        for i in range(len(feat_names)):
+            #convert to numpy array via '[()]'
+            X_i = h5f[feat_names[i]][()]
+            #add to list
+            X.append(X_i)
+        
+        y = h5f[target][()]
+        
+        h5f = h5py.File(file_path, 'r')
+        print('Loaded', h5f.keys())
+        
+        if 'X_symmetry' in kwargs:
+            self.X_symmetry = kwargs['X_symmetry']
+        else:
+            self.X_symmetry = np.zeros(len(X), dtype=bool)
+
+        if 'y_symmetry' in kwargs:
+            self.y_symmetry = kwargs['y_symmetry']
+        else:
+            self.y_symmetry = np.zeros(len(y), dtype=bool)
+        
+        self.X = self.flatten_data(X, self.X_symmetry)
+        self.y = self.flatten_data([y], self.y_symmetry)
         
     def standardize_data(self, X_only = False, y_only = False):
         """
         Normalize the training data
         """
         
-        X_mean = np.mean(self.X, axis = 0)
-        X_std = np.std(self.X, axis = 0)
+        self.X_mean = np.mean(self.X, axis = 0)
+        self.X_std = np.std(self.X, axis = 0)
         
-        y_mean = np.mean(self.y, axis = 0)
-        y_std = np.std(self.y, axis = 0)
+        self.y_mean = np.mean(self.y, axis = 0)
+        self.y_std = np.std(self.y, axis = 0)
         
         if X_only:
-            self.X = (self.X - X_mean)/X_std
+            self.X = (self.X - self.X_mean)/self.X_std
         elif y_only:
-            self.y = (self.y - y_mean)/y_std
+            self.y = (self.y - self.y_mean)/self.y_std
         else:
-            self.X = (self.X - X_mean)/X_std
-            self.y = (self.y - y_mean)/y_std
+            self.X = (self.X - self.X_mean)/self.X_std
+            self.y = (self.y - self.y_mean)/self.y_std
        
         return self.X, self.y
+    
+    def flatten_data(self, data, symmetric):
+       
+        """
+        Flatten the data from n_samples x n_1 x n_2 x .. to
+        n_samples x n, where n = prod(n_i)
+        
+        Parameters:
+            data: a list of numpy arrays of shape n_samples x n_1 x n_2 x ..
+            symmetric: a list of bools. If data[i] contains a symmetric array
+                       and symmetric[i] = True, only the upper triangular part
+                       of the array is used as a feature (or as data)
+                       
+        Returns:
+            An array of flattened data, shape = n_samples, N, where N is the 
+            sum of all flattened shapes in data
+        """
+        
+        #the number of samples, featutes must have shape n_samples, shape_sample
+        n_samples = data[0].shape[0]
+        
+        #temp array to store the features
+        feats = []
+        
+        for i in range(len(data)):
+            
+            #if symmetric only take upper triangular part
+            if symmetric[i]:
+                idx0, idx1 = np.triu_indices(data[i].shape[1])
+                data[i] = data[i][:, idx0, idx1]
+                
+            #the number of data points per sample = product of sample shape
+            n_in  = int(np.prod(data[i].shape[1:]))
+            
+            #add feature to list in shape n_samples x n_in
+            feats.append(data[i].reshape([n_samples, n_in]))
+            
+        #concatenate all features into a single of shape n_samples x n_features
+        return np.concatenate(feats, axis=1)
 
     def lag_training_data(self, X, lags):
         """    
