@@ -205,22 +205,6 @@ class Layer:
                 self.sum_w = xp.sum(self.h, axis=0)
                 self.L_i = -xp.log(self.sum_kernels_w) + xp.log(self.sum_w)
             elif self.loss == 'kvm' and self.n_softmax > 0:
-#                #compute values of the softmax layer
-#                #more than 1 (independent) softmax layer can be placed at the output
-#                o_i = []
-#                [o_i.append(xp.exp(h_i)/xp.sum(np.exp(h_i), axis=0)) for h_i in np.split(h, self.n_softmax)]
-#                self.o_i = np.concatenate(o_i)
-#                
-#                #in the case of multiple softmax layers, spread the data over the layers
-#                #(constant value per softmax)
-#                if self.n_softmax > 1:
-#                    y_i = np.repeat(y_i, self.n_bins, axis=0)
-#                
-#                self.kernels = norm.pdf(y_i, self.kernel_means, self.kernel_stds)
-#
-#                self.sum_kernels_Pr = xp.sum(self.o_i*self.kernels, axis=0)
-#
-#                self.L_i = -xp.log(self.sum_kernels_Pr)
 
                 if y_i.ndim == 1:
                     y_i = y_i.reshape([1, y_i.size])
@@ -231,7 +215,7 @@ class Layer:
                 self.p_i = []
                 for h_i in np.split(h, self.n_softmax):
                     o_i = xp.exp(h_i)/xp.sum(np.exp(h_i), axis=0)
-                    K_i = norm.pdf(y_i[idx], self.kernel_means, self.kernel_stds)
+                    K_i = norm.pdf(y_i[idx], self.kernel_means[idx], self.kernel_stds[idx])
                     p_i = K_i*xp.exp(h_i)/xp.sum(K_i*xp.exp(h_i), axis=0)
 #                    p_i = K_i*o_i/xp.sum(K_i*o_i, axis=0)
                     self.L_i += -xp.log(np.sum(o_i*K_i, axis=0))
