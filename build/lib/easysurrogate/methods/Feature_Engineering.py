@@ -45,6 +45,7 @@ class Feature_Engineering:
         
         self.X = self.flatten_data(X, self.X_symmetry)
         self.y = self.flatten_data([y], self.y_symmetry)
+        self.h5f = h5f
         
     def standardize_data(self, X_only = False, y_only = False):
         """
@@ -259,3 +260,23 @@ class Feature_Engineering:
             idx += 1
             
         return np.array(list(chain(*X_i)))
+    
+    def recursive_moments(self, X_np1, mu_n, sigma2_n, N):
+        """
+        recursive formulas for the mean and variance
+        
+        Parameters:
+            X_np1: the new sample of X 
+            mu_n: the mean of X computed from all previous samples
+            sigma2_n: the variance of X computed from all previous samples
+            N: the total number of samples (until n)
+            
+        Returns:
+            mu_np1: the mean, updated with sample X_np1
+            sigma2_np1: the variance, updated with sample X_np1
+        """    
+        mu_np1 = mu_n + (X_np1 - mu_n)/(N+1)
+    
+        sigma2_np1 = sigma2_n + mu_n**2 - mu_np1**2 + (X_np1**2 - sigma2_n - mu_n**2)/(N+1)
+    
+        return mu_np1, sigma2_np1
