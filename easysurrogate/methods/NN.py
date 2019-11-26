@@ -192,7 +192,12 @@ class ANN:
             
             idx_max.append(np.argmax(o_i))
        
-            pmf = rv_discrete(values=(np.arange(o_i.size), o_i))
+            try:
+                pmf = rv_discrete(values=(np.arange(o_i.size), o_i))
+            except ValueError:
+                print("Sum pk is not one:", np.sum(o_i))
+                import sys; sys.exit()
+                
             rvs.append(pmf.rvs())
             
 #        o_i = np.concatenate(o_i)
