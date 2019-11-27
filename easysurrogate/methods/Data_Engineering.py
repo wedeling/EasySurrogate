@@ -10,10 +10,9 @@ CLASS FOR FEATURE ENGINEERING SUBROUTINES
 ===============================================================================
 """
 
-class Feature_Engineering:
+class Data_Engineering:
         
-    def __init__(self, feat_names, target, **kwargs):
-       
+    def __init__(self, **kwargs):
 
         if 'file_path' in kwargs:
             file_path = kwargs['file_path']
@@ -24,18 +23,25 @@ class Feature_Engineering:
                                                    filetypes=(('HDF5 files', '*.hdf5'), 
                                                               ('All files', '*.*')))
         h5f = h5py.File(file_path, 'r')
+
+        h5f = h5py.File(file_path, 'r')
+        print('Loaded', h5f.keys())
+
+        self.h5f = h5f
+        
+    def set_training_data(self, feat_names, target, **kwargs):
+        """
+        Select which features and what target data to use from the hdf5 file
+        """
         
         X  = []
         for i in range(len(feat_names)):
             #convert to numpy array via '[()]'
-            X_i = h5f[feat_names[i]][()]
+            X_i = self.h5f[feat_names[i]][()]
             #add to list
             X.append(X_i)
         
-        y = h5f[target][()]
-        
-        h5f = h5py.File(file_path, 'r')
-        print('Loaded', h5f.keys())
+        y = self.h5f[target][()]
         
         if 'X_symmetry' in kwargs:
             self.X_symmetry = kwargs['X_symmetry']
@@ -49,7 +55,6 @@ class Feature_Engineering:
         
         self.X = self.flatten_data(X, self.X_symmetry)
         self.y = self.flatten_data([y], self.y_symmetry)
-        self.h5f = h5f
         
     def standardize_data(self, X_only = False, y_only = False):
         """

@@ -377,15 +377,15 @@ class ANN:
             
             #store the loss value 
             if store_loss == True:
-                l = 0.0
-                for k in range(self.n_out):
-                    if self.neuron_based_compute:
-                        l += self.layers[-1].neurons[k].L_i
-                    else:
-                        l += self.layers[-1].L_i
+#                l = 0.0
+#                for k in range(self.n_out):
+#                    if self.neuron_based_compute:
+#                        l += self.layers[-1].neurons[k].L_i
+#                    else:
+#                        l += self.layers[-1].L_i
                 
                 if np.mod(i, 1000) == 0:
-                    loss_i = xp.mean(l)
+                    loss_i = xp.linalg.norm(self.layers[-1].L_i)
                     print('Batch', i, 'learning rate', alpha ,'loss:', loss_i)
                     #note: appending a cupy value to a list is inefficient - if done every iteration
                     #it will slow down executing significantly
