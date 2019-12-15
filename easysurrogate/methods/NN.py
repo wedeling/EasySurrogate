@@ -188,15 +188,13 @@ class ANN:
         
         for h_i in np.split(h, self.n_softmax):
             o_i = xp.exp(h_i)/xp.sum(np.exp(h_i), axis=0)
+            o_i = o_i/np.sum(o_i)
+
             probs.append(o_i)
             
             idx_max.append(np.argmax(o_i))
        
-            try:
-                pmf = rv_discrete(values=(np.arange(o_i.size), o_i))
-            except ValueError:
-                print("Sum pk is not one:", np.sum(o_i))
-                import sys; sys.exit()
+            pmf = rv_discrete(values=(np.arange(o_i.size), o_i.flatten()))
                 
             rvs.append(pmf.rvs())
             
@@ -506,23 +504,28 @@ class ANN:
         
         #compute misclassification error of the training set if X and y are not set
         if y == []:
-            print('Computing number of misclassifications wrt training data...')
+            print('Computing number of misclassifications wrt all training data.')
             X = self.X
             y = self.y
         else:
-            print('Computing number of misclassifications wrt test data...')
+            print('Computing number of misclassifications wrt test data (',
+                  X.shape[0], 'samples)')
             
         n_samples = X.shape[0]
         
         for i in range(n_samples):
-            o_i, max_idx_ann = self.get_softmax(X[i].reshape([1, self.n_in]))
+            o_i, max_idx_ann, _ = self.get_softmax(X[i].reshape([1, self.n_in]))
          
             max_idx_data = np.array([np.where(y_j == 1.0)[0] for y_j in np.split(y[i], self.n_softmax)])
 
             for j in range(self.n_softmax):
                 if max_idx_ann[j] != max_idx_data[j]:
                     n_misclass[j] += 1
-                
+                    
+            if np.mod(i, 1000) == 0:
+                print('Computing misclassification error:', 
+                      np.around(i/n_samples*100, 1), '%')                
+
         print('Number of misclassifications =', n_misclass)
         print('Misclassification percentage =', n_misclass/n_samples*100, '%')
         

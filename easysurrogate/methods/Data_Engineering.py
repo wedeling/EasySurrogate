@@ -3,6 +3,7 @@ from itertools import chain
 import h5py
 import tkinter as tk
 from tkinter import filedialog
+from scipy import stats
 
 """
 ===============================================================================
@@ -29,19 +30,36 @@ class Data_Engineering:
 
         self.h5f = h5f
         
-    def set_training_data(self, feat_names, target, **kwargs):
+    def set_training_data(self, feats, targets, **kwargs):
         """
         Select which features and what target data to use from the hdf5 file
+        
+        Parameters:
+            - feats (list): list of features, If strings, it is assumed that
+            these are keys for the h5py data file. Otherwise, feats[i] will
+            be used as the i-th feature.
+            
+            - targets: the target data, i.e. that what must be learned. The 
+            same convetion as for feats applies.
         """
         
         X  = []
-        for i in range(len(feat_names)):
-            #convert to numpy array via '[()]'
-            X_i = self.h5f[feat_names[i]][()]
+        for i in range(len(feats)):
+            if type(feats[i]) == str:
+                #convert to numpy array via '[()]'
+                X_i = self.h5f[feats[i]][()]
+            else:
+                X_i = feats[i]
             #add to list
             X.append(X_i)
-        
-        y = self.h5f[target][()]
+            
+        y = []
+        for i in range(len(targets)):
+            if type(targets[i]) == str:
+                y_i = self.h5f[targets[i]][()]
+            else:
+                y_i = targets[i]
+            y.append(y_i)
         
         if 'X_symmetry' in kwargs:
             self.X_symmetry = kwargs['X_symmetry']
@@ -54,7 +72,7 @@ class Data_Engineering:
             self.y_symmetry = np.zeros(len(y), dtype=bool)
         
         self.X = self.flatten_data(X, self.X_symmetry)
-        self.y = self.flatten_data([y], self.y_symmetry)
+        self.y = self.flatten_data(y, self.y_symmetry)
         
     def standardize_data(self, X_only = False, y_only = False):
         """
@@ -76,6 +94,12 @@ class Data_Engineering:
             self.y = (self.y - self.y_mean)/self.y_std
        
         return self.X, self.y
+    
+    def get_hdf5_file(self):
+        """
+        Returns the h5py file object that was loaded when the object was created
+        """
+        return self.h5f
     
     def flatten_data(self, data, symmetric):
        
@@ -116,7 +140,7 @@ class Data_Engineering:
         #concatenate all features into a single of shape n_samples x n_features
         return np.concatenate(feats, axis=1)
 
-    def lag_training_data(self, X, lags):
+    def set_lagged_training_data(self, X, lags):
         """    
         Create time-lagged supervised training data X, y
         
@@ -199,6 +223,43 @@ class Data_Engineering:
         self.init_feature_history(lags)
                 
         return X_train, y_train
+    
+    def bin_data(self, y, n_bins):
+        """
+        
+        """
+        
+        n_samples = y.shape[0]
+        
+        if y.ndim == 2:
+            n_vars = y.shape[1]
+        else:
+            n_vars = 1
+            y = y.reshape([n_samples, 1])
+        
+        self.binnumbers = np.zeros([n_samples, n_vars]).astype('int')
+        self.r_ip1 = {}
+        self.bins = {}
+        self.binned_data = np.zeros([n_samples, n_bins*n_vars])
+        
+        for i in range(n_vars):
+            
+            self.r_ip1[i] = {}
+                       
+            bins = np.linspace(np.min(y[:, i]), np.max(y[:, i]), n_bins+1)
+            self.bins[i] = bins
+
+            count, _, self.binnumbers[:, i] = \
+            stats.binned_statistic(y[:, i], np.zeros(n_samples), statistic='count', bins=bins)
+        
+            unique_binnumbers = np.unique(self.binnumbers[:, i])
+
+            offset = i*n_bins
+
+            for j in unique_binnumbers:
+                idx = np.where(self.binnumbers[:, i] == j)
+                self.r_ip1[i][j-1] = y[idx, i]
+                self.binned_data[idx, offset + j - 1] = 1.0
     
     def init_feature_history(self, lags):
         """

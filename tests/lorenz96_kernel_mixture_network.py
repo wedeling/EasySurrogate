@@ -180,26 +180,27 @@ make_movie = True
 store = False
 train = True
 
-HOME = os.path.abspath(os.path.dirname(__file__))
+# HOME = os.path.abspath(os.path.dirname(__file__))
 
-#load training data
-store_ID = 'L96'
-QoI = ['X_data', 'B_data', 'Y_data']
-h5f = h5py.File(HOME + '/samples/' + store_ID + '.hdf5', 'r')
+# #load training data
+# store_ID = 'L96'
+# QoI = ['X_data', 'B_data', 'Y_data']
+# h5f = h5py.File(HOME + '/samples/' + store_ID + '.hdf5', 'r')
 
-print('Loading', HOME + '/samples/' + store_ID + '.hdf5')
+# print('Loading', HOME + '/samples/' + store_ID + '.hdf5')
 
-for q in QoI:
-    print(q)
-    vars()[q] = h5f[q][:]
-
-n_bins = 20
+# for q in QoI:
+#     print(q)
+#     vars()[q] = h5f[q][:]
 
 lags = [[1]]
 max_lag = np.max(list(chain(*lags)))
 
-feat_eng = es.methods.Feature_Engineering(X_data, B_data)
-X_train, y_train = feat_eng.lag_training_data([X_data], lags = lags)
+data_eng = es.methods.Data_Engineering()
+data_eng.set_training_data(['X_data'], ['B_data'])
+X_train, y_train = data_eng.set_lagged_training_data(data_eng.X, lags = lags)
+n_bins = 10
+data_eng.bin_data(y_train, n_bins)
 
 #anchor points kernels
 x_p = np.linspace(np.min(y_train), np.max(y_train), n_bins+1)
@@ -219,13 +220,13 @@ n_bins = kernel_props.shape[0]
 #    sigma = np.tile(sigma, n_softmax)
 
 if train:
-    surrogate = es.methods.ANN(X=X_train, y=y_train, n_layers=3, n_neurons=256, 
-                               n_out=n_bins*n_softmax, loss='kvm', bias = True,
-                               activation='tanh', activation_out='linear', n_softmax=n_softmax,
-                               batch_size=512,
-                               lamb=0.0, decay_step=10**4, decay_rate=0.9, alpha=0.001,
-                               standardize_X=False, standardize_y=False, save=True,
-                               kernel_means = mu, kernel_stds = sigma, relu_a = -0.01)
+    surrogate = es.methods.ANN(X=X_train, y=data_eng.binned_data, n_layers=3, n_neurons=256, 
+                              n_out=kernel_props.shape[0]*n_softmax, loss='kvm', bias = True,
+                              activation='relu', activation_out='linear', n_softmax=n_softmax,
+                              batch_size=512,
+                              lamb=0.0, decay_step=10**4, decay_rate=0.9, alpha=0.001,
+                              standardize_X=False, standardize_y=False, save=True,
+                              kernel_means = mu, kernel_stds = sigma)
     surrogate.train(10000, store_loss = True)
 
 else:    
@@ -291,7 +292,7 @@ if make_movie:
     anim.save('demo.mp4', writer = writer)
 
 for i in range(max_lag):
-    feat_eng.append_feat([X_data[i]], max_lag)
+    data_eng.append_feat([X_data[i]], max_lag)
     
 ####################
 # make predictions #
@@ -316,14 +317,14 @@ idx = 0
 for t_i in t[max_lag:]:
 
     #ANN SGS solve
-    feat = feat_eng.get_feat_history()
+    feat = data_eng.get_feat_history()
     _, _, rvs = surrogate.get_softmax(feat.reshape([1, n_feat]))
     B_n = norm.rvs(mu[rvs], sigma[rvs])  
     B_n = B_n.flatten()
     
     #solve large-scale equation
     X_np1, f_n = step_X(X_n, f_nm1, B_n)
-    feat_eng.append_feat([X_np1], max_lag)
+    data_eng.append_feat([X_np1], max_lag)
 
     #store solutions
     sol[idx, :] = X_n
