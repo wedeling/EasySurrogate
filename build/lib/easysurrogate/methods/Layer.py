@@ -197,7 +197,7 @@ class Layer:
                 [o_i.append(xp.exp(h_i)/xp.sum(np.exp(h_i), axis=0)) for h_i in xp.split(h, self.n_softmax)]
                 self.o_i = xp.concatenate(o_i)
                 
-                self.L_i = -xp.sum(y_i*np.log(o_i))
+                self.L_i = -xp.sum(y_i*xp.log(self.o_i))
             elif self.loss == 'kvm' and self.n_softmax == 0:
                 #NOTE: norm.pdf will not be on the GPU
                 self.kernels = norm.pdf(y_i, self.kernel_means, self.kernel_stds)
