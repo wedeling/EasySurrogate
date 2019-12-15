@@ -1,4 +1,6 @@
-./tests/saved_neural_nets
-./tests/samples
-./tests/figures
-./easysurrogate.egg-info
+tests/saved_neural_nets
+tests/samples
+tests/figures
+easysurrogate.egg-info
+build/
+dist/
