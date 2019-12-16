@@ -10,9 +10,9 @@ setup(
 
 #    url='https://readthedocs.org/projects/easyvvuq/',
 
-#    author='CCS',
+    author='CWI',
 
-    install_requires=['numpy'],
+    install_requires=['numpy', 'scipy', 'matplotlib', 'h5py'],
 
     packages=find_packages(),
 

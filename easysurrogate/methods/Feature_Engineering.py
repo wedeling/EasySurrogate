@@ -1,5 +1,7 @@
 import numpy as np
 from itertools import chain
+import tkinter as tk
+import h5py
 
 """
 ===============================================================================
@@ -9,10 +11,28 @@ CLASS FOR FEATURE ENGINEERING SUBROUTINES
 
 class Feature_Engineering:
         
-    def __init__(self, X, y):
+    def __init__(self, **kwargs):
         
-        self.X = X
-        self. y = y
+        if 'file_path' in kwargs:
+            file_path = kwargs['file_path']
+        else:
+            root = tk.Tk()
+            root.withdraw()
+            file_path = tk.filedialog.askopenfilename(title="Open data file", 
+                                                      filetypes=(('HDF5 files', '*.hdf5'), 
+                                                                ('All files', '*.*')))
+        h5f = h5py.File(file_path, 'r')
+
+        h5f = h5py.File(file_path, 'r')
+        print('Loaded', h5f.keys())
+
+        self.h5f = h5f
+
+    def get_hdf5_file(self):
+        """
+        Returns the h5py file object that was loaded when the object was created
+        """
+        return self.h5f
         
     def standardize_data(self):
         """
@@ -27,7 +47,7 @@ class Feature_Engineering:
         
         return (self.X - X_mean)/X_std, (self.y - y_mean)/y_std
 
-    def lag_training_data(self, X, lags):
+    def lag_training_data(self, X, y, lags):
         """    
         Create time-lagged supervised training data X, y
         
@@ -53,7 +73,7 @@ class Feature_Engineering:
         max_lag = np.max(lags_flattened)
         
         #total number of data samples
-        n_samples = self.y.shape[0]
+        n_samples = y.shape[0]
         
         #if X is one array, add it to a list anyway
         if type(X) == np.ndarray:
@@ -62,10 +82,10 @@ class Feature_Engineering:
             X = tmp
         
         #compute target data at next (time) step
-        if self.y.ndim == 2:
-            y_train = self.y[max_lag:, :]
-        elif self.y.ndim == 1:
-            y_train = self.y[max_lag:]
+        if y.ndim == 2:
+            y_train = y[max_lag:, :]
+        elif y.ndim == 1:
+            y_train = y[max_lag:]
         else:
             print("Error: y must be of dimension (n_samples, ) or (n_samples, n_outputs)")
             return
@@ -106,6 +126,9 @@ class Feature_Engineering:
             
             X_train = np.append(X_train, X_i, axis=1)
            
+        self.X = X_train
+        self.y = y_train
+            
         #initialize the storage of features
         self.init_feature_history(lags)
                 
