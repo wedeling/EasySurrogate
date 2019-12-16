@@ -188,11 +188,14 @@ class ANN:
         
         for h_i in np.split(h, self.n_softmax):
             o_i = xp.exp(h_i)/xp.sum(np.exp(h_i), axis=0)
+            o_i = o_i/np.sum(o_i)
+
             probs.append(o_i)
             
             idx_max.append(np.argmax(o_i))
        
-            pmf = rv_discrete(values=(np.arange(o_i.size), o_i))
+            pmf = rv_discrete(values=(np.arange(o_i.size), o_i.flatten()))
+                
             rvs.append(pmf.rvs())
             
 #        o_i = np.concatenate(o_i)
@@ -397,7 +400,8 @@ class ANN:
             root = tk.Tk()
             root.withdraw()
             
-            file = filedialog.asksaveasfile(mode='wb', defaultextension=".pickle")
+            file = filedialog.asksaveasfile(title="Save network",
+                                            mode='wb', defaultextension=".pickle")
         else:
             file = open(file_path, 'wb')
 
@@ -415,7 +419,9 @@ class ANN:
             root = tk.Tk()
             root.withdraw()
             
-            file_path = filedialog.askopenfilename()
+            file_path = filedialog.askopenfilename(title="Open neural network", 
+                                           filetypes=(('pickle files', '*.pickle'), 
+                                                      ('All files', '*.*')))
 
         print('Loading ANN from', file_path)
 

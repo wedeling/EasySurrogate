@@ -83,14 +83,6 @@ class Post_Processing:
  
         return C
     
-    def wave_variance(self, X):
-        
-        X_hat = np.fft.fft(X, axis=0)
-        X_hat_mean = np.mean(X_hat, axis=0)
-        X_hat_var = np.mean(np.abs(X_hat - X_hat_mean)**2, axis=0)
-        
-        return X_hat_var
-
     def get_pde(self, X, Npoints = 100):
         """
         Computes a kernel density estimate of the samples in X   
@@ -143,7 +135,8 @@ class Post_Processing:
             root = tk.Tk()
             root.withdraw()
             
-            file = filedialog.asksaveasfile(mode='wb', defaultextension=".hdf5")
+            file = filedialog.asksaveasfile(title="Store simulation results",
+                                            mode='wb', defaultextension=".hdf5")
         else:
             file = open(file_path, 'wb')
     

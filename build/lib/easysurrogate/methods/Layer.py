@@ -205,22 +205,6 @@ class Layer:
                 self.sum_w = xp.sum(self.h, axis=0)
                 self.L_i = -xp.log(self.sum_kernels_w) + xp.log(self.sum_w)
             elif self.loss == 'kvm' and self.n_softmax > 0:
-#                #compute values of the softmax layer
-#                #more than 1 (independent) softmax layer can be placed at the output
-#                o_i = []
-#                [o_i.append(xp.exp(h_i)/xp.sum(np.exp(h_i), axis=0)) for h_i in np.split(h, self.n_softmax)]
-#                self.o_i = np.concatenate(o_i)
-#                
-#                #in the case of multiple softmax layers, spread the data over the layers
-#                #(constant value per softmax)
-#                if self.n_softmax > 1:
-#                    y_i = np.repeat(y_i, self.n_bins, axis=0)
-#                
-#                self.kernels = norm.pdf(y_i, self.kernel_means, self.kernel_stds)
-#
-#                self.sum_kernels_Pr = xp.sum(self.o_i*self.kernels, axis=0)
-#
-#                self.L_i = -xp.log(self.sum_kernels_Pr)
 
                 if y_i.ndim == 1:
                     y_i = y_i.reshape([1, y_i.size])
@@ -291,13 +275,7 @@ class Layer:
                 
             #for multinomial classification
             elif self.loss == 'cross_entropy':
-                
-                #compute values of the softmax layer
-                #more than 1 (independent) softmax layer can be placed at the output
-#                o_i = []
-#                [o_i.append(xp.exp(h_i)/xp.sum(np.exp(h_i), axis=0)) for h_i in np.split(h, self.n_softmax)]
-#                o_i = np.concatenate(o_i)
-                
+         
                 #(see eq. 3.22 of Aggarwal book)
                 self.delta_ho = self.o_i - y_i
                 
