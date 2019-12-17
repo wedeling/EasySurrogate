@@ -4,68 +4,50 @@ from itertools import chain
 
 class SimpleBin:
     
-    def __init__(self, y, n_bins):
+    def __init__(self, feat_eng):
+        """
+        Parameters
+        ----------
+        feat_eng : EasySurrogate Feature_Engineering object
 
-        n_samples = y.shape[0]
+        Returns
+        -------
+        None.
+
+        """
         
-        if y.ndim == 2:
-            n_vars = y.shape[1]
-        else:
-            n_vars = 1
-            y = y.reshape([n_samples, 1])
+        if not hasattr(feat_eng, 'y_binned'):
+            print("Error: feat_eng object does not contain binned data")
+            print("Run the bin_data(..) subroutine of feat_eng")
+            return
         
-        self.n_vars = n_vars
-        self.binnumbers = np.zeros([n_samples, n_vars]).astype('int')
-        self.r_ip1 = {}
-        self.bins = {}
-        self.bin_data = np.zeros([n_samples, n_bins*n_vars])
+        #number of variables
+        self.n_vars = feat_eng.n_vars
         
-        for i in range(n_vars):
+        #dict of the binned data. To access the binned data of bin 1 of the
+        #6-th variable use: y_binned[5][1]
+        self.y_binned = feat_eng.y_binned
             
-            self.r_ip1[i] = {}
-                       
-            bins = np.linspace(np.min(y[:, i]), np.max(y[:, i]), n_bins+1)
-            self.bins[i] = bins
+    def resample(self, bin_idx):
+        """
+        Resamples reference data from bins specified by bin indices bin_idx.
+        Bin indices are integers >= 1.
 
-            count, _, self.binnumbers[:, i] = \
-            stats.binned_statistic(y[:, i], np.zeros(n_samples), statistic='count', bins=bins)
-        
-            unique_binnumbers = np.unique(self.binnumbers[:, i])
+        Parameters
+        ----------
+        bin_idx : array of integers, size (nvars,): the bin indices of each 
+                  output variable
 
-            offset = i*n_bins
+        Returns
+        -------
+        pred : array of floats, size (nvars,): array of resampled reference 
+               data. Samples are drawn from the bins specified by bin_idx
 
-            for j in unique_binnumbers:
-                idx = np.where(self.binnumbers[:, i] == j)
-                self.r_ip1[i][j-1] = y[idx, i]
-                
-                self.bin_data[idx, offset + j - 1] = 1.0
-            
-#        self.mapping = np.zeros(self.n_bins + 2).astype('int')
-#        self.mapping[1:-1] = range(self.n_bins)
-#        self.mapping[-1] = self.n_bins - 1
-            
-    def draw(self, bin_idx):
+        """
         
         pred = np.zeros(self.n_vars)
         
         for i in range(self.n_vars):
-            pred[i] = np.random.choice(self.r_ip1[i][bin_idx[i]][0])
+            pred[i] = np.random.choice(self.y_binned[i][bin_idx[i]][0])
         
         return pred
-    
-#    #append the features supplied to the binning object during simulation to self.feat
-#    #Note: use list to dynamically append, array is very slow
-#    #Note 2: X_i must be of size [n_in, 1], where n_in is 
-#    #the number of input features at a SINGLE time instance
-#    def append_feat(self, X_i):
-#       
-#        for i in range(self.n_feat):
-#            self.feat[i].append(X_i[i])
-#            
-#            #if max number of lagged features is reached, remove first item
-#            if len(self.feat[i]) > self.max_lag:
-#                self.feat[i].pop(0)
-#
-#    #return all time lagged features in self.feat as a 1d array
-#    def get_all_feats(self):
-#        return np.array(list(chain(*self.feat.values())))

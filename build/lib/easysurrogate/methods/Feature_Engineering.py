@@ -2,6 +2,7 @@ import numpy as np
 from itertools import chain
 import tkinter as tk
 import h5py
+from scipy import stats
 
 """
 ===============================================================================
@@ -33,24 +34,24 @@ class Feature_Engineering:
         Returns the h5py file object that was loaded when the object was created
         """
         return self.h5f
-        
+
     def standardize_data(self):
         """
         Normalize the training data
         """
-        
+
         X_mean = np.mean(self.X, axis = 0)
         X_std = np.std(self.X, axis = 0)
         
         y_mean = np.mean(self.y, axis = 0)
         y_std = np.std(self.y, axis = 0)
-        
+
         return (self.X - X_mean)/X_std, (self.y - y_mean)/y_std
 
     def lag_training_data(self, X, y, lags):
         """    
         Create time-lagged supervised training data X, y
-        
+
         Parameters:
             X: features. Either an array of dimension (n_samples, n_features)
                or a list of arrays of dimension (n_samples, n_features)
@@ -67,20 +68,20 @@ class Feature_Engineering:
             row of X_train is one (time) lagged feature vector. Every row of y_train
             is a target vector at the next (time) step
         """
-        
+
         #compute the max number of lags in lags
         lags_flattened = list(chain(*lags))
         max_lag = np.max(lags_flattened)
         
         #total number of data samples
         n_samples = y.shape[0]
-        
+
         #if X is one array, add it to a list anyway
         if type(X) == np.ndarray:
             tmp = []
             tmp.append(X)
             X = tmp
-        
+
         #compute target data at next (time) step
         if y.ndim == 2:
             y_train = y[max_lag:, :]
@@ -89,12 +90,12 @@ class Feature_Engineering:
         else:
             print("Error: y must be of dimension (n_samples, ) or (n_samples, n_outputs)")
             return
-        
+
         #a lag list must be specified for every feature in X
         if len(lags) != len(X):
             print('Error: no specified lags for one of the featutes in X')
             return
-        
+
         #compute the lagged features
         C = []
         idx = 0
@@ -115,25 +116,73 @@ class Feature_Engineering:
                 
         #C is a list of lagged features, turn into a single array X_train
         X_train = C[0]
-        
+
         if X_train.ndim == 1:
             X_train = X_train.reshape([y_train.shape[0], 1])    
-        
+
         for X_i in C[1:]:
             
             if X_i.ndim == 1:
                 X_i = X_i.reshape([y_train.shape[0], 1])
-            
+
             X_train = np.append(X_train, X_i, axis=1)
-           
+
         self.X = X_train
         self.y = y_train
-            
+
         #initialize the storage of features
         self.init_feature_history(lags)
                 
         return X_train, y_train
-    
+
+    def bin_data(self, y, n_bins):
+        """
+        Bin the data y. 
+        
+        Parameters
+        ----------
+        y, array, size (number of samples, number of variables): Data 
+        n_bins, int: Number of (equidistant) bins to be used.
+
+        Returns
+        -------
+        None.
+
+        """
+
+        n_samples = y.shape[0]
+        
+        if y.ndim == 2:
+            n_vars = y.shape[1]
+        else:
+            n_vars = 1
+            y = y.reshape([n_samples, 1])
+
+        self.binnumbers = np.zeros([n_samples, n_vars]).astype('int')
+        self.y_binned = {}
+        self.y_idx_binned = np.zeros([n_samples, n_bins*n_vars])
+        self.bins = {}
+        self.n_vars = n_vars
+
+        for i in range(n_vars):
+            
+            self.y_binned[i] = {}
+                       
+            bins = np.linspace(np.min(y[:, i]), np.max(y[:, i]), n_bins+1)
+            self.bins[i] = bins
+
+            count, _, self.binnumbers[:, i] = \
+            stats.binned_statistic(y[:, i], np.zeros(n_samples), statistic='count', bins=bins)
+
+            unique_binnumbers = np.unique(self.binnumbers[:, i])
+
+            offset = i*n_bins
+
+            for j in unique_binnumbers:
+                idx = np.where(self.binnumbers[:, i] == j)
+                self.y_binned[i][j-1] = y[idx, i]
+                self.y_idx_binned[idx, offset + j - 1] = 1.0
+
     def init_feature_history(self, lags):
         """
         Initialize the feat_history dict. This dict keeps track of the features
@@ -154,21 +203,21 @@ class Feature_Engineering:
 #        #subroutines
 #        if self.max_lag == 0:
 #            self.max_lag = 1
-                
+
         self.feat_history = {}
-        
+
         #the number of feature arrays that make up the total input feature vector
         self.n_feat_arrays = len(lags)
-        
+
         for i in range(self.n_feat_arrays):
             self.feat_history[i] = []
-            
+
     def append_feat(self, X, max_lag):
         """
         Append the feature vectors in X to feat_history dict
-        
+
         Parameters:
-            
+
             X: features. Either an array of dimension (n_samples, n_features)
                or a list of arrays of dimension (n_samples, n_features)
         """
@@ -178,14 +227,14 @@ class Feature_Engineering:
             tmp = []
             tmp.append(X)
             X = tmp
-        
+
         for i in range(self.n_feat_arrays):
             self.feat_history[i].append(X[i])
-                        
+
             #if max number of features is reached, remove first item
             if len(self.feat_history[i]) > max_lag:
                 self.feat_history[i].pop(0)
-                
+
     def get_feat_history(self):
         """
         Return the features from the feat_history dict based on the lags
@@ -195,11 +244,11 @@ class Feature_Engineering:
             X_i: array of lagged features of dimension (feat1.size + feat2.size + ...,) 
         """
         X_i = []
-        
+
         idx = 0
         for i in range(self.n_feat_arrays):
             for lag in self.lags[idx]:
                 X_i.append(self.feat_history[i][-lag])
             idx += 1
-            
+
         return np.array(list(chain(*X_i)))
