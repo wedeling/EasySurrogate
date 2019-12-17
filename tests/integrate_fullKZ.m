@@ -11,6 +11,7 @@ function [z,delT]=integrate_fullKZ(N,M,Nskip)
 % M = number of output datapoints
 % Nskip = output every Nskip integration steps
 % delT = output time step, delT = dt*Nskip = Nskip*0.01/N
+%N = 100, M = 10**4/10**5, Nskip = 100
 
 
 g=1; % coupling and mass scaling (gamma in the paper)

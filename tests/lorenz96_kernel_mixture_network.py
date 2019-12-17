@@ -88,6 +88,18 @@ def animate(i):
 
     ims.append((plt1[0], plt2[0], plt3[0], plt4[0], plt5[0],))
 
+def animate_pred(i):
+    """
+    Generate a movie frame for the coupled system
+    """
+    plt1 = ax1.plot(t[0:i], y_train[0:i, 0], 'ro', label=r'data')
+    plt2 = ax1.plot(t[0:i], B_ann[0:i, 0], 'g', label='random sample')
+
+    if i == 0:
+        ax1.legend(loc=1, fontsize=9)
+
+    ims.append((plt1[0], plt2[0],))
+
 def compute_kde(dom, w):
     
     """
@@ -140,10 +152,11 @@ max_lag = np.max(list(chain(*lags)))
 ###################
 # Simulation flags
 ###################
-train = True       #train the network
-make_movie = True   #make a movie (of the training)
-predict = True      #predict using the learned SGS term
-store = True        #store the prediction results
+train = False           #train the network
+make_movie = False       #make a movie (of the training)
+predict = True         #predict using the learned SGS term
+store = False           #store the prediction results
+make_movie_pred = True  #make a movie (of the prediction)
 
 #####################
 # Network parameters
@@ -389,5 +402,23 @@ if predict:
                    'dom_acf':dom_acf, 'acf_data':R_data, 'acf_ann':R_sol, \
                    'dom_ccf':dom_ccf, 'ccf_data':C_data, 'ccf_ann':C_sol}
         post_proc.store_samples_hdf5(samples)
+        
+    #make a mavie of the coupled system    
+    if make_movie_pred:
+        
+        ims = []
+        fig = plt.figure(figsize=[4,4])
+        ax1 = fig.add_subplot(111, xlabel=r'time', ylabel=r'$B_k$')
+        plt.tight_layout()
+        
+        n_movie = 1000
+        
+        for i in range(n_movie):
+            animate_pred(i)
+            
+        #make a movie of all frame in 'ims'
+        im_ani = animation.ArtistAnimation(fig, ims, interval=80, 
+                                           repeat_delay=2000, blit=True)
+        # im_ani.save('./movies/qsn_pred.mp4')
 
 plt.show()
