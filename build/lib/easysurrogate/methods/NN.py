@@ -176,12 +176,7 @@ class ANN:
             h = self.feed_forward(X_i, batch_size = 1)
         else:
             h = self.layers[-1].h
-        
-        #soft max values
-#        o_i = []
-#        [o_i.append(xp.exp(h_i)/xp.sum(np.exp(h_i), axis=0)) for h_i in np.split(h, self.n_softmax)]
-#        o_i = np.concatenate(o_i)
-        
+       
         probs = []
         idx_max = []
         rvs = []        
@@ -197,27 +192,9 @@ class ANN:
             pmf = rv_discrete(values=(np.arange(o_i.size), o_i.flatten()))
                 
             rvs.append(pmf.rvs())
-            
-#        o_i = np.concatenate(o_i)
                 
         #return values and index of highest probability and random samples from pmf
         return probs, idx_max, rvs
-    
-#    #treat the neural net output as a discrete random variable, return 
-#    #output idx drawn from the discrete distribution
-#    def sample_pmf(self, X_i, feed_forward = True):
-#        
-#        if feed_forward:
-#            #feed forward features X_i
-#            h = self.feed_forward(X_i, batch_size = 1)
-#        else:
-#            h = self.layers[-1].h
-#
-#        #construct the pmf
-#        pmf = rv_discrete(values=(self.out_idx, h/np.sum(h)))
-#        
-#        #return random output idx
-#        return pmf.rvs()
         
     #compute jacobian of the neural net via back propagation
     def jacobian(self, X_i, batch_size = 1, feed_forward = False):
@@ -497,7 +474,7 @@ class ANN:
                 n_misclass += 1
                 
         print('Number of misclassifications = ', n_misclass)
-        
+     
     #compute the number of misclassifications for a sofmax layer
     def compute_misclass_softmax(self, X = [], y = []):
         
@@ -505,23 +482,28 @@ class ANN:
         
         #compute misclassification error of the training set if X and y are not set
         if y == []:
-            print('Computing number of misclassifications wrt training data...')
+            print('Computing number of misclassifications wrt all training data.')
             X = self.X
             y = self.y
         else:
-            print('Computing number of misclassifications wrt test data...')
+            print('Computing number of misclassifications wrt specified data (',
+                  X.shape[0], 'samples)')
             
         n_samples = X.shape[0]
         
         for i in range(n_samples):
-            o_i, max_idx_ann = self.get_softmax(X[i].reshape([1, self.n_in]))
+            o_i, max_idx_ann, _ = self.get_softmax(X[i].reshape([1, self.n_in]))
          
             max_idx_data = np.array([np.where(y_j == 1.0)[0] for y_j in np.split(y[i], self.n_softmax)])
 
             for j in range(self.n_softmax):
                 if max_idx_ann[j] != max_idx_data[j]:
                     n_misclass[j] += 1
-                
+                    
+            if np.mod(i, 1000) == 0:
+                print('Computing misclassification error:', 
+                      np.around(i/n_samples*100, 1), '%')                
+
         print('Number of misclassifications =', n_misclass)
         print('Misclassification percentage =', n_misclass/n_samples*100, '%')
         

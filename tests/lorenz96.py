@@ -1,15 +1,12 @@
-def animate(s):
+"""
+===============================================================================
+Generate Lorenz 96 data for machine learning
+===============================================================================
+"""
 
-    print('Processing frame', s, 'of', sol.shape[0])
-    #add the periodic BC to current sample to create a closed plot
-    xlist = [theta, theta_Y]
-    ylist = [np.append(sol[s, :], sol[s, 0]), np.append(sol_Y[s].flatten(), sol_Y[s][0,0])]
-
-    #for index in range(0,1):
-    for lnum,line in enumerate(lines):
-        line.set_data(xlist[lnum], ylist[lnum]) # set data for each line separately. 
-
-    return lines
+####################################
+# Lorenz 96 subroutines (2 Layers) #
+####################################
 
 def rhs_X(X, B):
     """
@@ -121,14 +118,37 @@ def step_Y(Y_n, g_nm1, X_n):
     
     return Y_np1, g_n, multistep_rhs
 
+#####################
+# Other subroutines #
+#####################
+    
+def animate(s):
+    """
+    Generate a movie frame
+    """
+    plt1 = ax.plot(theta, np.append(X_data[s, :], X_data[s, 0]), 'b', label='X')    
+    plt2 = ax.plot(theta_Y, np.append(Y_data[s, :].flatten(), Y_data[s, 0, 0]), 'r', label='Y')
+    
+    if s == 0:
+        ax.legend(loc=1, fontsize=9)
+        
+    ims.append((plt1[0], plt2[0],))
+
+###############
+# Main program
+###############
+
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
+from matplotlib import animation
 import easysurrogate as es
 
 plt.close('all')
 
+#####################
 #Lorenz96 parameters
+#####################
+
 K = 18
 J = 20
 F = 10.0
@@ -144,12 +164,18 @@ epsilon = 0.5
 #h_y = 1.0
 #epsilon = 0.5
 
+##################
+# Time parameters
+##################
 dt = 0.01
-t_end = 25.0
+t_end = 1000.0
 t = np.arange(0.0, t_end, dt)
 
-make_movie = False
-store = True
+###################
+# Simulation flags
+###################
+make_movie = True     #make a movie
+store = False         #store the prediction results
 
 #equilibrium initial condition for X, zero IC for Y
 X_n = np.ones(K)*F
@@ -169,17 +195,13 @@ for k in range(K):
 #allocate memory for solutions
 X_data = np.zeros([t.size, K])
 Y_data = np.zeros([t.size, J, K])
-rhs_Y = np.zeros([t.size, J, K])
 B_data = np.zeros([t.size, K])
-pinn_data = np.zeros([t.size, K])
 
 #start time integration
 idx = 0
 for t_i in t:
     #solve small-scale equation
     Y_np1, g_n, multistep_n = step_Y(Y_n, g_nm1, X_n)
-    
-    rhs_Y[idx,:] = multistep_n
     
     #solve large-scale equation
     X_np1, f_n = step_X(X_n, f_nm1, B_n)
@@ -190,7 +212,6 @@ for t_i in t:
     #store solutions
     X_data[idx, :] = X_np1
     Y_data[idx, :] = Y_np1
-    pinn_data[idx, :] = h_x*np.mean(multistep_n, axis=0)
     B_data[idx, :] = B_n
     idx += 1
    
@@ -222,7 +243,7 @@ post_proc = es.methods.Post_Processing()
 if store == True:
     #store results
     samples = {}
-    QoI = {'X_data', 'B_data', 'pinn_data', 'Y_data', 'rhs_Y'}
+    QoI = {'X_data', 'B_data'}
     
     for q in QoI:
         print('Saving', q)
@@ -233,14 +254,21 @@ if store == True:
 #if True make a movie of the solution, if not just plot final solution
 if make_movie:
 
-    lines = []
-    legends = ['X', 'Y']
-    for i in range(2):
-        lobj = ax.plot([],[],lw=2, label=legends[i])[0]
-        lines.append(lobj)
+    print('===============================')
+    print('Making movie...')
+
+    ims = []
+    n_movie = 500
     
-    anim = FuncAnimation(fig, animate, frames=np.arange(0, sol.shape[0], 100), blit=True)    
-    anim.save('demo.gif', writer='imagemagick')
+    for s in range(n_movie):
+        animate(s) 
+
+    #make a movie of all frame in 'ims'
+    im_ani = animation.ArtistAnimation(fig, ims, interval=80, 
+                                       repeat_delay=2000, blit=True)
+    im_ani.save('l96.mp4')
+
+    print('done')
 else:
     ax.plot(theta, np.append(X_data[-1, :], X_data[-1, 0]), label='X')    
     ax.plot(theta_Y, np.append(Y_data[-1, :].flatten(), Y_data[-1, 0, 0]), label='Y')    
