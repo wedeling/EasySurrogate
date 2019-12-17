@@ -218,7 +218,7 @@ class Layer:
                     K_i = norm.pdf(y_i[idx], self.kernel_means, self.kernel_stds)
                     p_i = K_i*xp.exp(h_i)/xp.sum(K_i*xp.exp(h_i), axis=0)
 #                    p_i = K_i*o_i/xp.sum(K_i*o_i, axis=0)
-                    self.L_i += -xp.log(np.sum(o_i*K_i, axis=0))
+                    self.L_i = self.L_i - xp.log(np.sum(o_i*K_i, axis=0))
                     
                     self.o_i.append(o_i)
                     self.p_i.append(p_i)                    
