@@ -137,10 +137,10 @@ max_lag = np.max(list(chain(*lags)))
 ###################
 # Simulation flags
 ###################
-train = False        #train the network
-make_movie = False   #make a movie (of the training)
-predict = True       #predict using the learned SGS term
-store = True         #store the prediction results
+train = True        #train the network
+make_movie = True    #make a movie (of the training)
+predict = False      #predict using the learned SGS term
+store = False        #store the prediction results
 
 #####################
 # Network parameters
@@ -175,6 +175,9 @@ if train:
                                activation='hard_tanh', batch_size=512,
                                lamb=0.0, decay_step=10**4, decay_rate=0.9, 
                                standardize_X=False, standardize_y=False, save=True)
+
+    print('===============================')
+    print('Training Quantized Softmax Network...')
 
     #train network for N_inter mini batches
     N_iter = 30000
@@ -232,7 +235,7 @@ if make_movie:
     #make a movie of all frame in 'ims'
     im_ani = animation.ArtistAnimation(fig, ims, interval=80, 
                                        repeat_delay=2000, blit=True)
-    im_ani.save('qsm.mp4')
+    im_ani.save('./movies/qsn.mp4')
 
     print('done')
 
