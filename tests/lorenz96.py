@@ -168,14 +168,14 @@ epsilon = 0.5
 # Time parameters
 ##################
 dt = 0.01
-t_end = 1000.0
+t_end = 100.0
 t = np.arange(0.0, t_end, dt)
 
 ###################
 # Simulation flags
 ###################
 make_movie = True     #make a movie
-store = False         #store the prediction results
+store = True         #store the prediction results
 
 #equilibrium initial condition for X, zero IC for Y
 X_n = np.ones(K)*F
