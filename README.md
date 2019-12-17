@@ -22,8 +22,8 @@ python3 setup.py install --user
 
 The `tests/` folder constains following numerical experiments: 
 
-+ `tests/lorenz96_quantized_softmax.py`:
-+ `tests/lorenz96_kernel_mixture_network.py:`
++ `tests/lorenz96_quantized_softmax.py`: applies a quantized softmax network to learn subgrid-scale term of the Lorenz96 system.
++ `tests/lorenz96_kernel_mixture_network.py:` applies a kernel mixture network to learn subgrid-scale term of the Lorenz96 system.
 
 To execute these, perform the following steps
 
