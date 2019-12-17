@@ -20,7 +20,12 @@ python3 setup.py install --user
 ```
 ## Tutorial
 
-The `tests/` folder constains all numerical experiments. To execute these, perform the following steps
+The `tests/` folder constains following numerical experiments: 
+
++ `tests/lorenz96_quantized_softmax.py`:
++ `tests/lorenz96_kernel_mixture_network.py:`
+
+To execute these, perform the following steps
 
 ### Generate training data
 
