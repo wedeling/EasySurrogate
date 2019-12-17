@@ -24,4 +24,4 @@ The `tests/` folder constains all numerical experiments. To execute these, perfo
 
 ### Generate training data
 
-For the Lorenz96 example, execute `python3 lorenz96.py`. This will generate training pairs that are used in `tests/lotrenz96_quantized_softmax.py` and `tests/lorenz96_kernel_mixture_network.py`. You will be asked for a location to store the data (HDF5 format).
+For the Lorenz96 example, execute `python3 lorenz96.py`. This will generate training pairs that are used in `tests/lorenz96_quantized_softmax.py` and `tests/lorenz96_kernel_mixture_network.py`. You will be asked for a location to store the data (HDF5 format).
