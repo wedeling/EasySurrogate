@@ -192,7 +192,10 @@ if train:
                                lamb=0.0, decay_step=10**4, decay_rate=0.9, alpha=0.001,
                                standardize_X=False, standardize_y=False, save=True,
                                kernel_means = mu, kernel_stds = sigma)
-    
+
+    print('===============================')
+    print('Training Kernel Mixture Network...')
+  
     #train network for N_inter mini batches
     N_iter = 10000
     surrogate.train(N_iter, store_loss = True)
@@ -255,7 +258,7 @@ if make_movie:
     #make a movie of all frame in 'ims'
     im_ani = animation.ArtistAnimation(fig, ims, interval=20, 
                                        repeat_delay=2000, blit=True)
-    im_ani.save('kvm.mp4')
+    im_ani.save('./movies/kvm.mp4')
     
     print('done')
 
