@@ -168,7 +168,7 @@ epsilon = 0.5
 # Time parameters
 ##################
 dt = 0.01
-t_end = 100.0
+t_end = 1000.0
 t = np.arange(0.0, t_end, dt)
 
 ###################
