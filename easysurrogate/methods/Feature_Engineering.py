@@ -35,16 +35,22 @@ class Feature_Engineering:
         """
         return self.h5f
 
-    def standardize_data(self):
+    def standardize_data(self, standardize_X = True, standardize_y = True):
         """
         Normalize the training data
         """
 
-        X_mean = np.mean(self.X, axis = 0)
-        X_std = np.std(self.X, axis = 0)
+        if standardize_X:
+            X_mean = np.mean(self.X, axis = 0)
+            X_std = np.std(self.X, axis = 0)
+        else:
+            X_mean = 0.0; X_std = 1.0
         
-        y_mean = np.mean(self.y, axis = 0)
-        y_std = np.std(self.y, axis = 0)
+        if standardize_y:
+            y_mean = np.mean(self.y, axis = 0)
+            y_std = np.std(self.y, axis = 0)
+        else:
+            y_mean = 0.0; y_std = 1.0
 
         return (self.X - X_mean)/X_std, (self.y - y_mean)/y_std
 

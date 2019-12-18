@@ -2,7 +2,7 @@
 ===============================================================================
 Integrate full Kac-Zwanzig model to generate data
 -------------------------------------------------------------------------------
- Follow set-up from Stuart and Warren, J. Stat. Phys. 1999
+ Follows set-up from Stuart and Warren, J. Stat. Phys. 1999
 ===============================================================================
 """
 

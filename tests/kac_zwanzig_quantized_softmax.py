@@ -1,63 +1,8 @@
 """
 ===============================================================================
-Applies the Quantized Softmax Network to the Lorenz 96 system
+Applies the Quantized Softmax Network to the Kac Zwanzig heat bath model
 ===============================================================================
 """
-
-#########################
-# Lorenz 96 subroutines #
-#########################
-
-def rhs_X(X, B):
-    """
-    Compute the right-hand side of X
-    
-    Parameters:
-        - X (array, size K): large scale variables
-        - B (array, size K): SGS term
-        
-    returns:
-        - rhs_X (array, size K): right-hand side of X
-    """
-    
-    rhs_X = np.zeros(K)
-    
-    #first treat boundary cases (k=1, k=2 and k=K)
-    rhs_X[0] = -X[K-2]*X[K-1] + X[K-1]*X[1] - X[0] + F
-    
-    rhs_X[1] = -X[K-1]*X[0] + X[0]*X[2] - X[1] + F
-    
-    rhs_X[K-1] = -X[K-3]*X[K-2] + X[K-2]*X[0] - X[K-1] + F
-    
-    #treat interior points
-    for k in range(2, K-1):
-        rhs_X[k] = -X[k-2]*X[k-1] + X[k-1]*X[k+1] - X[k] + F
-        
-    rhs_X += B
-        
-    return rhs_X
-
-def step_X(X_n, f_nm1, B):
-    """
-    Time step for X equation, using Adams-Bashforth
-    
-    Parameters:
-        - X_n (array, size K): large scale variables at time n
-        - f_nm1 (array, size K): right-hand side of X at time n-1
-        - B (array, size K): SGS term
-        
-    Returns:
-        - X_np1 (array, size K): large scale variables at time n+1
-        - f_nm1 (array, size K): right-hand side of X at time n
-    """
-    
-    #right-hand side at time n
-    f_n = rhs_X(X_n, B)
-    
-    #adams bashforth
-    X_np1 = X_n + dt*(3.0/2.0*f_n - 0.5*f_nm1)
-    
-    return X_np1, f_n
 
 #####################
 # Other subroutines #
@@ -76,26 +21,14 @@ def animate(i):
     plt1 = ax1.vlines(np.arange(n_bins), ymin = np.zeros(n_bins), ymax = o_i[0],
                       colors = c, label=r'conditional pmf')
     plt2 = ax1.plot(idx_data[0], 0.0, 'ro', label=r'data')
-    plt3 = ax2.plot(t[0:i], y_train[0:i, 0], 'ro', label=r'data')
-    plt4 = ax2.plot(t[0:i], samples[0:i, 0], 'g', label='random sample')
+    plt3 = ax2.plot(t[0:i], y_train[0:i], 'ro', label=r'data')
+    plt4 = ax2.plot(t[0:i], samples[0:i], 'g', label='random sample')
 
     if i == 0:
         ax1.legend(loc=1, fontsize=9)
         ax2.legend(loc=1, fontsize=9)
 
     ims.append((plt1, plt2[0], plt3[0], plt4[0],))
-    
-def animate_pred(i):
-    """
-    Generate a movie frame for the coupled system
-    """
-    plt1 = ax1.plot(t[0:i], y_train[0:i, 0], 'ro', label=r'data')
-    plt2 = ax1.plot(t[0:i], B_ann[0:i, 0], 'g', label='random sample')
-
-    if i == 0:
-        ax1.legend(loc=1, fontsize=9)
-
-    ims.append((plt1[0], plt2[0],))
 
 ###############
 # Main program
@@ -111,34 +44,33 @@ from scipy.stats import norm, rv_discrete
 
 plt.close('all')
 
-#####################
-#Lorenz96 parameters
-#####################
-K = 18
-J = 20
-F = 10.0
-h_x = -1.0
-h_y = 1.0
-epsilon = 0.5
+########################
+# Kac Zwanzig parameters
+########################
+
+# Number of output data points
+M = 10**5
 
 ##################
 # Time parameters
 ##################
+
 dt = 0.01
-t_end = 1000.0
+t_end = M*dt
 t = np.arange(0.0, t_end, dt)
+
 #time lags per feature
-lags = [[1]]
+lags = [list(np.arange(100)), list(np.arange(100))]
 max_lag = np.max(list(chain(*lags)))
 
 ###################
 # Simulation flags
 ###################
 train = True           #train the network
-make_movie = False     #make a movie (of the training)
-predict = True         #predict using the learned SGS term
+make_movie = True     #make a movie (of the training)
+predict = False         #predict using the learned SGS term
 store = False           #store the prediction results
-make_movie_pred = True  #make a movie (of the prediction)
+make_movie_pred = False  #make a movie (of the prediction)
 
 #####################
 # Network parameters
@@ -150,26 +82,30 @@ feat_eng = es.methods.Feature_Engineering()
 h5f = feat_eng.get_hdf5_file()
 
 #Large-scale and SGS data - convert to numpy array via [()]
-X_data = h5f['X_data'][()]
-B_data = h5f['B_data'][()]
+q_data = h5f['q'][()]
+p_data = h5f['p'][()]
+r_data = h5f['r'][()]
 
 #Lag features as defined in 'lags'
-X_train, y_train = feat_eng.lag_training_data([X_data], B_data, lags = lags)
+X_train, y_train = feat_eng.lag_training_data([q_data, p_data], r_data, lags = lags)
+X_train, y_train = feat_eng.standardize_data(standardize_y = False)
 
 n_bins = 10
 feat_eng.bin_data(y_train, n_bins)
 sampler = es.methods.SimpleBin(feat_eng)
 
 #number of softmax layers (one per output)
-n_softmax = K
+n_softmax = 1
 
 #number of output neurons 
 n_out = n_bins*n_softmax
 
 #train the neural network
 if train:
-    surrogate = es.methods.ANN(X=X_train, y=feat_eng.y_idx_binned, n_layers=4, n_neurons=256, 
-                               n_softmax = K, n_out=K*n_bins, loss = 'cross_entropy',
+    surrogate = es.methods.ANN(X=X_train, y=feat_eng.y_idx_binned, n_layers=6, 
+                               n_neurons=50, 
+                               n_softmax = n_softmax, n_out=n_softmax*n_bins, 
+                               loss = 'cross_entropy',
                                activation='hard_tanh', batch_size=512,
                                lamb=0.0, decay_step=10**4, decay_rate=0.9, 
                                standardize_X=False, standardize_y=False, save=True)
@@ -178,7 +114,7 @@ if train:
     print('Training Quantized Softmax Network...')
 
     #train network for N_inter mini batches
-    N_iter = 30000
+    N_iter = 10000
     surrogate.train(N_iter, store_loss = True)
 
 #load a neural network from disk
@@ -233,7 +169,7 @@ if make_movie:
     #make a movie of all frame in 'ims'
     im_ani = animation.ArtistAnimation(fig, ims, interval=80, 
                                        repeat_delay=2000, blit=True)
-    # im_ani.save('./movies/qsn.mp4')
+    # im_ani.save('./movies/qsn_kac.mp4')
 
     print('done')
 
