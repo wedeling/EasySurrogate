@@ -299,8 +299,8 @@ if predict:
     f_nm1 = rhs_X(X_nm1, B_nm1)
     
     #allocate memory for solutions
-    X_ann = np.zeros([t.size, K])
-    B_ann = np.zeros([t.size, K])
+    X_ann = np.zeros([t.size - max_lag, K])
+    B_ann = np.zeros([t.size - max_lag, K])
     
     #start time integration
     idx = 0
