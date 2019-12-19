@@ -4,6 +4,28 @@ Applies the Quantized Softmax Network to the Kac Zwanzig heat bath model
 ===============================================================================
 """
 
+def step(p, q, r):
+    """
+    
+    Integrates v, p, u, q in time via sympletic Euler
+    
+    Parameters
+    ----------
+    p : (float): position distinguished particle.
+    q : (float): momentum distinguished particle
+
+    Returns
+    -------
+    
+    p and q at next time level
+    
+    """    
+    # potential V(q)=1/4 * (q^2-1)^2
+    p = p - dt*q*(q**2 - 1) + dt*G**2*(r - N*q)
+    q = q + dt*p
+    
+    return p, q
+
 #####################
 # Other subroutines #
 #####################          
@@ -48,8 +70,14 @@ plt.close('all')
 # Kac Zwanzig parameters
 ########################
 
+# Number of heat bath particles
+N = 100
+
 # Number of output data points
 M = 10**5
+
+# Coupling and mass scaling
+G = 1.0
 
 ##################
 # Time parameters
@@ -66,9 +94,9 @@ max_lag = np.max(list(chain(*lags)))
 ###################
 # Simulation flags
 ###################
-train = True           #train the network
-make_movie = True     #make a movie (of the training)
-predict = False         #predict using the learned SGS term
+train = False           #train the network
+make_movie = False      #make a movie (of the training)
+predict = True        #predict using the learned SGS term
 store = False           #store the prediction results
 make_movie_pred = False  #make a movie (of the prediction)
 
@@ -88,6 +116,9 @@ r_data = h5f['r'][()]
 
 #Lag features as defined in 'lags'
 X_train, y_train = feat_eng.lag_training_data([q_data, p_data], r_data, lags = lags)
+
+X_mean = np.mean(X_train, axis = 0)
+X_std = np.std(X_train, axis = 0)
 X_train, y_train = feat_eng.standardize_data(standardize_y = False)
 
 n_bins = 10
@@ -184,21 +215,18 @@ if predict:
 
     #features are time lagged, use the data to create initial feature set
     for i in range(max_lag):
-        feat_eng.append_feat([X_data[i]], max_lag)
+        feat_eng.append_feat([[q_data[i]], [p_data[i]]], max_lag)
 
     #initial conditions
-    X_n = X_data[max_lag]
-    B_n = B_data[max_lag]
-
-    X_nm1 = X_data[max_lag-1]
-    B_nm1 = B_data[max_lag-1]
-
-    #initial right-hand sides
-    f_nm1 = rhs_X(X_nm1, B_nm1)
+    q = q_data[max_lag]
+    p = p_data[max_lag]
 
     #allocate memory for solutions
-    X_ann = np.zeros([t.size, K])
-    B_ann = np.zeros([t.size, K])
+    q_ann = np.zeros(t.size - max_lag)
+    p_ann = np.zeros(t.size - max_lag)
+    r_ann = np.zeros(t.size - max_lag)
+    
+    foo = max_lag
 
     #start time integration
     idx = 0
@@ -207,26 +235,24 @@ if predict:
         #get time lagged features from Feature Engineering object
         feat = feat_eng.get_feat_history()
 
+        feat = (feat - X_mean)/X_std
+
         #SGS solve, draw random sample from network
         o_i, idx_max, rv_idx = surrogate.get_softmax(feat.reshape([1, n_feat]))
-        B_n = sampler.resample(idx_max)
-        B_n = B_n.flatten()
+        r = sampler.resample(idx_max)[0]
 
         #solve large-scale equation
-        X_np1, f_n = step_X(X_n, f_nm1, B_n)
+        p, q = step(p, q, r_data[foo]); foo+=1
         
         #append the features to the Feature Engineering object
-        feat_eng.append_feat([X_np1], max_lag)
+        feat_eng.append_feat([[p], [q]], max_lag)
 
         #store solutions
-        X_ann[idx, :] = X_n
-        B_ann[idx, :] = B_n
+        q_ann[idx] = q
+        p_ann[idx] = p
+        r_ann[idx] = r
 
         idx += 1
-
-        #update variables
-        X_n = X_np1
-        f_nm1 = f_n
 
         if np.mod(idx, 1000) == 0:
             print('t =', np.around(t_i, 1), 'of', t_end)
@@ -241,14 +267,14 @@ if predict:
     print('Postprocessing results')
 
     fig = plt.figure()
-    ax = fig.add_subplot(111, xlabel=r'$X_k$')
+    ax = fig.add_subplot(111, xlabel=r'p')
 
     post_proc = es.methods.Post_Processing()
-    X_dom_surr, X_pde_surr = post_proc.get_pde(X_ann.flatten()[0:-1:10])
-    X_dom, X_pde = post_proc.get_pde(X_data.flatten()[0:-1:10])
+    p_dom_surr, p_pde_surr = post_proc.get_pde(p_ann.flatten()[0:-1:10])
+    p_dom, p_pde = post_proc.get_pde(p_data.flatten()[0:-1:10])
 
-    ax.plot(X_dom, X_pde, 'ko', label='L96')
-    ax.plot(X_dom_surr, X_pde_surr, label='ANN')
+    ax.plot(p_dom, p_pde, 'ko', label='Kac Zwanzig')
+    ax.plot(p_dom_surr, p_pde_surr, label='ANN')
 
     plt.yticks([])
 
@@ -263,60 +289,34 @@ if predict:
     fig = plt.figure()
     ax = fig.add_subplot(111, ylabel='ACF', xlabel='time')
 
-    R_data = post_proc.auto_correlation_function(X_data[:,0], max_lag=1000)
-    R_sol = post_proc.auto_correlation_function(X_ann[:, 0], max_lag=1000)
+    R_p_data = post_proc.auto_correlation_function(p_data, max_lag=1000)
+    R_ann = post_proc.auto_correlation_function(p_ann, max_lag=1000)
 
-    dom_acf = np.arange(R_data.size)*dt
+    dom_acf = np.arange(R_p_data.size)*dt
 
-    ax.plot(dom_acf, R_data, 'ko', label='L96')
-    ax.plot(dom_acf, R_sol, label='ANN')
-
-    leg = plt.legend(loc=0)
-
-    plt.tight_layout()
-
-    #############   
-    # Plot CCFs #
-    #############
-
-    fig = plt.figure()
-    ax = fig.add_subplot(111, ylabel='CCF', xlabel='time')
-
-    C_data = post_proc.cross_correlation_function(X_data[:,0], X_data[:,1], max_lag=1000)
-    C_sol = post_proc.cross_correlation_function(X_ann[:, 0], X_ann[:, 1], max_lag=1000)
-
-    dom_ccf = np.arange(C_data.size)*dt
-
-    ax.plot(dom_ccf, C_data, 'ko', label='L96')
-    ax.plot(dom_ccf, C_sol, label='ANN')
+    ax.plot(dom_acf, R_p_data, 'ko', label='Kac Zwanzig')
+    ax.plot(dom_acf, R_ann, label='ANN')
 
     leg = plt.legend(loc=0)
 
     plt.tight_layout()
 
-    #store simulation results
-    if store:
-        samples = {'X': X_ann, 'B':B_ann, \
-                   'dom_acf':dom_acf, 'acf_data':R_data, 'acf_ann':R_sol, \
-                   'dom_ccf':dom_ccf, 'ccf_data':C_data, 'ccf_ann':C_sol}
-        post_proc.store_samples_hdf5(samples)
-    
-    #make a mavie of the coupled system    
-    if make_movie_pred:
+    # #make a mavie of the coupled system    
+    # if make_movie_pred:
         
-        ims = []
-        fig = plt.figure(figsize=[4,4])
-        ax1 = fig.add_subplot(111, xlabel=r'time', ylabel=r'$B_k$')
-        plt.tight_layout()
+    #     ims = []
+    #     fig = plt.figure(figsize=[4,4])
+    #     ax1 = fig.add_subplot(111, xlabel=r'time', ylabel=r'$B_k$')
+    #     plt.tight_layout()
         
-        n_movie = 1000
+    #     n_movie = 1000
         
-        for i in range(n_movie):
-            animate_pred(i)
+    #     for i in range(n_movie):
+    #         animate_pred(i)
             
-        #make a movie of all frame in 'ims'
-        im_ani = animation.ArtistAnimation(fig, ims, interval=80, 
-                                           repeat_delay=2000, blit=True)
-        # im_ani.save('./movies/qsn_pred.mp4')
+    #     #make a movie of all frame in 'ims'
+    #     im_ani = animation.ArtistAnimation(fig, ims, interval=80, 
+    #                                        repeat_delay=2000, blit=True)
+    #     # im_ani.save('./movies/qsn_pred.mp4')
 
 plt.show()
