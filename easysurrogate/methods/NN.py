@@ -243,33 +243,13 @@ class ANN:
     #update step of the weights
     def batch(self, X_i, y_i, alpha=0.001, beta1=0.9, beta2=0.999, t=0):
         
-        if self.loss != 'custom':
-            self.feed_forward(X_i, self.batch_size)
-            self.back_prop(y_i)
-        else:
-            #select a random training instance (X, y)
-            rand_idx = np.random.randint(1, self.n_train, self.batch_size)
-            X_n = self.X[rand_idx]
-            X_nm1 = self.X[rand_idx - 1]
-            y_n = self.y[rand_idx].T
-            
-            constaint_n = self.aux_vars['constraint'][rand_idx-1].T
-
-            h_nm1 = self.feed_forward(X_nm1, self.batch_size)
-            self.feed_forward(X_n, self.batch_size)
-            
-            self.layers[-1].set_user_defined_value(-h_nm1 + constaint_n)
-            
-            #for Raissi's example
-#            dt = 0.01; 
-#            self.layers[-1].set_user_defined_value(dt*(1.5*h_n - 0.5*h_nm1))
-            
-            self.back_prop(y_n)
+        self.feed_forward(X_i, self.batch_size)
+        self.back_prop(y_i)
 
         #if Jacobian regularization is used
         if self.phi > 0.0:
             self.jacobian(X_i, batch_size=self.batch_size)
-            self.test.append(np.linalg.norm(self.layers[0].delta_hy)**2)
+            # self.test.append(np.linalg.norm(self.layers[0].delta_hy)**2)
         
         for r in range(1, self.n_layers+1):
 
@@ -334,12 +314,17 @@ class ANN:
             #layer_r[i].W += -alpha*beta1*layer_r.V
     
     #train the neural network        
-    def train(self, n_epoch, store_loss = False, check_derivative = False):
+    def train(self, n_epoch, store_loss = False, check_derivative = False, sequential=False):
         
         for i in range(n_epoch):
 
             #select a random training instance (X, y)
-            rand_idx = np.random.randint(0, self.n_train, self.batch_size)
+            if not sequential:
+                rand_idx = np.random.randint(0, self.n_train, self.batch_size)
+            #select a random starting point, and use sequential data from there
+            else:
+                start = np.random.randint(0, self.n_train - self.batch_size, 1)
+                rand_idx = np.arange(start, start + self.batch_size)
             
             #compute learning rate
             alpha = self.alpha*self.decay_rate**(np.int(i/self.decay_step))

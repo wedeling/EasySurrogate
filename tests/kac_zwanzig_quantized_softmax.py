@@ -88,17 +88,19 @@ t_end = M*dt
 t = np.arange(0.0, t_end, dt)
 
 #time lags per feature
-lags = [list(np.arange(100)), list(np.arange(100))]
+lags = [list(np.arange(0, 100)), list(np.arange(0, 100))]
+#lags = [[1], [1], [1]]
 max_lag = np.max(list(chain(*lags)))
 
 ###################
 # Simulation flags
 ###################
-train = False           #train the network
-make_movie = False      #make a movie (of the training)
+train = True           #train the network
+make_movie = True      #make a movie (of the training)
 predict = True        #predict using the learned SGS term
 store = False           #store the prediction results
 make_movie_pred = False  #make a movie (of the prediction)
+online_training = True
 
 #####################
 # Network parameters
@@ -115,11 +117,11 @@ p_data = h5f['p'][()]
 r_data = h5f['r'][()]
 
 #Lag features as defined in 'lags'
-X_train, y_train = feat_eng.lag_training_data([q_data, p_data], r_data, lags = lags)
+X_train, y_train = feat_eng.lag_training_data([p_data, q_data], r_data, lags = lags)
 
 X_mean = np.mean(X_train, axis = 0)
 X_std = np.std(X_train, axis = 0)
-X_train, y_train = feat_eng.standardize_data(standardize_y = False)
+# X_train, y_train = feat_eng.standardize_data(standardize_y = False)
 
 n_bins = 10
 feat_eng.bin_data(y_train, n_bins)
@@ -133,8 +135,8 @@ n_out = n_bins*n_softmax
 
 #train the neural network
 if train:
-    surrogate = es.methods.ANN(X=X_train, y=feat_eng.y_idx_binned, n_layers=6, 
-                               n_neurons=50, 
+    surrogate = es.methods.ANN(X=X_train, y=feat_eng.y_idx_binned, n_layers=2, 
+                               n_neurons=256, 
                                n_softmax = n_softmax, n_out=n_softmax*n_bins, 
                                loss = 'cross_entropy',
                                activation='hard_tanh', batch_size=512,
@@ -146,7 +148,7 @@ if train:
 
     #train network for N_inter mini batches
     N_iter = 10000
-    surrogate.train(N_iter, store_loss = True)
+    surrogate.train(N_iter, store_loss = True, sequential = True)
 
 #load a neural network from disk
 else:
@@ -207,15 +209,15 @@ if make_movie:
 ##################################
 # make predictions, with ANN SGS #
 ##################################
-
+    
 if predict:
 
     print('===============================')
-    print('Predicting with stochastic SGS...')
+    print('Predicting with stochastic SGS model...')
 
     #features are time lagged, use the data to create initial feature set
     for i in range(max_lag):
-        feat_eng.append_feat([[q_data[i]], [p_data[i]]], max_lag)
+        feat_eng.append_feat([[p_data[i]], [q_data[i]]], max_lag)
 
     #initial conditions
     q = q_data[max_lag]
@@ -225,24 +227,42 @@ if predict:
     q_ann = np.zeros(t.size - max_lag)
     p_ann = np.zeros(t.size - max_lag)
     r_ann = np.zeros(t.size - max_lag)
-    
-    foo = max_lag
 
+    if online_training:
+        online_batch = 32
+        surrogate.set_batch_size(online_batch)
+        
+        X_online = np.zeros([online_batch, surrogate.n_in])
+        y_online = np.zeros([online_batch, surrogate.n_out])
+        
+        J = 0        
+    
     #start time integration
     idx = 0
     for t_i in t[max_lag:]:
  
         #get time lagged features from Feature Engineering object
         feat = feat_eng.get_feat_history()
+        
+        if online_batch:
+            X_online[J, :] = feat
+            y_online[J, :] = surrogate.y[idx, :]
+            
+            J += 1
+            
+            if J == online_batch:
+                print('Online back prop')
+                J = 0                
+                surrogate.batch(X_online, y_online.T)
 
-        feat = (feat - X_mean)/X_std
+        # feat = (feat - X_mean)/X_std
 
         #SGS solve, draw random sample from network
         o_i, idx_max, rv_idx = surrogate.get_softmax(feat.reshape([1, n_feat]))
-        r = sampler.resample(idx_max)[0]
-
+        r = sampler.resample(rv_idx)[0]
+        
         #solve large-scale equation
-        p, q = step(p, q, r_data[foo]); foo+=1
+        p, q = step(p, q, r)
         
         #append the features to the Feature Engineering object
         feat_eng.append_feat([[p], [q]], max_lag)
@@ -266,15 +286,28 @@ if predict:
     print('===============================')
     print('Postprocessing results')
 
-    fig = plt.figure()
-    ax = fig.add_subplot(111, xlabel=r'p')
+    fig = plt.figure(figsize=[12, 4])
+    ax1 = fig.add_subplot(131, xlabel=r'p')
+    ax2 = fig.add_subplot(132, xlabel=r'q')
+    ax3 = fig.add_subplot(133, xlabel=r'r')
 
     post_proc = es.methods.Post_Processing()
+
     p_dom_surr, p_pde_surr = post_proc.get_pde(p_ann.flatten()[0:-1:10])
     p_dom, p_pde = post_proc.get_pde(p_data.flatten()[0:-1:10])
 
-    ax.plot(p_dom, p_pde, 'ko', label='Kac Zwanzig')
-    ax.plot(p_dom_surr, p_pde_surr, label='ANN')
+    q_dom_surr, q_pde_surr = post_proc.get_pde(q_ann.flatten()[0:-1:10])
+    q_dom, q_pde = post_proc.get_pde(q_data.flatten()[0:-1:10])
+
+    r_dom_surr, r_pde_surr = post_proc.get_pde(r_ann.flatten()[0:-1:10])
+    r_dom, r_pde = post_proc.get_pde(r_data.flatten()[0:-1:10])
+
+    ax1.plot(p_dom, p_pde, 'ko', label='Kac Zwanzig')
+    ax1.plot(p_dom_surr, p_pde_surr, label='ANN')
+    ax2.plot(q_dom, q_pde, 'ko', label='Kac Zwanzig')
+    ax2.plot(q_dom_surr, q_pde_surr, label='ANN')
+    ax3.plot(r_dom, r_pde, 'ko', label='Kac Zwanzig')
+    ax3.plot(r_dom_surr, r_pde_surr, label='ANN')
 
     plt.yticks([])
 
@@ -301,22 +334,22 @@ if predict:
 
     plt.tight_layout()
 
-    # #make a mavie of the coupled system    
-    # if make_movie_pred:
+    #make a mavie of the coupled system    
+    if make_movie_pred:
         
-    #     ims = []
-    #     fig = plt.figure(figsize=[4,4])
-    #     ax1 = fig.add_subplot(111, xlabel=r'time', ylabel=r'$B_k$')
-    #     plt.tight_layout()
+        ims = []
+        fig = plt.figure(figsize=[4,4])
+        ax1 = fig.add_subplot(111, xlabel=r'time', ylabel=r'$B_k$')
+        plt.tight_layout()
         
-    #     n_movie = 1000
+        n_movie = 1000
         
-    #     for i in range(n_movie):
-    #         animate_pred(i)
+        for i in range(n_movie):
+            animate_pred(i)
             
-    #     #make a movie of all frame in 'ims'
-    #     im_ani = animation.ArtistAnimation(fig, ims, interval=80, 
-    #                                        repeat_delay=2000, blit=True)
-    #     # im_ani.save('./movies/qsn_pred.mp4')
+        #make a movie of all frame in 'ims'
+        im_ani = animation.ArtistAnimation(fig, ims, interval=80, 
+                                            repeat_delay=2000, blit=True)
+        # im_ani.save('./movies/qsn_pred.mp4')
 
 plt.show()

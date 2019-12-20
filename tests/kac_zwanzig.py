@@ -44,7 +44,7 @@ N = 100
 N_skip = 100
 
 # Number of output data points
-M = 10**5
+M = 10**6
 
 # Coupling and mass scaling
 G = 1.0
