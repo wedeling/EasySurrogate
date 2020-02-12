@@ -21,7 +21,9 @@ def step(p, q, r):
     
     """    
     # potential V(q)=1/4 * (q^2-1)^2
-    p = p - dt*q*(q**2 - 1) + dt*G**2*(r - N*q)
+    # p = p - dt*q*(q**2 - 1) + dt*G**2*N*(r - q)
+    #p = p - dt*q*(q**2 - 1) + dt*G**2*N*r
+    p = p + dt*r
     q = q + dt*p
     
     return p, q
@@ -52,6 +54,14 @@ def animate(i):
 
     ims.append((plt1, plt2[0], plt3[0], plt4[0],))
 
+def draw():
+    
+    plt.plot(Idx_pred, '-ro')
+    plt.plot(Idx_data, '-b+')
+
+    plt.pause(0.1)  
+    
+
 ###############
 # Main program
 ###############
@@ -62,7 +72,7 @@ from matplotlib import animation
 import easysurrogate as es
 import h5py, os
 from itertools import chain, product
-from scipy.stats import norm, rv_discrete
+from scipy.stats import norm, rv_discrete, binned_statistic
 
 plt.close('all')
 
@@ -74,7 +84,7 @@ plt.close('all')
 N = 100
 
 # Number of output data points
-M = 10**5
+M = 10**6
 
 # Coupling and mass scaling
 G = 1.0
@@ -83,24 +93,22 @@ G = 1.0
 # Time parameters
 ##################
 
-dt = 0.01
+dt = 0.0001
 t_end = M*dt
 t = np.arange(0.0, t_end, dt)
 
 #time lags per feature
-lags = [list(np.arange(0, 100)), list(np.arange(0, 100))]
-#lags = [[1], [1], [1]]
+lags = [[1], [1], [1]]
 max_lag = np.max(list(chain(*lags)))
 
 ###################
 # Simulation flags
 ###################
 train = True           #train the network
-make_movie = True      #make a movie (of the training)
-predict = True        #predict using the learned SGS term
+make_movie = False      #make a movie (of the training)
+predict = True     #predict using the learned SGS term
 store = False           #store the prediction results
 make_movie_pred = False  #make a movie (of the prediction)
-online_training = True
 
 #####################
 # Network parameters
@@ -112,18 +120,31 @@ feat_eng = es.methods.Feature_Engineering()
 h5f = feat_eng.get_hdf5_file()
 
 #Large-scale and SGS data - convert to numpy array via [()]
-q_data = h5f['q'][()]
-p_data = h5f['p'][()]
-r_data = h5f['r'][()]
+q_data = h5f['q_n'][()]
+p_data = h5f['p_n'][()]
+r_data = -h5f['q_n'][()]*(h5f['q_n'][()]**2 - 1.0) + N*(h5f['r_n'][()] - h5f['q_n'][()])
+
+# n_bins_p = 10
+# p_bins = np.linspace(np.min(p_data), np.max(p_data), n_bins_p+1)
+# _, _, p_data_binned = binned_statistic(p_data, np.zeros(p_data.size), bins=p_bins)
+
+# n_bins_q = 10
+# q_bins = np.linspace(np.min(q_data), np.max(q_data), n_bins_q+1)
+# _, _, q_data_binned = binned_statistic(q_data, np.zeros(q_data.size), bins=q_bins)
+
+# n_bins_r = 10
+# r_bins = np.linspace(np.min(r_data), np.max(r_data), n_bins_r+1)
+# _, _, r_data_binned = binned_statistic(r_data, np.zeros(r_data.size), bins=r_bins)
 
 #Lag features as defined in 'lags'
-X_train, y_train = feat_eng.lag_training_data([p_data, q_data], r_data, lags = lags)
+# X_train, y_train = feat_eng.lag_training_data([p_data, q_data, r_data], r_data, lags = lags)
 
-X_mean = np.mean(X_train, axis = 0)
-X_std = np.std(X_train, axis = 0)
-# X_train, y_train = feat_eng.standardize_data(standardize_y = False)
+X_train, y_train = feat_eng.lag_training_data([q_data, p_data, r_data],
+                                               r_data, lags = lags)
 
-n_bins = 10
+# X_mean, X_std = feat_eng.moments_lagged_features([q_data, r_data], lags = lags)
+
+n_bins = 100
 feat_eng.bin_data(y_train, n_bins)
 sampler = es.methods.SimpleBin(feat_eng)
 
@@ -135,20 +156,23 @@ n_out = n_bins*n_softmax
 
 #train the neural network
 if train:
-    surrogate = es.methods.ANN(X=X_train, y=feat_eng.y_idx_binned, n_layers=2, 
-                               n_neurons=256, 
+    surrogate = es.methods.ANN(X=X_train, y=feat_eng.y_idx_binned, n_layers=3, 
+                               n_neurons=30, alpha = 0.001, 
                                n_softmax = n_softmax, n_out=n_softmax*n_bins, 
-                               loss = 'cross_entropy',
+                               loss = 'cross_entropy', phi = 0.0,
                                activation='hard_tanh', batch_size=512,
                                lamb=0.0, decay_step=10**4, decay_rate=0.9, 
-                               standardize_X=False, standardize_y=False, save=True)
+                               standardize_X=False, standardize_y=False, save=False)
 
     print('===============================')
     print('Training Quantized Softmax Network...')
 
     #train network for N_inter mini batches
-    N_iter = 10000
-    surrogate.train(N_iter, store_loss = True, sequential = True)
+    N_iter = 20000
+    surrogate.train(N_iter, store_loss = True, sequential = False)
+    
+    rand_idx = np.random.randint(0, y_train.shape[0], 10000)
+    surrogate.compute_misclass_softmax(X_train[rand_idx], feat_eng.y_idx_binned[rand_idx])
 
 #load a neural network from disk
 else:
@@ -209,6 +233,16 @@ if make_movie:
 ##################################
 # make predictions, with ANN SGS #
 ##################################
+
+Idx_data = []
+Idx_pred = []
+
+n_otf = 16
+surrogate.set_batch_size(n_otf)
+feat_otf = []
+data_otf = []
+
+plt.figure()
     
 if predict:
 
@@ -217,55 +251,64 @@ if predict:
 
     #features are time lagged, use the data to create initial feature set
     for i in range(max_lag):
-        feat_eng.append_feat([[p_data[i]], [q_data[i]]], max_lag)
+        feat_eng.append_feat([[q_data[i][0]], [p_data[i][0]], [r_data[i]][0]], max_lag)
+
+    #allocate memory for solutions
+    T = t[max_lag:].size
+    q_ann = np.zeros(T)
+    p_ann = np.zeros(T)
+    r_ann = np.zeros(T)
+   
+    #start time integration
+    # idx = max_lag
+    idx = 0
 
     #initial conditions
     q = q_data[max_lag]
     p = p_data[max_lag]
 
-    #allocate memory for solutions
-    q_ann = np.zeros(t.size - max_lag)
-    p_ann = np.zeros(t.size - max_lag)
-    r_ann = np.zeros(t.size - max_lag)
-
-    if online_training:
-        online_batch = 32
-        surrogate.set_batch_size(online_batch)
-        
-        X_online = np.zeros([online_batch, surrogate.n_in])
-        y_online = np.zeros([online_batch, surrogate.n_out])
-        
-        J = 0        
-    
-    #start time integration
-    idx = 0
     for t_i in t[max_lag:]:
  
         #get time lagged features from Feature Engineering object
         feat = feat_eng.get_feat_history()
+        # feat = np.array(list(chain(*feat)))
         
-        if online_batch:
-            X_online[J, :] = feat
-            y_online[J, :] = surrogate.y[idx, :]
+        if idx > 0 and np.mod(idx, n_otf) == 0:
             
-            J += 1
+            feat_otf = np.array(feat_otf).reshape([n_otf, n_feat])
+            data_otf = np.array(data_otf).reshape([n_otf, surrogate.n_out])
             
-            if J == online_batch:
-                print('Online back prop')
-                J = 0                
-                surrogate.batch(X_online, y_online.T)
+            surrogate.batch(feat_otf, data_otf.T)
+            
+            feat_otf = []
+            data_otf = []            
 
+        feat_otf.append(feat.flatten())
+        data_otf.append(feat_eng.y_idx_binned[max_lag + idx])
+        
         # feat = (feat - X_mean)/X_std
 
         #SGS solve, draw random sample from network
         o_i, idx_max, rv_idx = surrogate.get_softmax(feat.reshape([1, n_feat]))
-        r = sampler.resample(rv_idx)[0]
+        idx_data = np.where(feat_eng.y_idx_binned[max_lag + idx] == 1.0)[0][0]
         
+        if np.mod(idx, 5000) == 0:
+            Idx_data.append(idx_data)
+            Idx_pred.append(idx_max)
+            draw()
+
+        r = sampler.resample(idx_max)[0]
+
+        # r = r_data[idx+max_lag]
+        
+        # idx_data = np.where(feat_eng.y_idx_binned[idx] == 1.0)[0][0]
+        # r = sampler.resample_mean([idx_data])[0]
+                
         #solve large-scale equation
         p, q = step(p, q, r)
         
         #append the features to the Feature Engineering object
-        feat_eng.append_feat([[p], [q]], max_lag)
+        feat_eng.append_feat([[q], [p], [r]], max_lag)
 
         #store solutions
         q_ann[idx] = q
@@ -280,7 +323,7 @@ if predict:
     print('done')
 
     #############   
-    # Plot PDEs #
+    # Plot PDFs #
     #############
 
     print('===============================')
@@ -322,8 +365,8 @@ if predict:
     fig = plt.figure()
     ax = fig.add_subplot(111, ylabel='ACF', xlabel='time')
 
-    R_p_data = post_proc.auto_correlation_function(p_data, max_lag=1000)
-    R_ann = post_proc.auto_correlation_function(p_ann, max_lag=1000)
+    R_p_data = post_proc.auto_correlation_function(p_data, max_lag=100)
+    R_ann = post_proc.auto_correlation_function(p_ann, max_lag=100)
 
     dom_acf = np.arange(R_p_data.size)*dt
 
