@@ -59,7 +59,6 @@ class ANN:
 
         #number of output neurons
         self.n_out = n_out
-        self.out_idx = np.arange(n_out)
         
         #use bias neurons
         self.bias = bias
@@ -244,6 +243,11 @@ class ANN:
     def batch(self, X_i, y_i, alpha=0.001, beta1=0.9, beta2=0.999, t=0):
         
         self.feed_forward(X_i, self.batch_size)
+        
+        if self.loss == 'hamilton':
+            jac = self.jacobian(X_i, batch_size=self.batch_size)
+            self.layers[-1].set_user_defined_value(jac)            
+            
         self.back_prop(y_i)
 
         #if Jacobian regularization is used
@@ -310,8 +314,8 @@ class ANN:
                 #without regularization
                 layer_r.W = layer_r.W - alpha_i*layer_r.V
            
-            #Nesterov momentum
-            #layer_r[i].W += -alpha*beta1*layer_r.V
+                #Nesterov momentum
+                # layer_r.W += -alpha*beta1*layer_r.V
     
     #train the neural network        
     def train(self, n_epoch, store_loss = False, check_derivative = False, sequential=False):

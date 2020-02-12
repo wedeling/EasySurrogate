@@ -1,5 +1,6 @@
 from .Neuron import Neuron
-import numpy as np
+import autograd.numpy as np
+from autograd import elementwise_grad
 from scipy.stats import norm
 
 class Layer:
@@ -176,9 +177,9 @@ class Layer:
             self.grad_Phi[idx[0], idx[1]] = 1.0
 
     #compute the value of the loss function
-    def compute_loss(self, y_i):
+    def compute_loss(self, h, y_i):
         
-        h = self.h
+        # h = self.h
         
         #only compute if in an output layer
         if self.layer_rp1 == None:
@@ -252,6 +253,9 @@ class Layer:
             W_rp1 = self.layer_rp1.W
             
             self.delta_hy = xp.dot(W_rp1, delta_hy_rp1*grad_Phi_rp1)[0:self.n_neurons, :]
+            
+    def test(self, h, y_i):
+        return (y_i - h)**2 
     
     #initialize the value of delta_ho at the output layer
     def compute_delta_oo(self, y_i):
@@ -260,7 +264,7 @@ class Layer:
         if self.layer_rp1 == None:
             
             #compute the loss function
-            self.compute_loss(y_i)
+            self.compute_loss(self.h, y_i)
             
             h = self.h
             
@@ -272,6 +276,8 @@ class Layer:
             elif self.loss == 'squared':# and self.activation == 'linear':
                 
                 self.delta_ho = -2.0*(y_i - h)
+                # grad_loss = elementwise_grad(self.test)
+                # self.delta_ho = grad_loss(self.h, y_i)
                 
             #for multinomial classification
             elif self.loss == 'cross_entropy':

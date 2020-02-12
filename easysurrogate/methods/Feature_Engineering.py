@@ -12,22 +12,23 @@ CLASS FOR FEATURE ENGINEERING SUBROUTINES
 
 class Feature_Engineering:
         
-    def __init__(self, **kwargs):
+    def __init__(self, load_data = False, **kwargs):
         
-        if 'file_path' in kwargs:
-            file_path = kwargs['file_path']
-        else:
-            root = tk.Tk()
-            root.withdraw()
-            file_path = tk.filedialog.askopenfilename(title="Open data file", 
-                                                      filetypes=(('HDF5 files', '*.hdf5'), 
-                                                                ('All files', '*.*')))
-        h5f = h5py.File(file_path, 'r')
-
-        h5f = h5py.File(file_path, 'r')
-        print('Loaded', h5f.keys())
-
-        self.h5f = h5f
+        if load_data:
+            if 'file_path' in kwargs:
+                file_path = kwargs['file_path']
+            else:
+                root = tk.Tk()
+                root.withdraw()
+                file_path = tk.filedialog.askopenfilename(title="Open data file", 
+                                                          filetypes=(('HDF5 files', '*.hdf5'), 
+                                                                    ('All files', '*.*')))
+            h5f = h5py.File(file_path, 'r')
+    
+            h5f = h5py.File(file_path, 'r')
+            print('Loaded', h5f.keys())
+    
+            self.h5f = h5f
 
     def get_hdf5_file(self):
         """
@@ -53,6 +54,59 @@ class Feature_Engineering:
             y_mean = 0.0; y_std = 1.0
 
         return (self.X - X_mean)/X_std, (self.y - y_mean)/y_std
+    
+    def moments_lagged_features(self, X, lags):
+        """
+        Standardize the time-lagged featues X
+
+        Parameters:
+            + X: features. Either an array of dimension (n_samples, n_features)
+                 or a list of arrays of dimension (n_samples, n_features)
+
+            + lags: list of lists, containing the integer values of lags
+                    Example: if X=[X_1, X_2] and lags = [[1], [1, 2]], the first 
+                    feature array X_1 is lagged by 1 (time) step and the second
+                    by 1 and 2 (time) steps.
+        
+        Returns:          
+            + mean_X: means of the time-lagged features. 
+                      If lags = [[1], [1,2,3]], then 
+                      means_X = [mu_1, mu_2, mu_2, mu_2]
+                      
+            + std_X: std devs of the time-lagged features. Same structure as
+                     mean_X
+        """
+        
+        #if X is one array, add it to a list anyway
+        if type(X) == np.ndarray:
+            tmp = []
+            tmp.append(X)
+            X = tmp
+
+        idx = 0
+        means = []
+        stds = []
+        for X_i in X:
+            
+            #the number of time kages for the current feature
+            L_i = len(lags[idx])
+            
+            #compute mean abd std dev of current feature
+            mean_X_i = np.mean(X_i, axis = 0)
+            std_X_i = np.std(X_i, axis = 0)
+            
+            #add to list
+            means.append(np.ones(L_i)*mean_X_i)
+            stds.append(np.ones(L_i)*std_X_i)
+        
+        #means and stddevs of the lagged features
+        mean_X = np.array(list(chain(*means)))
+        std_X = np.array(list(chain(*stds)))
+            
+        return mean_X, std_X        
+    
+    # def normalize_data(self):
+        # y = (ymax-ymin)*(x-xmin)/(xmax-xmin) + ymin;
 
     def lag_training_data(self, X, y, lags):
         """    
@@ -166,6 +220,7 @@ class Feature_Engineering:
 
         self.binnumbers = np.zeros([n_samples, n_vars]).astype('int')
         self.y_binned = {}
+        self.y_binned_mean = {}
         self.y_idx_binned = np.zeros([n_samples, n_bins*n_vars])
         self.bins = {}
         self.n_vars = n_vars
@@ -173,6 +228,7 @@ class Feature_Engineering:
         for i in range(n_vars):
             
             self.y_binned[i] = {}
+            self.y_binned_mean[i] = {}
                        
             bins = np.linspace(np.min(y[:, i]), np.max(y[:, i]), n_bins+1)
             self.bins[i] = bins
@@ -187,6 +243,7 @@ class Feature_Engineering:
             for j in unique_binnumbers:
                 idx = np.where(self.binnumbers[:, i] == j)
                 self.y_binned[i][j-1] = y[idx, i]
+                self.y_binned_mean[i][j-1] = np.mean(y[idx, i])
                 self.y_idx_binned[idx, offset + j - 1] = 1.0
 
     def init_feature_history(self, lags):
