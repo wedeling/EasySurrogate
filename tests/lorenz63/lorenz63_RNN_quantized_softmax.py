@@ -12,20 +12,25 @@ def rhs(X_n, s, r=28, b=2.667):
     
     return f_n
 
-def rhs_surrogate(X_n, Y_n, s):
+def rhs_surrogate(X_n, y_nm1, r_nm1, s=10):
 
-    feat = np.array([X_n]).flatten()
+    feat = feat_eng.get_feat_history().reshape([1, n_feat])
     feat = (feat - mean_feat)/std_feat
-    y = surrogate.feed_forward(feat.reshape([1, n_feat]))[0]
-    y = y*std_data + mean_data
+    o_i, idx_max, idx_rvs = surrogate.get_softmax(feat.reshape([1, n_feat]))
+    y_n = sampler.resample(idx_max)[0]
     
-    # y = Y_n + y_dot*dt
-
-    f_n = s*(y - X_n)
+    # beta = 0.9
+    # r_n = beta*r_nm1 + (1.0 - beta)*y_n
+    
+    tau1 = 100.0
+    # tau2 = 1.0
+    r_n = r_nm1 + dt*tau1*(y_n - r_nm1) 
+    
+    f_n = s*(y_n - X_n)
     # f_n[1] = r*x - y - x*z
     # z_dot = x*y - b*z
     
-    return f_n, y
+    return f_n, y_n, r_n
 
 def step(X_n, f_nm1):
     
@@ -40,10 +45,10 @@ def step(X_n, f_nm1):
     
     return X_np1, f_n
 
-def step_with_surrogate(X_n, Y_n, f_nm1):
+def step_with_surrogate(X_n, y_nm1, r_nm1, f_nm1):
 
     # Derivatives of the X, Y, Z state
-    f_n, Y_np1 = rhs_surrogate(X_n, Y_n, sigma)
+    f_n, y_n, r_n = rhs_surrogate(X_n, y_nm1, r_nm1)
 
     # Adams Bashforth
     # X_np1 = X_n + dt*(3.0/2.0*f_n - 0.5*f_nm1)
@@ -51,7 +56,9 @@ def step_with_surrogate(X_n, Y_n, f_nm1):
     # Euler
     X_np1 = X_n + dt*f_n
    
-    return X_np1, Y_np1, f_n
+    feat_eng.append_feat([[X_np1], [y_n]], 1)
+    
+    return X_np1, y_n, r_n, f_n
 
 def plot_lorenz(ax, xs, ys, zs, title='Lorenz63'):
     
@@ -102,24 +109,32 @@ for n in range(n_steps):
     X[n, :] = X_n
     X_dot[n, :] = f_n
     
+feat_eng = es.methods.Feature_Engineering()
 
-X_train = X[:, 0:1].reshape([n_steps, 1])
-y_train = X[:, 1].reshape([n_steps, 1])
+# X_train = X[:, 0:1].reshape([n_steps, 1])
+# y_train = X[:, 1].reshape([n_steps, 1])
+
+X_train, y_train = feat_eng.lag_training_data([X[:, 0], X[:, 1]], X[:, 1], [[0],[1]])
+
 n_train = X_train.shape[0]
 n_feat = X_train.shape[1]
 
-surrogate = es.methods.RNN(X_train, y_train, alpha = 0.001,
-                           decay_rate = 0.9, decay_step = 10**4, activation = 'tanh',
-                           bias = True, n_neurons = 16, n_layers = 3, sequence_size = 100,
-                           n_out = y_train.shape[1], training_mode='offline',
-                           save = False, param_specific_learn_rate = True)
+n_bins = 10
+feat_eng.bin_data(y_train, n_bins)
+sampler = es.methods.SimpleBin(feat_eng)
 
-surrogate.train(10000)
+
+surrogate = es.methods.RNN(X_train, feat_eng.y_idx_binned, alpha = 0.001,
+                           decay_rate = 0.9, decay_step = 10**4, activation = 'tanh',
+                           bias = True, n_neurons = 100, n_layers = 2, sequence_size = 100, 
+                           n_softmax = 1, n_out = n_bins,
+                           training_mode='offline', loss = 'cross_entropy',
+                           save = False, param_specific_learn_rate = True, standardize_y=False)
+
+surrogate.train(5000)
 
 mean_feat = surrogate.X_mean
 std_feat = surrogate.X_std
-mean_data = surrogate.y_mean
-std_data = surrogate.y_std
 
 test = []
 surrogate.window_idx = 0
@@ -127,48 +142,52 @@ S = X_train.shape[0]
 
 X_test = (X_train - surrogate.X_mean)/surrogate.X_std
 # surrogate.clear_history()
-surrogate.training_mode = 'offline'
 
-for i in range(1000):
-    test.append(surrogate.feed_forward())
-test = list(chain(*test))
+I = 10000
 
-plt.plot(test)
-plt.plot(surrogate.y, 'ro')
-
-"""
-# #offline prediction one step ahead
-# for i in range(S):
-#     x = np.array([X_test[i]])
-#     test.append(surrogate.feed_forward(x_sequence = x)[0][0])
+for i in range(I):
+    o_i, idx_max, idx_rvs = surrogate.get_softmax(X_test[i].reshape([1, n_feat]))
+    test.append(sampler.resample(idx_max))
+    # test.append(surrogate.feed_forward())
 # test = list(chain(*test))
 
+plt.plot(test)
+plt.plot(y_train[0:I], 'ro')
 
 X_surr = np.zeros([n_steps, 1])
 X_surr_dot = np.zeros([n_steps, 1])
 
-X_n = X[1, 0]
-Y_n = X[1, 1]
-f_nm1 = X_dot[0, 0]
+#initial condition, pick a random point from the data
+idx_start = 1
+X_n = X[idx_start, 0]
+f_nm1 = X_dot[idx_start - 1, 0]
+y_nm1 = X[idx_start - 1, 1]
+r_nm1 = X[idx_start - 1, 1]
 
-inputs = []; outputs = []
+#features are time lagged, use the data to create initial feature set
+for i in range(1):
+    j = idx_start - 1 + i
+    feat_eng.append_feat([[X[j, 0]], [X[j, 1]]], 1)
+
+outputs = []
+outputs_smooth = []
 
 for n in range(n_train):
     
     X_surr[n, :] = X_n
         
     #step in time
-    X_np1, Y_np1, f_n = step_with_surrogate(X_n, Y_n, f_nm1)
+    X_np1, y_n, r_n, f_n = step_with_surrogate(X_n, y_nm1, r_nm1, f_nm1)
 
-    inputs.append(alpha*X_n + (1-alpha)*Y_n)
-    outputs.append(Y_np1[0])
+    outputs.append(y_n)
+    outputs_smooth.append(r_n)
 
     X_surr_dot[n, :] = f_n
 
     #update variables
     X_n = X_np1
-    Y_n = Y_np1
     f_nm1 = f_n  
+    r_nm1 = r_n
     
 #############   
 # Plot PDEs #
@@ -206,5 +225,5 @@ ax.plot(dom_acf, R_sol, label='ANN')
 leg = plt.legend(loc=0)
 
 plt.tight_layout()
-"""
+
 plt.show()
