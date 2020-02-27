@@ -3,9 +3,10 @@ from scipy.stats import norm
 
 class RNN_Layer:
     
+    
     def __init__(self, W_in, W_h, 
-                 n_neurons, r, n_layers, activation, loss, bias = False,
-                 lamb = 0.0, on_gpu = False,
+                 n_neurons, r, n_layers, activation, loss, sequence_size,
+                 bias = False, lamb = 0.0, on_gpu = False,
                  n_softmax = 0, **kwargs):
 
         #input weight matrix
@@ -16,9 +17,12 @@ class RNN_Layer:
         self.n_layers = n_layers
         self.activation = activation
         self.loss = loss
+        self.sequence_size = sequence_size
         self.bias = bias
         self.lamb = lamb
         self.n_softmax = n_softmax
+        
+        self.hidden_history = []
         
         #use either numpy or cupy via xp based on the on_gpu flag
         global xp
@@ -36,10 +40,7 @@ class RNN_Layer:
         if self.n_softmax > 0:
             self.n_bins = int(self.n_neurons/self.n_softmax)
             
-        #initialize the hidden state of the previous time level to zero
-        self.h_tm1 = np.zeros([self.n_neurons + self.n_bias, 1])
-        if self.bias:
-            self.h_tm1[-1] = 1.0
+        self.init_h_tm1()
        
         #init momentum, squared grad and regularization matrices
         self.V_in = xp.zeros([W_in.shape[0], W_in.shape[1]])
@@ -70,6 +71,13 @@ class RNN_Layer:
         else:
             self.layer_rm1 = layer_rm1
             self.layer_rp1 = layer_rp1
+            
+            
+    def init_h_tm1(self):
+        #initialize the hidden state of the previous time level to zero
+        self.h_tm1 = np.zeros([self.n_neurons + self.n_bias, 1])
+        if self.bias:
+            self.h_tm1[-1] = 1.0
      
 
     #compute the output of the current layer in one shot using matrix - vector/matrix multiplication    
@@ -97,7 +105,11 @@ class RNN_Layer:
         self.a_t = a_t
         
         #overwrite value of h_tm1
-        self.h_tm1 = self.h_t
+        self.h_tm1 = np.copy(self.h_t)
+
+        self.hidden_history.append(self.h_t)
+        if len(self.hidden_history) > self.sequence_size:
+            self.hidden_history.pop(0)
 
         #compute the gradient of the activation function, 
         self.compute_grad_Phi()

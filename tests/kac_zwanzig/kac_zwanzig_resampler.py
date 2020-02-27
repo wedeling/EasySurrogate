@@ -95,7 +95,7 @@ store = False           #store the prediction results
 #####################
 
 #Feature engineering object - loads data file
-feat_eng = es.methods.Feature_Engineering()
+feat_eng = es.methods.Feature_Engineering(load_data=True)
 #get training data
 h5f = feat_eng.get_hdf5_file()
 
