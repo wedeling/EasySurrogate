@@ -28,7 +28,7 @@ def rhs_ccm(X_n, s=10):
     x = X_n
  
     feat = feat_eng.get_feat_history(max_lag)
-    y = ccm.get_sample(feat.reshape([1, N_c]))
+    y = ccm.get_sample(feat.reshape([1, N_c]), stochastic = True)
     f_n = s*(y - x)
     
     return f_n
@@ -113,10 +113,10 @@ N_c = ccm.N_c
 
 X_n = np.zeros(3)
 #initial condition of the training data
-# X_n[0] = 0.0; X_n[1]  = 1.0; X_n[2] = 1.05
+X_n[0] = 0.0; X_n[1]  = 1.0; X_n[2] = 1.05
 
 #new initial condition to break symmetry
-X_n[0] = 0.20; X_n[1] = 0.75; X_n[2] = 1.0
+# X_n[0] = 0.20; X_n[1] = 0.75; X_n[2] = 1.0
 
 #initial condition right-hand side
 f_nm1 = rhs(X_n)
