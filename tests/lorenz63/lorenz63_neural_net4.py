@@ -23,7 +23,7 @@ def rhs_surrogate(X_n, s=10):
     # f_n[1] = r*x - y - x*z
     # z_dot = x*y - b*z
     
-    return f_n
+    return f_n, y
 
 def step(X_n, f_nm1):
     
@@ -41,7 +41,7 @@ def step(X_n, f_nm1):
 def step_with_surrogate(X_n, f_nm1):
 
     # Derivatives of the X, Y, Z state
-    f_n = rhs_surrogate(X_n)
+    f_n, y = rhs_surrogate(X_n)
 
     # Adams Bashforth
     # X_np1 = X_n + dt*(3.0/2.0*f_n - 0.5*f_nm1)
@@ -51,7 +51,7 @@ def step_with_surrogate(X_n, f_nm1):
    
     feat_eng.append_feat([[X_np1[0]]], max_lag)
     
-    return X_np1, f_n
+    return X_np1, f_n, y
 
 def plot_lorenz(ax, xs, ys, zs, title='Lorenz63'):
     
@@ -128,10 +128,13 @@ surrogate.get_n_weights()
 surrogate.train(20000, store_loss=True)
 
 X_surr = np.zeros([n_steps, 1])
+Y_surr = np.zeros([n_steps, 1])
+
 X_surr_dot = np.zeros([n_steps, 1])
 
 #initial condition, pick a random point from the data
 idx_start = np.random.randint(max_lag, n_train)
+idx_start = 0
 X_n = X[idx_start, 0]
 f_nm1 = X_dot[idx_start - 1, 0]
 
@@ -145,9 +148,10 @@ for n in range(n_train):
     X_surr[n, :] = X_n
         
     #step in time
-    X_np1, f_n = step_with_surrogate(X_n, f_nm1)
+    X_np1, f_n, y = step_with_surrogate(X_n, f_nm1)
 
     X_surr_dot[n, :] = f_n
+    Y_surr[n, :] = y
 
     #update variables
     X_n = X_np1

@@ -1,5 +1,7 @@
 def rhs(X_n, s=10, r=28, b=2.667):
-
+    """
+    Lorenz 1963 Deterministic Nonperiodic Flow
+    """
     x = X_n[0]; y = X_n[1]; z = X_n[2]
     
     f_n = np.zeros(3)
@@ -23,20 +25,20 @@ def step(X_n, f_nm1):
     
     return X_np1, f_n
 
-def rhs_ccm(X_n, s=10):
-
-    x = X_n
- 
-    feat = feat_eng.get_feat_history(max_lag)
-    y = ccm.get_sample(feat.reshape([1, N_c]))
-    f_n = s*(y - x)
+def rhs_surrogate(X_n, s=10):
     
-    return f_n
+    feat = feat_eng.get_feat_history(max_lag)
+    o_i = model.predict(feat.reshape([1, n_lags, 1]))
+    y_n = sampler.resample([np.argmax(o_i)])
+    
+    f_n = s*(y_n - X_n)
+    
+    return f_n, y_n
 
-def step_ccm(X_n, f_nm1):
+def step_surrogate(X_n, f_nm1):
     
     # Derivatives of the X, Y, Z state
-    f_n = rhs_ccm(X_n)
+    f_n, y_n = rhs_surrogate(X_n)
 
     # Adams Bashforth
     # X_np1 = X_n + dt*(3.0/2.0*f_n - 0.5*f_nm1)
@@ -44,28 +46,15 @@ def step_ccm(X_n, f_nm1):
     # Euler
     X_np1 = X_n + dt*f_n
     
-    feat_eng.append_feat([[X_np1]], max_lag)
-    
-    return X_np1, f_n
+    return X_np1, f_n, y_n
 
-
-def plot_lorenz(xs, ys, zs, title='Lorenz63'):
-
-    fig = plt.figure(title)
-    ax = fig.gca(projection='3d')
-    
-    ax.plot(xs, ys, zs, lw=0.5)
-    ax.set_xlabel("X Axis")
-    ax.set_ylabel("Y Axis")
-    ax.set_zlabel("Z Axis")
-    ax.set_title(title)
-    
-
+from keras.models import Sequential
+from keras.layers import Dense
+from keras.layers import LSTM, SimpleRNN, Embedding, Dropout, Activation
 import numpy as np
 import easysurrogate as es
 import matplotlib.pyplot as plt
 from itertools import chain
-from mpl_toolkits.mplot3d import Axes3D
 
 plt.close('all')
 
@@ -95,36 +84,75 @@ for n in range(n_steps):
 
     X[n, :] = X_n
     X_dot[n, :] = f_n
-
+    
 feat_eng = es.methods.Feature_Engineering()
-lags = [[1, 10]]
-# n_lags = len(list(chain(*lags)))
+n_increment = 10
+lags = [range(0, 100, n_increment)]
+n_lags = len(list(chain(*lags)))
 max_lag = np.max(list(chain(*lags)))
 
-X_lagged, y_train = feat_eng.lag_training_data([X[:, 0]], X[:, 1], lags)
-Y_lagged, _ = feat_eng.lag_training_data([X[:, 1]], np.zeros(n_steps), lags)
+X_train, y_train = feat_eng.lag_training_data([X[:, 0]], X[:, 1], lags)
+X_train = X_train.reshape([X_train.shape[0], X_train.shape[1], 1])
+y_train = y_train.reshape([y_train.shape[0], 1])
 
-ccm = es.methods.CCM(X_lagged, Y_lagged, [5, 5], lags)
-N_c = ccm.N_c
+n_bins = 5
+feat_eng.bin_data(y_train, n_bins)
+sampler = es.methods.SimpleBin(feat_eng)
 
-#################################
-# Run full model to generate IC #
-#################################
+n_neurons = 50
+# n_feat = X_train.shape[2]
+n_train = X_train.shape[0]
 
-X_n = np.zeros(3)
-#initial condition of the training data
-# X_n[0] = 0.0; X_n[1]  = 1.0; X_n[2] = 1.05
+model = Sequential()
+# model.add(LSTM(n_neurons, input_shape=(X_train.shape[1], X_train.shape[2])))
+# model.add(Dense(num_lags, activation='tanh'))
+# model.add(Dense(50, activation='tanh'))
+# model.add(Dense(8, activation='tanh'))
+model.add(SimpleRNN(n_neurons))
+# model.add(Dropout(0.01))
+# model.add(LSTM(n_neurons))
+model.add(Dense(n_bins))
+model.add(Activation('softmax'))
+model.compile(optimizer='adam', loss='categorical_crossentropy')
 
-#new initial condition to break symmetry
-X_n[0] = 0.20; X_n[1] = 0.75; X_n[2] = 1.0
+# fit network
+history = model.fit(X_train, feat_eng.y_idx_binned, 
+                    epochs=20, batch_size=72, verbose=2, shuffle=True)
 
-#initial condition right-hand side
-f_nm1 = rhs(X_n)
+n_surr = 1000
 
-for n in range(max_lag):
+foo = []
+
+for i in range(n_surr):
+    
+    o_i = model.predict(X_train[i].reshape([1, n_lags, 1]))
+    r = sampler.resample([np.argmax(o_i)])
+    foo.append(r[0])
+    
+plt.plot(foo)
+plt.plot(y_train[0:n_surr])
+
+#initial condition, pick a random point from the data
+idx_start = np.random.randint(0, n_train - max_lag)
+idx_start = 0
+X_n = X[idx_start, 0]
+
+# feat = []
+
+#features are time lagged, use the data to create initial feature set
+for i in range(max_lag+1):
+    feat_eng.append_feat([[X[i, 0]]], max_lag+1)
+
+X_surr = np.zeros([n_steps, 1])
+Y_surr = np.zeros([n_steps, 1])
+X_dot_surr = np.zeros([n_steps, 1])
+
+idx = max_lag
+
+for n in range(n_train):
     
     #step in time
-    X_np1, f_n = step(X_n, f_nm1)
+    X_np1, f_n, y_n = step_surrogate(X_n, f_nm1)
 
     feat_eng.append_feat([[X_np1[0]]], max_lag)
 
@@ -132,29 +160,9 @@ for n in range(max_lag):
     X_n = X_np1
     f_nm1 = f_n
 
-########################################
-# Run the model with the CCM surrogate #
-########################################
-
-#number of time steps
-n_pred = n_steps - max_lag
-
-#reduce IC to X only
-X_n = X_n[0]
-f_nm1 = f_nm1[0]
-
-X_surr = np.zeros([n_pred, 1])   
-
-for i in range(n_pred):
-    
-    #step in time
-    X_np1, f_n = step_ccm(X_n, f_nm1)
-
-    #update variables
-    X_n = X_np1
-    f_nm1 = f_n
-
-    X_surr[i, :] = X_n
+    X_surr[n, :] = X_n
+    Y_surr[n, :] = y_n
+    X_dot_surr[n, :] = f_n
     
 #############   
 # Plot PDEs #
