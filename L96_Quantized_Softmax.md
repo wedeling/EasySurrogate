@@ -23,7 +23,7 @@ To recreate the results, perform the following steps
 
 ## Generate training data
 
-Pre-generated training data for the Lorenz96 system is available in `test/samples/L96_training.hdf5`. If you wish to regenerate the data, execute `python3 tests/lorenz96/lorenz96.py`. This will generate training pairs that are used in `tests/lorenz_96/lorenz96_quantized_softmax.py`. You will be asked for a location to store the data (HDF5 format).
+The first step is to generate the training data, by executing `python3 tests/lorenz96/lorenz96.py`. This will generate training pairs that are used in `tests/lorenz_96/lorenz96_quantized_softmax.py`. You will be asked for a location to store the data (HDF5 format).
 
 ## Training / predicting with the Quantized Softmax Network
 
