@@ -156,14 +156,6 @@ h_x = -1.0
 h_y = 1.0
 epsilon = 0.5
 
-##trimodal Lorenz96 parameters (!NEEDS dt=1e-3)
-#K = 32
-#J = 16
-#F = 18.0
-#h_x = -3.2
-#h_y = 1.0
-#epsilon = 0.5
-
 ##################
 # Time parameters
 ##################
@@ -266,7 +258,7 @@ if make_movie:
     #make a movie of all frame in 'ims'
     im_ani = animation.ArtistAnimation(fig, ims, interval=80, 
                                        repeat_delay=2000, blit=True)
-    im_ani.save('.l96.mp4')
+    im_ani.save('../movies/l96.mp4')
 
     print('done')
 else:

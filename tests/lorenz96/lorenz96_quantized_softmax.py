@@ -135,10 +135,10 @@ max_lag = np.max(list(chain(*lags)))
 # Simulation flags
 ###################
 train = True           #train the network
-make_movie = True     #make a movie (of the training)
-predict = False         #predict using the learned SGS term
-store = False           #store the prediction results
-make_movie_pred = False  #make a movie (of the prediction)
+make_movie = True      #make a movie (of the training)
+predict = True         #predict using the learned SGS term
+store = True           #store the prediction results
+make_movie_pred = True #make a movie (of the prediction)
 
 #####################
 # Network parameters
@@ -269,7 +269,7 @@ if predict:
     for t_i in t[max_lag:]:
  
         #get time lagged features from Feature Engineering object
-        feat = feat_eng.get_feat_history()
+        feat = feat_eng.get_feat_history(max_lag)
 
         #SGS solve, draw random sample from network
         o_i, idx_max, rv_idx = surrogate.get_softmax(feat.reshape([1, n_feat]))
