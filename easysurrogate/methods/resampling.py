@@ -12,9 +12,10 @@ Code: W. Edeling
 
 import numpy as np
 from scipy import stats
-from itertools import chain, product
+from itertools import chain, product, cycle
 import matplotlib.pyplot as plt
 import sys
+from scipy.spatial import ConvexHull
 
 class Resampler:
     
@@ -232,6 +233,38 @@ class Resampler:
         plt.tight_layout()
         plt.show()
         
+    def plot_2D_shadow_manifold(self, X):
+
+        if self.N_c != 2:
+            print('Only works for N_c = 2')
+            return
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot(X[:,0], X[:,1], '+', color='lightgray', alpha=0.3)
+        
+        colors = cycle(['--r', '--g', '--b', '--m', '--k'])
+
+        for idx in self.unique_binnumbers:
+            
+            idx_i = np.where(self.binnumber == idx)[0]
+            
+           
+            if idx_i.size >= 3:        
+                marker = next(colors)
+                points = X[idx_i, :]
+                hull = ConvexHull(points)
+                ax.plot(points[hull.vertices, 0], points[hull.vertices, 1], marker)
+                ax.plot([points[hull.vertices[0], 0], points[hull.vertices[-1], 0]],
+                        [points[hull.vertices[0], 1], points[hull.vertices[-1], 1]], marker)
+                
+                x_mid = np.mean(points[hull.vertices, :], axis=0)
+                ax.text(x_mid[0], x_mid[1], str(idx))
+            # ax.plot(X[idx_i, 0], X[idx_i, 1], '+')
+            else:
+                x_mid = np.mean(X[idx_i,:], axis=0)
+                ax.text(x_mid[0], x_mid[1], str(idx))
+     
     #the data-driven model for the unresolved scales
     #Given c_i return r at time i+1 (r_ip1)
     def get_sample(self, c_i, n_mc=1):
@@ -314,9 +347,9 @@ class Resampler:
     def print_bin_info(self):
         print('-------------------------------')
         print('Total number of samples= ', self.r_ip1.size)
-        print('Total number of bins = ', self.N_bins**self.N_c)
+        # print('Total number of bins = ', self.N_bins**self.N_c)
         print('Total number of non-empty bins = ', self.binnumbers_nonempty.size)
-        print('Percentage filled = ', np.double(self.binnumbers_nonempty.size)/self.N_bins**self.N_c*100., ' %')
+        # print('Percentage filled = ', np.double(self.binnumbers_nonempty.size)/self.N_bins**self.N_c*100., ' %')
         print('-------------------------------')
         
     #compute the uniform bins of the conditional variables in c
@@ -325,7 +358,7 @@ class Resampler:
         bins = []
         
         for i in range(self.N_c):
-            bins.append(np.linspace(np.min(self.c[:,i]), np.max(self.c[:,i]), N_bins+1))
+            bins.append(np.linspace(np.min(self.c[:,i]), np.max(self.c[:,i]), N_bins[i]+1))
     
         return bins
     

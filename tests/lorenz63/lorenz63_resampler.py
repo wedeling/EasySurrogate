@@ -12,9 +12,9 @@ def rhs(X_n, s=10, r=28, b=2.667):
     
     return f_n
 
-def rhs_surrogate(X_n, y_nm1, r_nm1, s=10):
+def rhs_surrogate(X_n, y_nm1, s=10):
 
-    feat = feat_eng.get_feat_history().reshape([1, n_feat])
+    feat = feat_eng.get_feat_history(max_lag).reshape([1, n_feat])
     y_n = surrogate.get_sample(feat)[0][0]
     y_n_mean = surrogate.get_mean_sample(feat)[0][0]
     
@@ -25,11 +25,11 @@ def rhs_surrogate(X_n, y_nm1, r_nm1, s=10):
     # # tau2 = 1.0
     # r_n = r_nm1 + dt*tau1*(y_n_mean - r_nm1) 
     
-    f_n = s*(y_n_mean - X_n)
+    f_n = s*(y_n - X_n)
     # f_n[1] = r*x - y - x*z
     # z_dot = x*y - b*z
     
-    return f_n, y_n, r_n
+    return f_n, y_n
 
 def step(X_n, f_nm1):
     
@@ -44,10 +44,10 @@ def step(X_n, f_nm1):
     
     return X_np1, f_n
 
-def step_with_surrogate(X_n, y_nm1, r_nm1, f_nm1):
+def step_with_surrogate(X_n, y_nm1, f_nm1):
 
     # Derivatives of the X, Y, Z state
-    f_n, y_n, r_n = rhs_surrogate(X_n, y_nm1, r_nm1)
+    f_n, y_n = rhs_surrogate(X_n, y_nm1)
 
     # Adams Bashforth
     # X_np1 = X_n + dt*(3.0/2.0*f_n - 0.5*f_nm1)
@@ -57,7 +57,7 @@ def step_with_surrogate(X_n, y_nm1, r_nm1, f_nm1):
    
     feat_eng.append_feat([[X_np1], [y_n]], max_lag)
     
-    return X_np1, y_n, r_n, f_n
+    return X_np1, y_n, f_n
 
 def plot_lorenz(ax, xs, ys, zs, title='Lorenz63'):
     
@@ -76,7 +76,7 @@ from itertools import chain
 plt.close('all')
 
 n_steps = 10**5
-dt = 0.001
+dt = 0.01
 X = np.zeros(n_steps); Y = np.zeros(n_steps); Z = np.zeros(n_steps) 
 X_dot = np.zeros(n_steps); Y_dot = np.zeros(n_steps); Z_dot = np.zeros(n_steps) 
 
@@ -110,7 +110,7 @@ for n in range(n_steps):
 feat_eng = es.methods.Feature_Engineering()
 
 #Lag features as defined in 'lags'
-lags = [[1], [1]]
+lags = [[1, 10], [1]]
 max_lag = np.max(list(chain(*lags)))
 X_train, y_train = feat_eng.lag_training_data([X[:, 0], X[:, 1]], X[:, 1], lags = lags)
 
@@ -119,7 +119,7 @@ n_train = X_train.shape[0]
 n_feat = X_train.shape[1]
 
 #number of bins
-n_bins = 10
+n_bins = [10, 10, 10]
 
 surrogate = es.methods.Resampler(X_train, y_train.flatten(), 1, n_bins, lags)
 surrogate.print_bin_info()
@@ -150,17 +150,15 @@ for n in range(n_predict):
     X_surr[n, :] = X_n
         
     #step in time
-    X_np1, y_n, r_n, f_n = step_with_surrogate(X_n, y_nm1, r_nm1, f_nm1)
+    X_np1, y_n, f_n = step_with_surrogate(X_n, y_nm1, f_nm1)
 
     outputs.append(y_n)
-    outputs_smooth.append(r_n)
 
     X_surr_dot[n, :] = f_n
 
     #update variables
     X_n = X_np1
     f_nm1 = f_n  
-    r_nm1 = r_n
     
 #############   
 # Plot PDEs #

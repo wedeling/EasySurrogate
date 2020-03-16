@@ -124,7 +124,7 @@ n_train = X_train.shape[0]
 
 surrogate = es.methods.ANN(X=X_train, y=feat_eng.y_idx_binned, n_layers=3, 
                            n_neurons=64, n_out=n_bins, n_softmax = 1,  
-                           activation='leaky_relu', batch_size=128, loss='cross_entropy',
+                           activation='tanh', batch_size=128, loss='cross_entropy',
                            lamb=0.0, decay_step=10**4, decay_rate=0.9, 
                            save = False, standardize_y = False)
 surrogate.get_n_weights()

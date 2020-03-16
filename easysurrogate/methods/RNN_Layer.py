@@ -22,7 +22,8 @@ class RNN_Layer:
         self.lamb = lamb
         self.n_softmax = n_softmax
         
-        self.hidden_history = []
+        self.h_history = []
+        self.grad_Phi_history = []
         
         #use either numpy or cupy via xp based on the on_gpu flag
         global xp
@@ -78,7 +79,14 @@ class RNN_Layer:
         self.h_tm1 = np.zeros([self.n_neurons + self.n_bias, 1])
         if self.bias:
             self.h_tm1[-1] = 1.0
+        return self.h_tm1
+
      
+    def init_history(self, h, grad_Phi):
+        
+        tmp = []; tmp.append(h); self.h_history = tmp        
+        tmp = []; tmp.append(grad_Phi); self.grad_Phi_history = tmp
+
 
     #compute the output of the current layer in one shot using matrix - vector/matrix multiplication    
     def compute_output(self, x_t):
@@ -107,9 +115,9 @@ class RNN_Layer:
         #overwrite value of h_tm1
         self.h_tm1 = np.copy(self.h_t)
 
-        self.hidden_history.append(self.h_t)
-        if len(self.hidden_history) > self.sequence_size:
-            self.hidden_history.pop(0)
+        self.h_history.append(self.h_t)
+        if len(self.h_history) > self.sequence_size + 1:
+            self.h_history.pop(0)
 
         #compute the gradient of the activation function, 
         self.compute_grad_Phi()
@@ -125,6 +133,10 @@ class RNN_Layer:
         elif self.activation == 'tanh':
             self.grad_Phi = 1.0 - self.h_t[0:self.n_neurons]**2
 
+        self.grad_Phi_history.append(self.grad_Phi)
+        if len(self.grad_Phi_history) > self.sequence_size + 1:
+            self.grad_Phi_history.pop(0)
+        
 
     #compute the value of the loss function
     def compute_loss(self, y_t):
@@ -186,28 +198,88 @@ class RNN_Layer:
         
         self.delta_ho = xp.dot(W_rp1, delta_ho_rp1*grad_Phi_rp1)[0:self.n_neurons, :]
 
-    #compute the gradient of the loss function wrt the weights of this layer
-    def compute_L_grad_W(self):
+    #compute the gradient of the loss function wrt the activation functions through time
+    def compute_delta_ho_through_time(self, t):
         
-        delta_ho_grad_Phi = self.delta_ho*self.grad_Phi
+        #the value of delta_ho of the next time level is still in self.delta_ho,
+        #will be overwritten below
+        delta_ho_tp1 = self.delta_ho
+        
+        #get the grad_Phi values of the next time level
+        grad_Phi_tp1 = self.grad_Phi_history[t+1]
+        
+        #the value of the hidden weight matrix at the next time level,
+        #equal to the one from the current time level due to shared weights
+        W_h_tp1  = self.W_h
+        
+        #overwrite the value of delta_ho from time level t+1
+        self.delta_ho = xp.dot(W_h_tp1, delta_ho_tp1*grad_Phi_tp1)[0:self.n_neurons, :]
+
+    #compute the gradient of the loss function wrt the weights of this layer
+    def compute_L_grad_W_in(self):
+        
+        grad_Phi = self.grad_Phi
+        delta_ho_grad_Phi = self.delta_ho*grad_Phi
 
         #output previous hidden layer r-1, current time level t
         h_rm1_t = self.layer_rm1.h_t
         
+        #cumulative add over all time levels of the training sequence
+        self.L_grad_W_in = self.L_grad_W_in + xp.dot(h_rm1_t, delta_ho_grad_Phi.T)
+
+    #compute the gradient of the loss function wrt the weights of this layer
+    def compute_L_grad_W_h(self):
+        
+        grad_Phi = self.grad_Phi
+        delta_ho_grad_Phi = self.delta_ho*grad_Phi
+
         #output current hidden layer r, previous time level t-1
         h_r_tm1 = self.h_tm1
 
+        self.L_grad_W_h = self.L_grad_W_h + xp.dot(h_r_tm1, delta_ho_grad_Phi.T)
+
+    #compute the gradient of the loss function wrt the weights of this layer
+    def compute_L_grad_W_in_through_time(self, t):
+        
+        grad_Phi = self.grad_Phi_history[t]
+        delta_ho_grad_Phi = self.delta_ho*grad_Phi
+
+        #output previous hidden layer r-1, current time level t
+        h_rm1_t = self.layer_rm1.h_history[t]
+        
         #cumulative add over all time levels of the training sequence
         self.L_grad_W_in = self.L_grad_W_in + xp.dot(h_rm1_t, delta_ho_grad_Phi.T)
+
+    #compute the gradient of the loss function wrt the weights of this layer
+    def compute_L_grad_W_h_through_time(self, t):
+        
+        grad_Phi = self.grad_Phi_history[t]
+        delta_ho_grad_Phi = self.delta_ho*grad_Phi
+        
+        #output current hidden layer r, previous time level t-1
+        h_r_tm1 = self.h_history[t-1]
+
+        #cumulative add over all time levels of the training sequence
         self.L_grad_W_h = self.L_grad_W_h + xp.dot(h_r_tm1, delta_ho_grad_Phi.T)
-    
-    #perform the backpropogation operations of the current layer
+
+    #perform the backpropagation operations of the current layer
     def back_prop(self, y_i):
         
         if self.r == self.n_layers:
             self.compute_delta_oo(y_i)
-            self.compute_L_grad_W()
+            self.compute_L_grad_W_in()
         else:
             self.compute_delta_ho()
-            self.compute_L_grad_W()
-                    
+            self.compute_L_grad_W_in()
+            self.compute_L_grad_W_h()
+            
+    #compute the gradient of BPTT, should only be applied to hidden layers
+    def back_prop_through_time(self, y_i, t):
+        
+        if self.r == self.n_layers:
+            self.compute_delta_oo(y_i)
+            self.compute_L_grad_W_in()
+        else:
+            self.compute_delta_ho_through_time(t)
+            self.compute_L_grad_W_in_through_time(t)
+            self.compute_L_grad_W_h_through_time(t)

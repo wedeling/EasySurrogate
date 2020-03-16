@@ -6,13 +6,14 @@ from scipy.stats import rv_discrete
 
 
 from .RNN_Layer import RNN_Layer
+from .Input_Layer import Input_Layer
 
 class RNN:
     
     def __init__(self, X, y, alpha = 0.001, decay_rate = 1.0, 
                  decay_step = 10**5, beta1 = 0.9, beta2 = 0.999, lamb = 0.0,
                  n_out = 1, param_specific_learn_rate = True, loss = 'squared', 
-                 activation = 'tanh', training_mode = 'offline',
+                 activation = 'tanh', training_mode = 'offline', increment = 1,
                  activation_out = 'linear', n_softmax = 0, n_layers = 2, n_neurons = 16,
                  bias = True, sequence_size = 100, save = True, load=False, name='ANN', 
                  on_gpu = False, standardize_X = True, standardize_y = True, **kwargs):
@@ -102,6 +103,8 @@ class RNN:
         
         self.training_mode = training_mode
         
+        self.increment = increment
+        
         #number of sofmax layers
         self.n_softmax = n_softmax
         
@@ -117,11 +120,13 @@ class RNN:
         self.W_in = []
         self.W_h = []
         
+        self.test = []
+        
         #####################################
         # Initialize shared weight matrices #
         #####################################
         
-        self.x_t = self.X[0, 0]
+        # self.x_t = self.X[0, 0]
         
         #input weights
         self.W_in.append(xp.random.randn(self.n_in + self.n_bias, self.n_neurons)*xp.sqrt(1.0/self.n_neurons))
@@ -139,16 +144,19 @@ class RNN:
         # Create the RNN layers #
         #########################
         
+        #add the input layer
+        self.layers.append(Input_Layer(self.n_in, self.bias, self.sequence_size))
+        
         #add the hidden layers
-        for r in range(self.n_layers):
-            self.layers.append(RNN_Layer(self.W_in[r], self.W_h[r], 
+        for r in range(1, self.n_layers):
+            self.layers.append(RNN_Layer(self.W_in[r-1], self.W_h[r-1], 
                                          self.n_neurons, r, self.n_layers, 'tanh', 
                                          self.loss, self.sequence_size, 
                                          self.bias, lamb = lamb,
                                          on_gpu=on_gpu, n_softmax = self.n_softmax))
         
         #add the output layer
-        self.layers.append(RNN_Layer(self.W_in[self.n_layers], None, 
+        self.layers.append(RNN_Layer(self.W_in[-1], None, 
                                      self.n_out, r+1, self.n_layers, 'linear', 
                                      self.loss, self.sequence_size,
                                      False, lamb = lamb,
@@ -161,24 +169,19 @@ class RNN:
         
     #train the neural network        
     def train(self, n_batch, store_loss = True):
-        """
-        
-
-        Parameters
-        ----------
-        n_batch : TYPE
-            DESCRIPTION.
-        store_loss : TYPE, optional
-            DESCRIPTION. The default is True.
-
-        Returns
-        -------
-        None.
-
-        """
         
         #number of epochs
         self.n_epoch = 0
+
+        #initialize the history of the input layer
+        self.layers[0].init_history()
+        #initialize the first entries of the h_history and grad_Phi_history
+        for r in range(1, self.n_layers):
+            #initial previous h value
+            h = self.layers[r].init_h_tm1()
+            #never used, just a place filler
+            grad_Phi = None
+            self.layers[r].init_history(h, grad_Phi)
         
         for i in range(n_batch):
 
@@ -221,19 +224,19 @@ class RNN:
 
         Returns
         -------
-        y_hat_t : array of outputs. 1 output for every input value.
+        y_hat_t : 
 
         """
         
         #if no sequence is specified, get one from the training data
         if x_sequence is None and self.training_mode == 'offline':
             #generates the next sequence of continuous indices 
-            idx = self.slide_window(self.sequence_size, self.sequence_size)
+            idx = self.slide_window(self.sequence_size, self.increment)
             x_sequence = self.X[idx, :]
         
             #predicted output sequence        
             sequence_size = self.sequence_size
-            y_hat_t = xp.zeros([sequence_size, self.n_out])
+            # y_hat_t = xp.zeros([sequence_size, self.n_out])
         # #if training is done online
         # elif x_sequence is None and self.training_mode == 'online':
         #     #generates the next sequence of continuous indices 
@@ -248,7 +251,7 @@ class RNN:
         else:
             assert x_sequence.ndim == 2
             sequence_size = x_sequence.shape[0]
-            y_hat_t = xp.zeros([sequence_size, self.n_out])
+            # y_hat_t = xp.zeros([sequence_size, self.n_out])
         
         #perform back propagation if True
         if back_prop:
@@ -256,13 +259,27 @@ class RNN:
             y_sequence = self.y[idx, :]
 
             #zero out the gradients of the previous sequence
-            for r in range(self.n_layers+1):
+            for r in range(1, self.n_layers):
                 self.layers[r].L_grad_W_in = 0.0
-                self.layers[r].L_grad_W_h = 0.0
+                self.layers[r].L_grad_W_h = 0.0       
+            #zero out the gradient in the output layer
+            self.layers[-1].L_grad_W_in = 0.0               
             #set loss to zero
             self.layers[-1].L_t = 0.0
+
+            # #if we are not at the beginning of the training data
+            # if idx[0] != 0:
+            #     #set the correct previous values of h and grad_Phis
+            #     #for the next training sequence to ensure continuity
+            #     self.layers[0].init_history()
+            #     for r in range(1, self.n_layers):
+            #         h = self.layers[r].h_history[self.increment]
+            #         grad_Phi = self.layers[r].grad_Phi_history[self.increment]
+            #         self.layers[r].init_history(h, grad_Phi)
+            # else:
+            #     self.clear_history()
             
-        count = 0
+        # count = 0
                 
         #loop over all inputs of the input sequence
         for t in range(sequence_size):
@@ -283,20 +300,47 @@ class RNN:
                 input_feat = hidden_state
             
             #final hidden state is the output
-            y_hat_t[t, :] = hidden_state.flatten()
-            
+            # y_hat_t[t, :] = hidden_state.flatten()
+        
+        y_hat = hidden_state
+        self.test.append(y_hat[0][0])
             # if self.training_mode == 'online':
             #     # x_t = 0.9*self.X[idx[count], 0] + 0.1*self.y[idx[count]]
             #     # x_t = 0.9*self.X[idx[count], 0] + 0.1*hidden_state
             #     x_t = 0.9*x_t[0:self.n_in] + 0.1*hidden_state
             #     count += 1
                 
-            if back_prop:
-                self.back_prop(y_sequence[t].reshape([self.n_out, 1]))
+        if back_prop:
+            #perform back propagation through time
+            for t in range(self.sequence_size, 0, -1):
+                
+                if t == self.sequence_size:
+                    #perform standard back propagation on the final time layer
+                    self.back_prop(y_sequence[t-1].reshape([self.n_out, 1]))
+                else:
+                    #perform back propagation through time
+                    self.back_prop_through_time(y_sequence[t-1].reshape([self.n_out, 1]), t)
         
         # self.x_t = x_t[0:self.n_in]
             
-        return y_hat_t
+        return y_hat
+    
+    
+    #back propagation algorithm    
+    def back_prop(self, y_t):
+
+        #start back propagation over hidden layers and the output layer
+        for r in range(self.n_layers, 0, -1):
+            self.layers[r].back_prop(y_t)
+
+
+    #back prop through time
+    def back_prop_through_time(self, y_t, t):
+        
+        #start back propagation through time over only the hidden layers
+        for r in range(self.n_layers, 0, -1):
+            self.layers[r].back_prop_through_time(y_t, t)
+        
     
     #get the output of the softmax layer (so far: only works for batch_size = 1)
     def get_softmax(self, X_i, feed_forward = True):
@@ -338,14 +382,6 @@ class RNN:
         self.window_idx += increment
         
         return idxs
-    
-    
-    #back propagation algorithm    
-    def back_prop(self, y_t):
-
-        #start back propagation over hidden layers, starting with output layer
-        for r in range(self.n_layers, 0, -1):
-            self.layers[r].back_prop(y_t)
             
 
     #update step of the weights
@@ -353,7 +389,7 @@ class RNN:
         
         self.feed_forward(back_prop = True)
         
-        for r in range(self.n_layers+1):
+        for r in range(1, self.n_layers+1):
 
             layer_r = self.layers[r]
             
@@ -397,10 +433,15 @@ class RNN:
                     
     
     def clear_history(self):
+        #clear input history
+        self.layers[0].init_history()
         #Clear the hidden history of all layers        
-        for r in range(self.n_layers + 1):
-            self.layers[r].init_h_tm1()
-            self.layers[r].hidden_history = []
+        for r in range(1, self.n_layers):
+            #initial previous h value
+            h = self.layers[r].init_h_tm1()
+            #never used, just a place filler
+            grad_Phi = None
+            self.layers[r].init_history(h, grad_Phi)
 
            
     #connect each layer in the NN with its previous and the next      

@@ -69,7 +69,7 @@ from itertools import chain
 
 plt.close('all')
 
-n_steps = 10**5
+n_steps = 10**4
 dt = 0.01
 sigma = 10.0
 alpha = 1.0-sigma*dt
@@ -108,10 +108,13 @@ y_train = X[:, 1].reshape([n_steps, 1])
 n_train = X_train.shape[0]
 n_feat = X_train.shape[1]
 
+X_train = np.linspace(0, 2*np.pi, 1000).reshape([1000, 1])
+y_train = np.sin(X_train).reshape([1000, 1])
+
 surrogate = es.methods.RNN(X_train, y_train, alpha = 0.001,
-                           decay_rate = 0.9, decay_step = 10**4, activation = 'tanh',
-                           bias = True, n_neurons = 16, n_layers = 3, sequence_size = 100,
-                           n_out = y_train.shape[1], training_mode='offline',
+                           decay_rate = 0.9, decay_step = 10**5, activation = 'tanh',
+                           bias = True, n_neurons = 16, n_layers = 2, sequence_size = 100,
+                           n_out = y_train.shape[1], training_mode='offline', increment=1,
                            save = False, param_specific_learn_rate = True)
 
 surrogate.train(10000)
@@ -127,23 +130,22 @@ S = X_train.shape[0]
 
 X_test = (X_train - surrogate.X_mean)/surrogate.X_std
 # surrogate.clear_history()
-surrogate.training_mode = 'offline'
 
-for i in range(1000):
-    test.append(surrogate.feed_forward())
-test = list(chain(*test))
+n_surr = 1000
+
+# for i in range(n_surr):
+#     test.append(surrogate.feed_forward(back_prop = False)[-1][0])
+# # test = list(chain(*test))
+
+#offline prediction one step ahead
+for i in range(100, n_surr):
+    x = np.array([X_test[i]])
+    test.append(surrogate.feed_forward(x_sequence = x)[0][0])
 
 plt.plot(test)
-plt.plot(surrogate.y, 'ro')
+# plt.plot(surrogate.y[0:n_surr], 'ro')
 
 """
-# #offline prediction one step ahead
-# for i in range(S):
-#     x = np.array([X_test[i]])
-#     test.append(surrogate.feed_forward(x_sequence = x)[0][0])
-# test = list(chain(*test))
-
-
 X_surr = np.zeros([n_steps, 1])
 X_surr_dot = np.zeros([n_steps, 1])
 

@@ -108,7 +108,7 @@ class Feature_Engineering:
     # def normalize_data(self):
         # y = (ymax-ymin)*(x-xmin)/(xmax-xmin) + ymin;
 
-    def lag_training_data(self, X, y, lags):
+    def lag_training_data(self, X, y, lags, store = True):
         """    
         Create time-lagged supervised training data X, y
 
@@ -128,7 +128,7 @@ class Feature_Engineering:
             row of X_train is one (time) lagged feature vector. Every row of y_train
             is a target vector at the next (time) step
         """
-
+        
         #compute the max number of lags in lags
         lags_flattened = list(chain(*lags))
         max_lag = np.max(lags_flattened)
@@ -161,7 +161,7 @@ class Feature_Engineering:
         idx = 0
         for X_i in X:
           
-            for lag in lags[idx]:
+            for lag in np.sort(lags[idx])[::-1]:
                 begin = max_lag - lag
                 end = n_samples - lag
                 
@@ -187,13 +187,34 @@ class Feature_Engineering:
 
             X_train = np.append(X_train, X_i, axis=1)
 
-        self.X = X_train
-        self.y = y_train
+        if store:
+            self.X = X_train
+            self.y = y_train
 
         #initialize the storage of features
         self.init_feature_history(lags)
                 
         return X_train, y_train
+    
+    def get_feat_history(self, max_lag):
+        """
+        Return the features from the feat_history dict based on the lags
+        specified in self.lags
+        
+        Returns:
+            X_i: array of lagged features of dimension (feat1.size + feat2.size + ...,) 
+        """
+        X_i = []
+
+        idx = 0
+        for i in range(self.n_feat_arrays):
+            for lag in self.lags[idx]:
+                begin = max_lag - lag
+                
+                X_i.append(self.feat_history[i][begin])
+            idx += 1
+
+        return np.array(list(chain(*X_i)))
 
     def bin_data(self, y, n_bins):
         """
@@ -258,7 +279,11 @@ class Feature_Engineering:
                   feature array X_1 is lagged by 1 (time) step and the second
                   by 1 and 2 (time) steps.
         """
-        self.lags = lags
+        self.lags = []
+        
+        for l in lags:
+            self.lags.append(np.sort(l)[::-1])
+        
 #        self.max_lag = np.max(list(chain(*lags)))
 #        
 #        #if there is no lag (feratures at the same time level as the data)
@@ -297,21 +322,3 @@ class Feature_Engineering:
             #if max number of features is reached, remove first item
             if len(self.feat_history[i]) > max_lag:
                 self.feat_history[i].pop(0)
-
-    def get_feat_history(self):
-        """
-        Return the features from the feat_history dict based on the lags
-        specified in self.lags
-        
-        Returns:
-            X_i: array of lagged features of dimension (feat1.size + feat2.size + ...,) 
-        """
-        X_i = []
-
-        idx = 0
-        for i in range(self.n_feat_arrays):
-            for lag in self.lags[idx]:
-                X_i.append(self.feat_history[i][-lag])
-            idx += 1
-
-        return np.array(list(chain(*X_i)))

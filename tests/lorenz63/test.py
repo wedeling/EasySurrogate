@@ -1,140 +1,196 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Apr  3 20:10:34 2019
-@author: pmaddala
-"""
+def rhs(X_n, s=10, r=28, b=2.667):
 
-import torch
-import torch.nn as nn
-import string
-
-data = "i love neural networks"
-EOF = "#"
-#data = data+EOF
-data = data.lower()
-
-seq_len = len(data)
-
-letters = string.ascii_lowercase+' #'
-print('Letter set is '+letters)
-n_letters = len(letters)
-print(letters)
-
-#letter to tensor
-def ltt(ch):
-    ans = torch.zeros(n_letters)
-    ans[letters.find(ch)]=1
-    return ans
+    x = X_n[0]; y = X_n[1]; z = X_n[2]
     
-def getLine(s):
-    ans = []
-    for c in s:
-        ans.append(ltt(c))
-    return torch.cat(ans,dim=0).view(len(s),1,n_letters)
+    f_n = np.zeros(3)
     
-class MyLSTM(nn.Module):
-    def __init__(self,input_dim,hidden_dim):
-        super(MyLSTM,self).__init__()
-        self.input_dim = input_dim
-        self.hidden_dim = hidden_dim
-        #LSTM takes, input_dim, hidden_dim and num_layers incase of stacked LSTMs
-        self.LSTM = nn.LSTM(input_dim,hidden_dim)
-        self.LNN = nn.Linear(hidden_dim,input_dim)
-        
-    #Input must be 3 dimensional (seq_len, batch, input_dim). 
-    #hc is a tuple of hidden and cell state vector. Each of them have shape (1,1,hidden_dim)
-    def forward(self,inp,hc):
-        #this gives outut for each input in the sequence and also (hidden and cell state vector)
-        #Dimensions of output vector is (seq_len,batch,hidden_dim)
-        output,_= self.LSTM(inp,hc)
-        return self.LNN(output)
-        #return output
-        
-
-#Dimensions of output of neural network is (seq_len, batch , hidden_dim). Since we want output dimensions to be
-#the same as n_letters, hidden_dim = n_letters (**output dimensions = hidden_dimensions)
-hidden_dim = n_letters     
-#Invoking model. Input dimensions = n_letters i.e 28. output dimensions = hidden_dimensions = 28
-model = MyLSTM(n_letters,hidden_dim)
-#I'm using Adam optimizer here
-optimizer = torch.optim.Adam(params = model.parameters(),lr=0.01)
-#Loss function is CrossEntropyLoss
-LOSS = torch.nn.CrossEntropyLoss()
-
-#List to store targets
-targets = []
-#Iterate through all chars in the sequence, starting from second letter. Since output for 1st letter is the 2nd letter
-for x in data[1:]+'#':
-    #Find the target index. For a, it is 0, For 'b' it is 1 etc..
-    targets.append(letters.find(x))
-#Convert into tensor
-targets = torch.tensor(targets)
+    f_n[0] = s*(y - x)
+    f_n[1] = r*x - y - x*z
+    f_n[2] = x*y - b*z
     
-n_iters = 400
+    return f_n
 
-#List to store input
-inpl = []
-#Iterate through all inputs in the sequence
-for c in data:
-    #Convert into tensor
-    inpl.append(ltt(c))
-#Convert list to tensor
-inp = torch.cat(inpl,dim=0)
-#Reshape tensor into 3 dimensions (sequence length, batches = 1, dimensions = n_letters (28))
-inp = inp.view(seq_len,1,n_letters)
-
-
-#Let's note down start time to track the training time
-import time
-start = time.time()
-#Number of iterations
-n_iters = 150
-for itr in range(n_iters):
-    #Zero the previosus gradients
-    model.zero_grad()
-    optimizer.zero_grad()
-    #Initialize h and c vectors
-    h = torch.rand(hidden_dim).view(1,1,hidden_dim)
-    c = torch.rand(hidden_dim).view(1,1,hidden_dim)
-    #Find the output
-    output = model(inp,(h,c))
-    #Reshape the output to 2 dimensions. This is done, so that we can compare with target and get loss
-    output = output.view(seq_len,n_letters)
-    #Find loss
-    loss = LOSS(output,targets)
-    #Print loss for every 10th iteration
-    if itr%10==0:
-        print('Iteration : '+str(itr)+' Loss : '+str(loss) )
-    #Back propagate the loss
-    loss.backward()
-    #Perform weight updation
-    optimizer.step()
+def step(X_n, f_nm1):
     
-print('Time taken to train : '+str(time.time()-start)+" seconds")
+    # Derivatives of the X, Y, Z state
+    f_n = rhs(X_n)
+
+    # Adams Bashforth
+    # X_np1 = X_n + dt*(3.0/2.0*f_n - 0.5*f_nm1)
+    
+    # Euler
+    X_np1 = X_n + dt*f_n
+    
+    return X_np1, f_n
+
+def rhs_ccm(X_n, s=10):
+
+    x = X_n
  
+    feat = feat_eng.get_feat_history(max_lag)
+    y = ccm.get_sample(feat.reshape([1, N_c]))
+    f_n = s*(y - x)
+    
+    return f_n
 
-#This utility method predicts the next letter given the sequence   
-def predict(s):
-    #Get the vector for input
-    inp = getLine(s)
-    #Initialize h and c vectors
-    h = torch.rand(1,1,hidden_dim)
-    c = torch.rand(1,1,hidden_dim)
-    #Get the output
-    out = model(inp,(h,c))
-    #Find the corresponding letter from the output
-    return letters[out[-1][0].topk(1)[1].detach().numpy().item()]
-         
+def step_ccm(X_n, f_nm1):
+    
+    # Derivatives of the X, Y, Z state
+    f_n = rhs_ccm(X_n)
 
-#THis method recursively generates the sequence using the trained model
-def gen(s):
-    #If generated sequence length is too large, or terminate char is generated, we can print the generated output so far
-    if s[-1]=='#' or len(s)>=len(data)+5:
-        print(s)
-        return
-    #Predict with sequence s
-    pred = predict(s)
-    #Continue prediction with sequence s + predicted value
-    print(s+pred)
-    #Recurse
-    gen(s+pred)
+    # Adams Bashforth
+    # X_np1 = X_n + dt*(3.0/2.0*f_n - 0.5*f_nm1)
+    
+    # Euler
+    X_np1 = X_n + dt*f_n
+    
+    feat_eng.append_feat([[X_np1]], max_lag)
+    
+    return X_np1, f_n
+
+
+def plot_lorenz(xs, ys, zs, title='Lorenz63'):
+
+    fig = plt.figure(title)
+    ax = fig.gca(projection='3d')
+    
+    ax.plot(xs, ys, zs, lw=0.5)
+    ax.set_xlabel("X Axis")
+    ax.set_ylabel("Y Axis")
+    ax.set_zlabel("Z Axis")
+    ax.set_title(title)
+    
+
+import numpy as np
+import easysurrogate as es
+import matplotlib.pyplot as plt
+from itertools import chain
+from mpl_toolkits.mplot3d import Axes3D
+
+plt.close('all')
+
+n_steps = 10**5
+dt = 0.01
+X = np.zeros(n_steps); Y = np.zeros(n_steps); Z = np.zeros(n_steps) 
+X_dot = np.zeros(n_steps); Y_dot = np.zeros(n_steps); Z_dot = np.zeros(n_steps) 
+
+#initial condition
+X_n = np.zeros(3)
+X_n[0] = 0.0; X_n[1]  = 1.0; X_n[2] = 1.05
+
+#initial condition right-hand side
+f_nm1 = rhs(X_n)
+
+X = np.zeros([n_steps, 3])
+X_dot = np.zeros([n_steps, 3])
+
+for n in range(n_steps):
+    
+    #step in time
+    X_np1, f_n = step(X_n, f_nm1)
+
+    #update variables
+    X_n = X_np1
+    f_nm1 = f_n
+
+    X[n, :] = X_n
+    X_dot[n, :] = f_n
+
+feat_eng = es.methods.Feature_Engineering()
+lags = [[1, 10]]
+# n_lags = len(list(chain(*lags)))
+max_lag = np.max(list(chain(*lags)))
+
+X_lagged, y_train = feat_eng.lag_training_data([X[:, 0]], X[:, 1], lags)
+Y_lagged, _ = feat_eng.lag_training_data([X[:, 1]], np.zeros(n_steps), lags)
+
+ccm = es.methods.CCM(X_lagged, Y_lagged, [5, 5], lags)
+N_c = ccm.N_c
+
+#################################
+# Run full model to generate IC #
+#################################
+
+X_n = np.zeros(3)
+#initial condition of the training data
+# X_n[0] = 0.0; X_n[1]  = 1.0; X_n[2] = 1.05
+
+#new initial condition to break symmetry
+X_n[0] = 0.20; X_n[1] = 0.75; X_n[2] = 1.0
+
+#initial condition right-hand side
+f_nm1 = rhs(X_n)
+
+for n in range(max_lag):
+    
+    #step in time
+    X_np1, f_n = step(X_n, f_nm1)
+
+    feat_eng.append_feat([[X_np1[0]]], max_lag)
+
+    #update variables
+    X_n = X_np1
+    f_nm1 = f_n
+
+########################################
+# Run the model with the CCM surrogate #
+########################################
+
+#number of time steps
+n_pred = n_steps - max_lag
+
+#reduce IC to X only
+X_n = X_n[0]
+f_nm1 = f_nm1[0]
+
+X_surr = np.zeros([n_pred, 1])   
+
+for i in range(n_pred):
+    
+    #step in time
+    X_np1, f_n = step_ccm(X_n, f_nm1)
+
+    #update variables
+    X_n = X_np1
+    f_nm1 = f_n
+
+    X_surr[i, :] = X_n
+    
+#############   
+# Plot PDEs #
+#############
+
+post_proc = es.methods.Post_Processing()
+
+print('===============================')
+print('Postprocessing results')
+
+fig = plt.figure(figsize=[4, 4])
+
+ax = fig.add_subplot(111, xlabel=r'$x$')
+X_dom_surr, X_pde_surr = post_proc.get_pde(X_surr[0:-1:10, 0])
+X_dom, X_pde = post_proc.get_pde(X[0:-1:10, 0])
+ax.plot(X_dom, X_pde, 'ko', label='L63')
+ax.plot(X_dom_surr, X_pde_surr, label='ANN')
+plt.yticks([])
+plt.legend(loc=0)
+
+plt.tight_layout()
+
+#############   
+# Plot ACFs #
+#############
+
+fig = plt.figure(figsize=[4, 4])
+
+ax = fig.add_subplot(111, ylabel='ACF X', xlabel='time')
+R_data = post_proc.auto_correlation_function(X[:, 0], max_lag = 500)
+R_sol = post_proc.auto_correlation_function(X_surr[:, 0], max_lag = 500)
+dom_acf = np.arange(R_data.size)*dt
+ax.plot(dom_acf, R_data, 'ko', label='L63')
+ax.plot(dom_acf, R_sol, label='ANN')
+leg = plt.legend(loc=0)
+
+plt.tight_layout()
+
+plt.show()
