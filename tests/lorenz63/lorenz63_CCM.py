@@ -28,7 +28,7 @@ def rhs_ccm(X_n, s=10):
     x = X_n
  
     feat = feat_eng.get_feat_history(max_lag)
-    y = ccm.get_sample(feat.reshape([1, N_c]), stochastic = True)
+    y = ccm.get_sample(feat.reshape([1, N_c]), stochastic = False)
     f_n = s*(y - x)
     
     return f_n
@@ -69,6 +69,12 @@ from mpl_toolkits.mplot3d import Axes3D
 
 plt.close('all')
 
+###################
+# Simulation flags
+###################
+predict = False         #predict using the learned SGS term
+store = False           #store the prediction results
+
 n_steps = 10**5
 dt = 0.01
 X = np.zeros(n_steps); Y = np.zeros(n_steps); Z = np.zeros(n_steps) 
@@ -104,7 +110,7 @@ max_lag = np.max(list(chain(*lags)))
 X_lagged, y_train = feat_eng.lag_training_data([X[:, 0]], X[:, 1], lags)
 Y_lagged, _ = feat_eng.lag_training_data([X[:, 1]], np.zeros(n_steps), lags)
 
-ccm = es.methods.CCM(X_lagged, Y_lagged, [5, 5], lags)
+ccm = es.methods.CCM(X_lagged, Y_lagged, [10, 10], lags)
 N_c = ccm.N_c
 
 #################################
@@ -113,10 +119,10 @@ N_c = ccm.N_c
 
 X_n = np.zeros(3)
 #initial condition of the training data
-X_n[0] = 0.0; X_n[1]  = 1.0; X_n[2] = 1.05
+# X_n[0] = 0.0; X_n[1]  = 1.0; X_n[2] = 1.05
 
 #new initial condition to break symmetry
-# X_n[0] = 0.20; X_n[1] = 0.75; X_n[2] = 1.0
+X_n[0] = 0.20; X_n[1] = 0.75; X_n[2] = 1.0
 
 #initial condition right-hand side
 f_nm1 = rhs(X_n)
