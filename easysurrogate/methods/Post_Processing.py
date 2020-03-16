@@ -12,9 +12,30 @@ CLASS FOR POST PROCESSING SUBROUTINES
 
 class Post_Processing:
     
-    def __init__(self):
+    def __init__(self, load_data = False, **kwargs):
+        
+        if load_data:
+            if 'file_path' in kwargs:
+                file_path = kwargs['file_path']
+            else:
+                root = tk.Tk()
+                root.withdraw()
+                file_path = tk.filedialog.askopenfilename(title="Post processing: Open data file", 
+                                                          filetypes=(('HDF5 files', '*.hdf5'), 
+                                                                    ('All files', '*.*')))
+            h5f = h5py.File(file_path, 'r')
+    
+            h5f = h5py.File(file_path, 'r')
+            print('Loaded', h5f.keys())
+    
+            self.h5f = h5f
+
+    def get_hdf5_file(self):
         """
+        Returns the h5py file object that was loaded when the object was created
         """
+        return self.h5f
+
         
     def auto_correlation_function(self, X, max_lag):
         """
