@@ -134,11 +134,11 @@ max_lag = np.max(list(chain(*lags)))
 ###################
 # Simulation flags
 ###################
-train = True           #train the network
-make_movie = True      #make a movie (of the training)
-predict = True         #predict using the learned SGS term
-store = True           #store the prediction results
-make_movie_pred = True #make a movie (of the prediction)
+train = False           #train the network
+make_movie = False      #make a movie (of the training)
+predict = False         #predict using the learned SGS term
+store = False           #store the prediction results
+make_movie_pred = True  #make a movie (of the prediction)
 
 #####################
 # Network parameters
@@ -296,91 +296,97 @@ if predict:
             print('t =', np.around(t_i, 1), 'of', t_end)
 
     print('done')
+    post_proc = es.methods.Post_Processing(load_data = False)
 
-    #############   
-    # Plot PDEs #
-    #############
+else:
+    post_proc = es.methods.Post_Processing(load_data = True)
+    h5f = post_proc.get_hdf5_file()
+    X_ann = h5f['X'][()]
+    B_ann = h5f['B'][()]
 
-    print('===============================')
-    print('Postprocessing results')
+#############   
+# Plot PDEs #
+#############
 
-    fig = plt.figure()
-    ax = fig.add_subplot(111, xlabel=r'$X_k$')
+print('===============================')
+print('Postprocessing results')
 
-    post_proc = es.methods.Post_Processing()
-    X_dom_surr, X_pde_surr = post_proc.get_pde(X_ann.flatten()[0:-1:10])
-    X_dom, X_pde = post_proc.get_pde(X_data.flatten()[0:-1:10])
+fig = plt.figure()
+ax = fig.add_subplot(111, xlabel=r'$X_k$')
 
-    ax.plot(X_dom, X_pde, 'ko', label='L96')
-    ax.plot(X_dom_surr, X_pde_surr, label='ANN')
+X_dom_surr, X_pde_surr = post_proc.get_pde(X_ann.flatten()[0:-1:10])
+X_dom, X_pde = post_proc.get_pde(X_data.flatten()[0:-1:10])
 
-    plt.yticks([])
+ax.plot(X_dom, X_pde, 'ko', label='L96')
+ax.plot(X_dom_surr, X_pde_surr, label='QSN')
 
-    plt.legend(loc=0)
+plt.yticks([])
 
-    plt.tight_layout()
+plt.legend(loc=0)
 
-    #############   
-    # Plot ACFs #
-    #############
+plt.tight_layout()
 
-    fig = plt.figure()
-    ax = fig.add_subplot(111, ylabel='ACF', xlabel='time')
+#############   
+# Plot ACFs #
+#############
 
-    R_data = post_proc.auto_correlation_function(X_data[:,0], max_lag=1000)
-    R_sol = post_proc.auto_correlation_function(X_ann[:, 0], max_lag=1000)
+fig = plt.figure()
+ax = fig.add_subplot(111, ylabel='ACF', xlabel='time')
 
-    dom_acf = np.arange(R_data.size)*dt
+R_data = post_proc.auto_correlation_function(X_data[:,0], max_lag=1000)
+R_sol = post_proc.auto_correlation_function(X_ann[:, 0], max_lag=1000)
 
-    ax.plot(dom_acf, R_data, 'ko', label='L96')
-    ax.plot(dom_acf, R_sol, label='ANN')
+dom_acf = np.arange(R_data.size)*dt
 
-    leg = plt.legend(loc=0)
+ax.plot(dom_acf, R_data, 'ko', label='L96')
+ax.plot(dom_acf, R_sol, label='QSN')
 
-    plt.tight_layout()
+leg = plt.legend(loc=0)
 
-    #############   
-    # Plot CCFs #
-    #############
+plt.tight_layout()
 
-    fig = plt.figure()
-    ax = fig.add_subplot(111, ylabel='CCF', xlabel='time')
+#############   
+# Plot CCFs #
+#############
 
-    C_data = post_proc.cross_correlation_function(X_data[:,0], X_data[:,1], max_lag=1000)
-    C_sol = post_proc.cross_correlation_function(X_ann[:, 0], X_ann[:, 1], max_lag=1000)
+fig = plt.figure()
+ax = fig.add_subplot(111, ylabel='CCF', xlabel='time')
 
-    dom_ccf = np.arange(C_data.size)*dt
+C_data = post_proc.cross_correlation_function(X_data[:,0], X_data[:,1], max_lag=1000)
+C_sol = post_proc.cross_correlation_function(X_ann[:, 0], X_ann[:, 1], max_lag=1000)
 
-    ax.plot(dom_ccf, C_data, 'ko', label='L96')
-    ax.plot(dom_ccf, C_sol, label='ANN')
+dom_ccf = np.arange(C_data.size)*dt
 
-    leg = plt.legend(loc=0)
+ax.plot(dom_ccf, C_data, 'ko', label='L96')
+ax.plot(dom_ccf, C_sol, label='QSN')
 
-    plt.tight_layout()
+leg = plt.legend(loc=0)
 
-    #store simulation results
-    if store:
-        samples = {'X': X_ann, 'B':B_ann, \
-                   'dom_acf':dom_acf, 'acf_data':R_data, 'acf_ann':R_sol, \
-                   'dom_ccf':dom_ccf, 'ccf_data':C_data, 'ccf_ann':C_sol}
-        post_proc.store_samples_hdf5(samples)
+plt.tight_layout()
+
+#store simulation results
+if store:
+    samples = {'X': X_ann, 'B':B_ann, \
+               'dom_acf':dom_acf, 'acf_data':R_data, 'acf_ann':R_sol, \
+               'dom_ccf':dom_ccf, 'ccf_data':C_data, 'ccf_ann':C_sol}
+    post_proc.store_samples_hdf5(samples)
+
+#make a mavie of the coupled system    
+if make_movie_pred:
     
-    #make a mavie of the coupled system    
-    if make_movie_pred:
+    ims = []
+    fig = plt.figure(figsize=[4, 4])
+    ax1 = fig.add_subplot(111, xlabel=r'time', ylabel=r'$B_k$')
+    plt.tight_layout()
+    
+    n_movie = 1000
+    
+    for i in range(n_movie):
+        animate_pred(i)
         
-        ims = []
-        fig = plt.figure(figsize=[4,4])
-        ax1 = fig.add_subplot(111, xlabel=r'time', ylabel=r'$B_k$')
-        plt.tight_layout()
-        
-        n_movie = 1000
-        
-        for i in range(n_movie):
-            animate_pred(i)
-            
-        #make a movie of all frame in 'ims'
-        im_ani = animation.ArtistAnimation(fig, ims, interval=80, 
-                                           repeat_delay=2000, blit=True)
-        # im_ani.save('./movies/qsn_pred.mp4')
+    #make a movie of all frame in 'ims'
+    im_ani = animation.ArtistAnimation(fig, ims, interval=80, 
+                                       repeat_delay=2000, blit=True)
+    im_ani.save('../movies/qsn_pred.gif')
 
 plt.show()
