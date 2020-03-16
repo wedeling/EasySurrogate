@@ -1,15 +1,3 @@
-"""
-===================================================================================
-CLASS FOR THE BINNING SURROGATE PROCEDURE
------------------------------------------------------------------------------------
-Reference:
-N. Verheul, D. Crommelin, 
-"Data-driven stochastic representations of unresolved features in multiscale models"
-Communications in Mathematical Sciences, 14, 5, 2016.
-Code: W. Edeling
-===================================================================================
-"""
-
 import numpy as np
 from scipy import stats
 from itertools import chain, product, cycle
@@ -17,24 +5,23 @@ import matplotlib.pyplot as plt
 import sys
 from scipy.spatial import ConvexHull
 
-class Resampler:
+class CCM:
     
-    def __init__(self, c, r_ip1, N, N_bins, lags, store_frame_rate=1, 
-                 min_count = 0):
+    def __init__(self, c, r, N_bins, lags, min_count = 0):
+        
+        #spatial dimension, hardcoded to 1 for now
+        self.N = 1
         
         #total number of conditional variables including lagged terms
         self.N_c = c.shape[1]
+        self.N_s = c.shape[0]
         
         #number of unique conditioning variables (not including lags)
         self.N_covar = len(lags)
-        
-        #'spatial' size SHOULD BE FLATTENED???
-        self.N = N
-        self.r_ip1 = r_ip1
+
+        self.r = r
         self.c = c
         self.N_bins = N_bins
-        #FIX THIS:
-        self.N_s = r_ip1.size/N**2
         self.lags = lags
         self.max_lag = np.max(list(chain(*lags)))
         self.covar = {}
@@ -44,10 +31,8 @@ class Resampler:
 
         bins = self.get_bins(N_bins)
         
-        #count = numver of r_ip1 samples in each bin
-        #binedges = same as bins
-        #binnumber = bin indices of the r_ip1 samples. A 1D array, no matter N_c
-        count, binedges, binnumber = stats.binned_statistic_dd(c, r_ip1, statistic='count', bins=bins)
+        count, binedges, binnumber = stats.binned_statistic_dd(c, np.zeros(self.N_s), 
+                                                               statistic='count', bins=bins)
         
         #the unique set of binnumers which have at least one r_ip1 sample
         unique_binnumbers = np.unique(binnumber)
@@ -105,6 +90,14 @@ class Resampler:
         midpoints = np.zeros([N_nonempty, self.N_c])
         for i in range(self.N_c):
             midpoints[:, i] = x_mid[i][x_idx_nonempty[i]]
+            
+        #########################################
+        # find all sample indices per bin index #
+        #########################################
+        
+        sample_idx_per_bin = {}
+        for j in unique_binnumbers:
+            sample_idx_per_bin[j] = np.where(binnumber == j)[0]
 
         self.bins = bins
         self.count = count
@@ -113,13 +106,12 @@ class Resampler:
         self.midpoints = midpoints
         self.idx_of_bin = idx_of_bin
         self.unique_binnumbers = unique_binnumbers
+        self.sample_idx_per_bin = sample_idx_per_bin
         
         print('Connecting all possible empty bins to nearest non-empty bin...')
         self.fill_in_blanks()
         print('done.')
 
-        #mean r per cell
-        self.rmean, _, _ = stats.binned_statistic_dd(c, r_ip1, statistic='mean', bins=bins)
 
     #check which c_i fall within empty bins and correct binnumbers_i by
     #projecting to the nearest non-empty bin
@@ -165,9 +157,16 @@ class Resampler:
 
             binnumbers_i[outliers_idx] = binnumbers_closest
             
-    #create an apriori mapping between every possible bin and the nearest 
-    #non-empty bin. Non-empty bins will link to themselves.
     def fill_in_blanks(self):
+        """
+        Create an a-priori mapping between every possible bin and the nearest 
+        non-empty bin. Non-empty bins will link to themselves.
+    
+        Returns
+        -------
+        None.
+
+        """
         
         bins_padded = []
         
@@ -205,10 +204,17 @@ class Resampler:
             
         self.mapping = mapping
         
-    #visual representation of a 2D binning object. Also shows the mapping
-    #between empty to nearest non-empty bins.
-    def plot_2D_binning_object(self):
 
+    def plot_2D_binning_object(self):
+        """
+        Visual representation of a 2D binning object. Also shows the mapping
+        between empty to nearest non-empty bins.
+
+        Returns
+        -------
+        None.
+
+        """
         if self.N_c != 2:
             print('Only works for N_c = 2')
             return
@@ -233,116 +239,177 @@ class Resampler:
         plt.tight_layout()
         plt.show()
         
-    def plot_2D_shadow_manifold(self, X):
+    def onclick(self, event):
+        
+        if event.inaxes != self.ax1: return
+        
+        # print('%s click: button=%d, x=%d, y=%d, xdata=%f, ydata=%f' %
+        #       ('double' if event.dblclick else 'single', event.button,
+        #        event.x, event.y, event.xdata, event.ydata))
+        
+        c_i = np.array([event.xdata, event.ydata]).reshape([1, 2])
+        _, _, binnumber_i = stats.binned_statistic_dd(c_i, np.zeros(1), 
+                                                      bins=self.bins)
 
-        if self.N_c != 2:
-            print('Only works for N_c = 2')
+        print('Bin', binnumber_i[0])
+        binnumber_i = self.mapping[binnumber_i][0]
+        idx = self.sample_idx_per_bin[binnumber_i]
+        points_c = self.c[idx]
+        points_r = self.r[idx]
+                    
+        self.plot_local_bin(points_c, binnumber_i, self.ax1, 'r', width = 4)               
+        self.plot_local_bin(points_r, binnumber_i, self.ax2, 'r', width = 4)
+        
+        plt.draw()
+        
+    
+    def plot_local_bin(self, points, binnumber, ax, marker, width=2):
+        #if  there are 3 or more samples in current bin, plot the
+        #convex hull of all samples in this bin
+        if points.shape[0] >= 3:        
+            # marker = next(colors)
+            hull = ConvexHull(points)
+            ax.plot(points[hull.vertices, 0], points[hull.vertices, 1], marker, linewidth=width)
+            ax.plot([points[hull.vertices[0], 0], points[hull.vertices[-1], 0]],
+                    [points[hull.vertices[0], 1], points[hull.vertices[-1], 1]], marker, linewidth=width)
+            
+        #     #plot the binnumber
+        #     x_mid = np.mean(points[hull.vertices, :], axis=0)
+        #     ax.text(x_mid[0], x_mid[1], str(binnumber))
+        # # ax.plot(X[idx_i, 0], X[idx_i, 1], '+')
+        # else:
+        #     x_mid = np.mean(points, axis=0)
+        #     ax.text(x_mid[0], x_mid[1], str(binnumber))
+        
+        
+    def plot_2D_shadow_manifold(self):
+        """
+        Plots the bins on the manifold of the conditioning variables, and
+        the corresponding neighborhoods on the shadow manifold.   
+
+        Returns
+        -------
+        None.
+
+        """
+
+        if self.N_c == 1:
+            print('Dimension manifold = 1, only works for dimension of 2 or higher')
             return
+        elif self.N_c > 2:
+            print('Dimension manifold > 2, will only plot first 2 dimensions')
 
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        ax.plot(X[:,0], X[:,1], '+', color='lightgray', alpha=0.3)
+        fig = plt.figure('manifolds_and_binnumbers', figsize = [8, 4])
+        # colors = cycle(['--r', '--g', '--b', '--m', '--k'])
+        self.ax1 = fig.add_subplot(121, title = 'Manifold')
+        self.ax2 = fig.add_subplot(122, title = 'Showdow manifold')       
+        self.ax1.set_xlabel(r'$\mathrm{conditioning\;variable\;at\;t-\tau}$')
+        self.ax1.set_ylabel(r'$\mathrm{conditioning\;variable\;at\;t}$')
+        self.ax2.set_xlabel(r'$\mathrm{shadow\;variable\;at\;t-\tau}$')
+        self.ax2.set_ylabel(r'$\mathrm{shadow\;variable\;at\;t}$')
         
-        colors = cycle(['--r', '--g', '--b', '--m', '--k'])
+        #plot the samples
+        self.ax1.plot(self.c[:,0], self.c[:,1], '+', color='lightgray', alpha=0.3)
+        self.ax2.plot(self.r[:,0], self.r[:,1], '+', color='lightgray', alpha=0.3)
+        
+        for idx_i in self.sample_idx_per_bin.keys():
+            
+            idx = self.sample_idx_per_bin[idx_i]
+            points_c = self.c[idx]
+            points_r = self.r[idx]
+                        
+            self.plot_local_bin(points_c, idx_i, self.ax1, '--k')               
+            self.plot_local_bin(points_r, idx_i, self.ax2, '--k')               
 
-        for idx in self.unique_binnumbers:
-            
-            idx_i = np.where(self.binnumber == idx)[0]
-            
-           
-            if idx_i.size >= 3:        
-                marker = next(colors)
-                points = X[idx_i, :]
-                hull = ConvexHull(points)
-                ax.plot(points[hull.vertices, 0], points[hull.vertices, 1], marker)
-                ax.plot([points[hull.vertices[0], 0], points[hull.vertices[-1], 0]],
-                        [points[hull.vertices[0], 1], points[hull.vertices[-1], 1]], marker)
-                
-                x_mid = np.mean(points[hull.vertices, :], axis=0)
-                ax.text(x_mid[0], x_mid[1], str(idx))
-            # ax.plot(X[idx_i, 0], X[idx_i, 1], '+')
+        plt.tight_layout()
+        
+        cid = fig.canvas.mpl_connect('button_press_event', self.onclick)
+
+
+    def get_sample(self, c_i, stochastic = False):
+    
+        #find in which bins the c_i samples fall
+        _, _, binnumbers_i = stats.binned_statistic_dd(c_i, np.zeros(self.N**2), bins=self.bins)
+        
+        #static correction for outliers, using precomputed mapping array
+        binnumbers_i = self.mapping[binnumbers_i]
+       
+        #the neighbors in the selected bin, on the 'C manifold'
+        neighbors = self.c[self.sample_idx_per_bin[binnumbers_i[0]]]
+        
+        #the distance from the current point to all neighbors
+        dists = np.linalg.norm(neighbors - c_i, axis = 1)
+        
+        #if the current bin does not contain enough points to form a simplex,
+        #adjust K.
+        if dists.size < self.N_c + 1:
+            K = dists.size      #adjusted K
+        else:
+            K = self.N_c + 1    #simplex K (manifold dimension + 1)
+        
+        #sort the distances + select the K nearest neighbors
+        idx = np.argsort(dists)[0:K]
+        simplex_idx = self.sample_idx_per_bin[binnumbers_i[0]][idx]
+        
+        if not stochastic:
+            #compute the simplex weights w_i
+            d_i = dists[idx]
+            if d_i[0] == 0:
+                u_i = np.zeros(K)
+                u_i[0] = 1.0
             else:
-                x_mid = np.mean(X[idx_i,:], axis=0)
-                ax.text(x_mid[0], x_mid[1], str(idx))
+                u_i = np.exp(-d_i/d_i[0])
+            w_i = u_i/np.sum(u_i)
+    
+            #prediction is the weighted sum of correspoding samples
+            #on the showdow manifold        
+            shadow_sample = np.sum(self.r[simplex_idx, -1]*w_i)
+    
+            return shadow_sample
+        else:
+            shadow_sample = self.sample_simplex(self.r[simplex_idx])[0]
+            return shadow_sample[-1]
+
+    def sample_simplex(self, xi, n_mc = 1):
+        """
+        Use an analytical function map to points in the n_xi-dim. hypercube to a
+        n_xi-dim simplex with vertices xi_k_jl. 
+        
+        Source: 
+            W. Edeling, R. Dwight, P. Cinnella, 
+            Simplex-stochastic collocation method with improved scalability
+            Journal of Computational Physics, 310, 301--328, 2016.
+            
+        Parameters
+        ----------
+        xi: array of floats, shape (n_xi + 1, n_xi) 
+            
+        n_mc : int, number of samples to draw from inside the simplex
+            DESCRIPTION. The default is 1.
+
+        Returns
+        -------
+        n_mc uniformly distributed points inside the simplex.
+ 
+        """
+        n_xi = xi.shape[1]
+        P = np.zeros([n_mc, n_xi])
+        for k in range(n_mc):
+            #random points inside the hypercube
+            r = np.random.rand(n_xi)
+            
+            #the term of the map is \xi_k_j0
+            sample = np.copy(xi[0])
+            for i in range(1, n_xi+1):
+                prod_r = 1.
+                #compute the product of r-terms: prod(r_{n_xi-j+1}^{1/(n_xi-j+1)})
+                for j in range(1,i+1):
+                    prod_r *= r[n_xi - j]**(1./(n_xi - j + 1))
+                #compute the ith term of the sum: prod_r*(\xi_i-\xi_{i-1})
+                sample += prod_r*(xi[i] - xi[i-1])
+            P[k,:] = sample
      
-    #the data-driven model for the unresolved scales
-    #Given c_i return r at time i+1 (r_ip1)
-    def get_sample(self, c_i, n_mc=1):
-    
-        #find in which bins the c_i samples fall
-        _, _, binnumbers_i = stats.binned_statistic_dd(c_i, np.zeros(self.N**2), bins=self.bins)
-        
-        #dynamically corrects binnumbers_i if outliers are found
-        #self.check_outliers(binnumbers_i, c_i)
-
-        #static correction for outliers, using precomputed mapping array
-        binnumbers_i = self.mapping[binnumbers_i]
-        
-        #self.check_outliers(binnumbers_i, c_i)
-
-        #convert 1D binnumbers_i to equivalent ND indices
-        x_idx = np.unravel_index(binnumbers_i, [len(b) + 1 for b in self.bins])
-        x_idx = [x_idx[i] - 1 for i in range(self.N_c)]
-        
-        #random integers between 0 and max bin count for each index in binnumbers_i    
-        I = np.floor(self.count[x_idx].reshape([self.N**2, 1])*np.random.rand(self.N**2, n_mc)).astype('int')
-        
-        #the correct offset for the 1D array idx_of_bin
-        start = self.offset[binnumbers_i]
-    
-        #get random r sample from each bin indexed by binnumbers_i
-        r = np.zeros([n_mc, self.N, self.N])
-        
-        for i in range(n_mc):
-            r[i, :, :] = self.r_ip1[self.idx_of_bin[start + I[:, i]]].reshape([self.N, self.N])
-       
-        return np.mean(r, 0) #, binnumbers_i
-    
-    #the data-driven model for the unresolved scales
-    #Given c_i return bin averaged r at time i+1 
-    def get_mean_sample(self, c_i):
-        
-        #find in which bins the c_i samples fall
-        _, _, binnumbers_i = stats.binned_statistic_dd(c_i, np.zeros(self.N**2), bins=self.bins)
-        
-        #dynamically corrects binnumbers_i if outliers are found
-        #self.check_outliers(binnumbers_i, c_i)
-
-        #static correction for outliers, using precomputed mapping array
-        binnumbers_i = self.mapping[binnumbers_i]
-    
-        #convert 1D binnumbers_i to equivalent ND indices
-        x_idx = np.unravel_index(binnumbers_i, [len(b) + 1 for b in self.bins])
-        x_idx = [x_idx[i] - 1 for i in range(self.N_c)]
-    
-        return self.rmean[x_idx].reshape([self.N, self.N]) #, self.rstd[x_idx].reshape([self.N, self.N])
-
-    #append the covariates supplied to the binning object during simulation
-    #to self.covars
-    #Note: use list to dynamically append, array is very slow
-    def append_covar(self, c_i):
-       
-        for i in range(self.N_covar):
-            self.covar[i].append(c_i[:,i])
-            
-            #if max number of covariates is reached, remove first item
-            if len(self.covar[i]) > self.max_lag:
-                self.covar[i].pop(0)
-
-    #return lagged covariates, assumes constant lag
-    #Note: typecast to array if spatially varying lag is required
-    def get_covar(self):
-        
-        c_i = np.zeros([self.N, self.N_c])
-
-        idx = 0
-        
-        for i in range(self.N_covar):
-            for lag in self.lags[i]:
-                c_i[:, idx] = self.covar[i][-lag]    
-                idx += 1
-            
-        return c_i
+        return P
            
     def print_bin_info(self):
         print('-------------------------------')

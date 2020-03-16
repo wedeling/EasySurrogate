@@ -128,13 +128,13 @@ dt = 0.01
 t_end = 1000.0
 t = np.arange(0.0, t_end, dt)
 #time lags per feature
-lags = [[1]]
+lags = [[1, 10]]
 max_lag = np.max(list(chain(*lags)))
 
 ###################
 # Simulation flags
 ###################
-train = False           #train the network
+train = True           #train the network
 make_movie = True     #make a movie (of the training)
 predict = False         #predict using the learned SGS term
 store = False           #store the prediction results
@@ -145,7 +145,7 @@ make_movie_pred = False  #make a movie (of the prediction)
 #####################
 
 #Feature engineering object - loads data file
-feat_eng = es.methods.Feature_Engineering()
+feat_eng = es.methods.Feature_Engineering(load_data = True)
 #get training data
 h5f = feat_eng.get_hdf5_file()
 
