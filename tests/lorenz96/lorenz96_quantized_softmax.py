@@ -127,6 +127,7 @@ epsilon = 0.5
 dt = 0.01
 t_end = 1000.0
 t = np.arange(0.0, t_end, dt)
+
 #time lags per feature
 lags = [[1, 10]]
 max_lag = np.max(list(chain(*lags)))
@@ -156,8 +157,11 @@ B_data = h5f['B_data'][()]
 #Lag features as defined in 'lags'
 X_train, y_train = feat_eng.lag_training_data([X_data], B_data, lags = lags)
 
+#number of bins per B_k
 n_bins = 10
+#one-hot encoded training data per B_k
 feat_eng.bin_data(y_train, n_bins)
+#simple sampler to draw random samples from the bins
 sampler = es.methods.SimpleBin(feat_eng)
 
 #number of softmax layers (one per output)

@@ -16,18 +16,9 @@ def rhs_surrogate(X_n, y_nm1, s=10):
 
     feat = feat_eng.get_feat_history(max_lag).reshape([1, n_feat])
     y_n = surrogate.get_sample(feat)[0][0]
-    y_n_mean = surrogate.get_mean_sample(feat)[0][0]
-    
-    # beta = 0.9
-    # r_n = beta*r_nm1 + (1.0 - beta)*y_n
-    
-    # tau1 = 100.0
-    # # tau2 = 1.0
-    # r_n = r_nm1 + dt*tau1*(y_n_mean - r_nm1) 
+    # y_n_mean = surrogate.get_mean_sample(feat)[0][0]
     
     f_n = s*(y_n - X_n)
-    # f_n[1] = r*x - y - x*z
-    # z_dot = x*y - b*z
     
     return f_n, y_n
 
@@ -37,10 +28,10 @@ def step(X_n, f_nm1):
     f_n = rhs(X_n)
 
     # Adams Bashforth
-    # X_np1 = X_n + dt*(3.0/2.0*f_n - 0.5*f_nm1)
+    X_np1 = X_n + dt*(3.0/2.0*f_n - 0.5*f_nm1)
     
-    # Euler
-    X_np1 = X_n + dt*f_n
+    # # Euler
+    # X_np1 = X_n + dt*f_n
     
     return X_np1, f_n
 
@@ -50,10 +41,10 @@ def step_with_surrogate(X_n, y_nm1, f_nm1):
     f_n, y_n = rhs_surrogate(X_n, y_nm1)
 
     # Adams Bashforth
-    # X_np1 = X_n + dt*(3.0/2.0*f_n - 0.5*f_nm1)
+    X_np1 = X_n + dt*(3.0/2.0*f_n - 0.5*f_nm1)
     
     # Euler
-    X_np1 = X_n + dt*f_n
+    # X_np1 = X_n + dt*f_n
    
     feat_eng.append_feat([[X_np1], [y_n]], max_lag)
     
@@ -75,8 +66,8 @@ from itertools import chain
 
 plt.close('all')
 
-n_steps = 10**5
-dt = 0.01
+n_steps = 10**6
+dt = 0.001
 X = np.zeros(n_steps); Y = np.zeros(n_steps); Z = np.zeros(n_steps) 
 X_dot = np.zeros(n_steps); Y_dot = np.zeros(n_steps); Z_dot = np.zeros(n_steps) 
 
