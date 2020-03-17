@@ -25,6 +25,31 @@ To recreate the results, perform the following steps
 
 The first step is to generate the training data, by executing `python3 tests/lorenz96/lorenz96.py`. This will generate training pairs that are used in `tests/lorenz_96/lorenz96_quantized_softmax.py`. You will be asked for a location to store the data (HDF5 format).
 
+## Setup the Quantized Softmax Network
+
+The first step is to time lag the generated training data. This is done via:
+
+```python
+#Feature engineering object - loads data file
+feat_eng = es.methods.Feature_Engineering(load_data = True)
+
+#get training data
+h5f = feat_eng.get_hdf5_file()
+
+#Large-scale and SGS data - convert to numpy array via [()]
+X_data = h5f['X_data'][()]
+B_data = h5f['B_data'][()]
+
+#Lag features as defined in 'lags'
+lags = [[1, 10]]
+X_train, y_train = feat_eng.lag_training_data([X_data], B_data, lags = lags)
+```
+
++ `feat_eng` is a `Feature_Engineering` object that we (amongst others) use to lag the training data.
++ `lags` is a nested list of time lags. Every conditioning variable has one list of time lags in `lags`. Since we only condition on X here, there is only a single list. In this example we lag X by 1 and 10 time steps.
++ `X_train` are the time-lagged training features. In this example, every entry consists of 2 X *vectors* (each of size K), one lagged behind the corresponding SGS data B by one time step, and the other vector by 10 steps.
++ `y_train` are the SGS data vectors B (size K).
+
 ## Training / predicting with the Quantized Softmax Network
 
 As mentioned, the file `tests/lorenz_96/lorenz96_quantized_softmax.py` contains the QSN applied to L96 data. It contains the following flags:
@@ -38,7 +63,7 @@ make_movie_pred = False #make a movie (of the prediction)
 ```
 
 + `train` (Boolean): train the QSN network on L96 data.
-+ `make_movie` (Boolean): make a movie as displayed above. This is the QSN evaluated on the *training* data.
++ `make_movie` (Boolean): make a movie as displayed below. This is the QSN evaluated on the *training* data.
 
 ![alt text](https://github.com/wedeling/EasySurrogate/blob/phys_D/tests/movies/qsn.gif)
 
