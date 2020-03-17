@@ -8,7 +8,9 @@ The two layer Lorenz 96 system is given by:
 
 ![equation](https://latex.codecogs.com/svg.latex?B_k%20%3A%3D%20%5Cfrac%7Bh_x%7D%7BJ%7D%5Csum_%7Bj%3D1%7D%5E%7BJ%7D%20Y_%7Bj%2Ck%7D)
 
-Here B_k is the subgrid-scale term for which we create a surrogate model in the form of a quantized softmax network, see the paper (referenced [here](./README.md)) for details.
+![equation](https://latex.codecogs.com/gif.latex?k%20%3D%201%2C%5Ccdots%2C%20K%20%5Cquad%5Cquad%20j%20%3D%201%2C%5Ccdots%2CJ)
+
+Here B_k is the subgrid-scale (SGS) term for which we create a surrogate model in the form of a quantized softmax network, see the paper (referenced [here](./README.md)) for details.
 
 ## Files
 
@@ -49,6 +51,37 @@ X_train, y_train = feat_eng.lag_training_data([X_data], B_data, lags = lags)
 + `lags` is a nested list of time lags. Every conditioning variable has one list of time lags in `lags`. Since we only condition on X here, there is only a single list. In this example we lag X by 1 and 10 time steps.
 + `X_train` are the time-lagged training features. In this example, every entry consists of 2 X *vectors* (each of size K), one lagged behind the corresponding SGS data B by one time step, and the other vector by 10 steps.
 + `y_train` are the SGS data vectors B (size K).
+
+Next, we divide the SGS data B_k (at each spatial location index by k) into `n_bins` non-overlapping bins, and create one-hot encoded training data. This is done via:
+
+```python
+#number of bins per B_k
+n_bins = 10
+#one-hot encoded training data per B_k
+feat_eng.bin_data(y_train, n_bins)
+#simple sampler to draw random samples from the bins
+sampler = es.methods.SimpleBin(feat_eng)
+```
+
++ `feat_eng.bin_data(y_train, n_bins)` creates the one-hot encoded data from y_train. Here, we bin each B_k into 10 bins, meaning that the number of output neurons of the QSN is 10K (K=18 in our L96 setup). The one-hot encoded data is stored in `feat_eng.y_idx_binned`.
++ `sampler` is a `SimpleBin` object that is used to draw random samples from the bins identified by the QSN output.
+
+Finally, a QSN object is created via:
+
+```
+#number of softmax layers (one per output location k)
+n_softmax = K
+
+#number of output neurons 
+n_out = n_bins*n_softmax
+
+#train the neural network
+surrogate = es.methods.ANN(X=X_train, y=feat_eng.y_idx_binned, n_layers=4, n_neurons=256, 
+                           n_softmax = K, n_out=K*n_bins, loss = 'cross_entropy',
+                           activation='hard_tanh', batch_size=512,
+                           lamb=0.0, decay_step=10**4, decay_rate=0.9, 
+                           standardize_X=False, standardize_y=False, save=True)
+```
 
 ## Training / predicting with the Quantized Softmax Network
 
