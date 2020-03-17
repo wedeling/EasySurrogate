@@ -82,10 +82,11 @@ surrogate = es.methods.ANN(X=X_train, y=feat_eng.y_idx_binned, n_layers=4, n_neu
                            lamb=0.0, decay_step=10**4, decay_rate=0.9, 
                            standardize_X=False, standardize_y=False, save=True)
 ```
+This is all fairly self explanatory. We use an in-house Artificial Neural Network (ANN) code to create a QSN. This consists of a feed-forward network of a specified number of layers and neurons per layer, with K separate softmax layers at the output to predict the probability mass function (pmf) of the bins, for each B_k. We can sample the binnumbers from these pmfs, or just take the bin with the highest probablity. These binnumbers are then fed to the `sampler` to randomly resample reference data from the identified bins.
 
 ## Training / predicting with the Quantized Softmax Network
 
-As mentioned, the file `tests/lorenz_96/lorenz96_quantized_softmax.py` contains the QSN applied to L96 data. It contains the following flags:
+As mentioned, the file `tests/lorenz_96/lorenz96_quantized_softmax.py` contains the QSN applied in conjunction with the L96 system. It contains the following flags:
 
 ```python
 train = True            #train the network
