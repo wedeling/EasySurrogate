@@ -107,6 +107,6 @@ make_movie_pred = False #make a movie (of the prediction)
 
 ![alt text](https://github.com/wedeling/EasySurrogate/blob/phys_D/tests/movies/qsn_pred.gif)
 
-Pre-generated statistical results van be found in `tests/figures`, e.g. the probability density function of X_k:
+Pre-generated statistical results van be found in `tests/figures`, e.g. the probability density function of X_k computed from the full two-layer L96 system and the one-layer model forced by the QSN SGS model:
 
 ![alt text](https://github.com/wedeling/EasySurrogate/blob/phys_D/tests/figures/QSM_pdf.png)
