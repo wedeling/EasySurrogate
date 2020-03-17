@@ -107,3 +107,6 @@ make_movie_pred = False #make a movie (of the prediction)
 
 ![alt text](https://github.com/wedeling/EasySurrogate/blob/phys_D/tests/movies/qsn_pred.gif)
 
+Pre-generated statistical results van be found in `tests/figures`, e.g. the probability density function of X_k:
+
+![al text](https://github.com/wedeling/EasySurrogate/blob/phys_D/tests/figures/L96_pdf.png)
