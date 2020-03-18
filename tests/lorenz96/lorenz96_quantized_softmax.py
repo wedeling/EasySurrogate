@@ -137,8 +137,8 @@ max_lag = np.max(list(chain(*lags)))
 ###################
 train = False           #train the network
 make_movie = False      #make a movie (of the training)
-predict = False         #predict using the learned SGS term
-store = False           #store the prediction results
+predict = True         #predict using the learned SGS term
+store = True           #store the prediction results
 make_movie_pred = True  #make a movie (of the prediction)
 
 #####################
@@ -391,6 +391,6 @@ if make_movie_pred:
     #make a movie of all frame in 'ims'
     im_ani = animation.ArtistAnimation(fig, ims, interval=80, 
                                        repeat_delay=2000, blit=True)
-    im_ani.save('../movies/qsn_pred.gif')
+    im_ani.save('../movies/qsn_pred.mp4')
 
 plt.show()
