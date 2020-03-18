@@ -272,7 +272,7 @@ class CCM:
             ax.plot(points[hull.vertices, 0], points[hull.vertices, 1], marker, linewidth=width)
             ax.plot([points[hull.vertices[0], 0], points[hull.vertices[-1], 0]],
                     [points[hull.vertices[0], 1], points[hull.vertices[-1], 1]], marker, linewidth=width)
-            
+            print(hull.volume)
         #     #plot the binnumber
         #     x_mid = np.mean(points[hull.vertices, :], axis=0)
         #     ax.text(x_mid[0], x_mid[1], str(binnumber))
@@ -302,7 +302,7 @@ class CCM:
         fig = plt.figure('manifolds_and_binnumbers', figsize = [8, 4])
         # colors = cycle(['--r', '--g', '--b', '--m', '--k'])
         self.ax1 = fig.add_subplot(121, title = 'Manifold')
-        self.ax2 = fig.add_subplot(122, title = 'Showdow manifold')       
+        self.ax2 = fig.add_subplot(122, title = 'Shawdow manifold')       
         self.ax1.set_xlabel(r'$\mathrm{conditioning\;variable\;at\;t-\tau}$')
         self.ax1.set_ylabel(r'$\mathrm{conditioning\;variable\;at\;t}$')
         self.ax2.set_xlabel(r'$\mathrm{shadow\;variable\;at\;t-\tau}$')
