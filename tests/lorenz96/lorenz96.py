@@ -152,7 +152,7 @@ plt.close('all')
 K = 18
 J = 20
 F = 10.0
-h_x = -1.0
+h_x = -2.0
 h_y = 1.0
 epsilon = 0.5
 

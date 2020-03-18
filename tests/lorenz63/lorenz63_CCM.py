@@ -112,6 +112,7 @@ Y_lagged, _ = feat_eng.lag_training_data([X[:, 1]], np.zeros(n_steps), lags)
 
 ccm = es.methods.CCM(X_lagged, Y_lagged, [10, 10], lags)
 N_c = ccm.N_c
+ccm.plot_2D_shadow_manifold()
 
 #################################
 # Run full model to generate IC #
