@@ -33,7 +33,7 @@ def rhs_X(X, B):
     for k in range(2, K-1):
         rhs_X[k] = -X[k-2]*X[k-1] + X[k-1]*X[k+1] - X[k] + F
         
-    rhs_X += B
+    rhs_X += h_x*B
         
     return rhs_X
 
@@ -152,9 +152,16 @@ plt.close('all')
 K = 18
 J = 20
 F = 10.0
-h_x = -1.0
+h_x = -1.5
 h_y = 1.0
 epsilon = 0.5
+
+# K = 32
+# J = 16
+# F = 18.0
+# h_x = -3.2
+# h_y = 1.0
+# epsilon = 0.5
 
 ##################
 # Time parameters
@@ -166,7 +173,7 @@ t = np.arange(0.0, t_end, dt)
 ###################
 # Simulation flags
 ###################
-make_movie = True     #make a movie
+make_movie = False     #make a movie
 store = True         #store the prediction results
 
 #equilibrium initial condition for X, zero IC for Y
@@ -199,7 +206,7 @@ for t_i in t:
     X_np1, f_n = step_X(X_n, f_nm1, B_n)
     
     #compute SGS term
-    B_n = h_x*np.mean(Y_n, axis=0)
+    B_n = np.mean(Y_n, axis=0)
 
     #store solutions
     X_data[idx, :] = X_np1
@@ -227,7 +234,7 @@ ax.set_rorigin(-22)
 ax.set_rgrids([-10, 0, 10], labels=['', '', ''])[0][1]
 ax.legend(loc=1)
 
-burn = 500
+burn = 1000
 
 post_proc = es.methods.Post_Processing()
 
@@ -267,7 +274,6 @@ else:
     
 #plot X_k vs B_k
 fig = plt.figure()
-burn = 500
 plt.plot(X_data[burn:, 0], B_data[burn:, 0], '.')
 
 #############   
