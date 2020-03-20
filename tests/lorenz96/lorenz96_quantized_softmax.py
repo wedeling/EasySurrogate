@@ -114,19 +114,19 @@ plt.close('all')
 #####################
 #Lorenz96 parameters
 #####################
-K = 18
-J = 20
-F = 10.0
-h_x = -1.5
-h_y = 1.0
-epsilon = 0.5
-
-# K = 32
-# J = 16
-# F = 18.0
-# h_x = -3.2
+# K = 18
+# J = 20
+# F = 10.0
+# h_x = -1.0
 # h_y = 1.0
 # epsilon = 0.5
+
+K = 32
+J = 16
+F = 18.0
+h_x = -3.2
+h_y = 1.0
+epsilon = 0.5
 
 ##################
 # Time parameters
@@ -142,10 +142,10 @@ max_lag = np.max(list(chain(*lags)))
 ###################
 # Simulation flags
 ###################
-train = False            #train the network
+train = False           #train the network
 make_movie = False      #make a movie (of the training)
 predict = True          #predict using the learned SGS term
-store = False            #store the prediction results
+store = False           #store the prediction results
 make_movie_pred = False #make a movie (of the prediction)
 
 #####################
@@ -162,7 +162,7 @@ X_data = h5f['X_data'][()]
 B_data = h5f['B_data'][()]
 
 #Lag features as defined in 'lags'
-X_train, y_train = feat_eng.lag_training_data([X_data], B_data, lags = lags)
+X_train, y_train = feat_eng.lag_training_data([X_data, B_data], B_data, lags = lags)
 n_train = X_train.shape[0]
 
 #number of bins per B_k
@@ -260,7 +260,7 @@ if predict:
 
     #features are time lagged, use the data to create initial feature set
     for i in range(max_lag):
-        feat_eng.append_feat([X_data[i]], max_lag)
+        feat_eng.append_feat([X_data[i], B_data[i]], max_lag)
 
     #initial conditions
     X_n = X_data[max_lag]
@@ -292,7 +292,7 @@ if predict:
         X_np1, f_n = step_X(X_n, f_nm1, B_n)
         
         #append the features to the Feature Engineering object
-        feat_eng.append_feat([X_np1], max_lag)
+        feat_eng.append_feat([X_np1, B_n], max_lag)
 
         #store solutions
         X_ann[idx, :] = X_n
