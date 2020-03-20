@@ -118,7 +118,7 @@ K = 18
 J = 20
 F = 10.0
 h_x = -1.5
-h_y = 1.5
+h_y = 1.0
 epsilon = 0.5
 
 # K = 32
@@ -142,11 +142,11 @@ max_lag = np.max(list(chain(*lags)))
 ###################
 # Simulation flags
 ###################
-train = True            #train the network
+train = False            #train the network
 make_movie = False      #make a movie (of the training)
 predict = True          #predict using the learned SGS term
-store = True           #store the prediction results
-make_movie_pred = True #make a movie (of the prediction)
+store = False            #store the prediction results
+make_movie_pred = False #make a movie (of the prediction)
 
 #####################
 # Network parameters
