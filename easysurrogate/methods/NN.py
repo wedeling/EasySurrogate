@@ -3,6 +3,8 @@ import pickle
 import tkinter as tk
 from tkinter import filedialog
 from scipy.stats import rv_discrete
+from itertools import cycle
+import matplotlib.pyplot as plt
 
 from .Layer import Layer
 
@@ -451,18 +453,38 @@ class ANN:
 
         print('==============================================')
       
-    #compute the number of misclassifications
-    def compute_misclass(self):
+
+    def plot_binning_estimate(self, feat_eng, X = []):
         
-        n_misclass = 0.0
-        
-        for i in range(self.n_train):
-            y_hat_i = xp.sign(self.feed_forward(self.X[i]))
+        if X == []:
+            X = self.X
             
-            if y_hat_i != self.y[i]:
-                n_misclass += 1
-                
-        print('Number of misclassifications = ', n_misclass)
+        if X.shape[1] < 2:
+            return
+        
+        n_train = X.shape[0]
+        n_bins = self.n_softmax
+        
+        fig = plt.figure(figsize=[8,4])
+        ax1 = fig.add_subplot(121, title = 'data',
+                              xlabel=r'conditioning variable 1', ylabel=r'conditioning variable 2')
+        ax2 = fig.add_subplot(122, title = 'QSN',
+                              xlabel=r'conditioning variable 1', ylabel=r'conditioning variable 2')
+        colors = cycle(['r+', 'b+', 'g+', 'k+', 'c+', 'm+', 'y+'])
+        
+        binnumbers_ann = np.zeros(n_train)
+        for i in range(n_train):
+            _, idx_max, _ = self.get_softmax(X[i].reshape([1, self.n_in]))
+            binnumbers_ann[i] = idx_max[0]
+        
+        for i in range(n_bins):
+            idx_data = np.where(feat_eng.binnumbers[:,0] == i+1)
+            idx_ann = np.where(binnumbers_ann == i)
+            marker = next(colors)
+            ax1.plot(self.X[idx_data, 0], self.X[idx_data, 1], marker)
+            ax2.plot(X[idx_ann, 0], X[idx_ann, 1], marker)
+     
+        plt.tight_layout()   
      
     #compute the number of misclassifications for a sofmax layer
     def compute_misclass_softmax(self, X = [], y = []):
@@ -497,7 +519,8 @@ class ANN:
         print('Misclassification percentage =', n_misclass/n_samples*100, '%')
         
         return n_misclass/n_samples
-        
+       
+            
     #return the number of weights
     def get_n_weights(self):
         

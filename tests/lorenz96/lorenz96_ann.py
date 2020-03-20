@@ -33,7 +33,7 @@ def rhs_X(X, B):
     for k in range(2, K-1):
         rhs_X[k] = -X[k-2]*X[k-1] + X[k-1]*X[k+1] - X[k] + F
         
-    rhs_X += h_x*B
+    rhs_X += B
         
     return rhs_X
 
@@ -63,28 +63,6 @@ def step_X(X_n, f_nm1, B):
 # Other subroutines #
 #####################          
 
-def animate(i):
-    """
-    Generate a movie frame for the training verification (neural net only)
-    """
-    
-    if idx_max[0] == idx_data[0]:
-        c = 'b'
-    else:
-        c = 'r'
-    
-    plt1 = ax1.vlines(np.arange(n_bins), ymin = np.zeros(n_bins), ymax = o_i[0],
-                      colors = c, label=r'conditional pmf')
-    plt2 = ax1.plot(idx_data[0], 0.0, 'ro', label=r'SGS data')
-    plt3 = ax2.plot(t[0:i], y_train[0:i, 0], 'ro', alpha = 0.5, label=r'SGS data')
-    plt4 = ax2.plot(t[0:i], samples[0:i, 0], 'b', label='random sample')
-
-    if i == 0:
-        ax1.legend(loc=1, fontsize=9)
-        ax2.legend(loc=1, fontsize=9)
-
-    ims.append((plt1, plt2[0], plt4[0], plt3[0],))
-   
 def animate_pred(i):
     """
     Generate a movie frame for the coupled system
@@ -114,39 +92,39 @@ plt.close('all')
 #####################
 #Lorenz96 parameters
 #####################
-K = 18
-J = 20
-F = 10.0
-h_x = -1.5
-h_y = 1.5
-epsilon = 0.5
-
-# K = 32
-# J = 16
-# F = 18.0
-# h_x = -3.2
+# K = 18
+# J = 20
+# F = 10.0
+# h_x = -2.0
 # h_y = 1.0
 # epsilon = 0.5
+
+K = 32
+J = 16
+F = 18.0
+h_x = -3.2
+h_y = 1.0
+epsilon = 0.5
 
 ##################
 # Time parameters
 ##################
-dt = 0.01
-t_end = 1000.0
+dt = 0.001
+t_end = 100.0
 t = np.arange(0.0, t_end, dt)
 
 #time lags per feature
-lags = [[1, 10]]
+lags = [range(1, 51, 5)]
 max_lag = np.max(list(chain(*lags)))
 
 ###################
 # Simulation flags
 ###################
-train = True            #train the network
+train = True           #train the network
 make_movie = False      #make a movie (of the training)
-predict = True          #predict using the learned SGS term
-store = True           #store the prediction results
-make_movie_pred = True #make a movie (of the prediction)
+predict = True         #predict using the learned SGS term
+store = False           #store the prediction results
+make_movie_pred = True  #make a movie (of the prediction)
 
 #####################
 # Network parameters
@@ -163,34 +141,23 @@ B_data = h5f['B_data'][()]
 
 #Lag features as defined in 'lags'
 X_train, y_train = feat_eng.lag_training_data([X_data], B_data, lags = lags)
-n_train = X_train.shape[0]
-
-#number of bins per B_k
-n_bins = 10
-#one-hot encoded training data per B_k
-feat_eng.bin_data(y_train, n_bins)
-#simple sampler to draw random samples from the bins
-sampler = es.methods.SimpleBin(feat_eng)
-
-#number of softmax layers (one per output)
-n_softmax = K
 
 #number of output neurons 
-n_out = n_bins*n_softmax
+n_out = K
 
 #train the neural network
 if train:
-    surrogate = es.methods.ANN(X=X_train, y=feat_eng.y_idx_binned, n_layers=4, n_neurons=256, 
-                               n_softmax = K, n_out=K*n_bins, loss = 'cross_entropy',
+    surrogate = es.methods.ANN(X=X_train, y=y_train, n_layers=4, n_neurons=256, 
+                               n_out=n_out,
                                activation='hard_tanh', batch_size=512,
                                lamb=0.0, decay_step=10**4, decay_rate=0.9, 
                                standardize_X=False, standardize_y=False, save=True)
 
     print('===============================')
-    print('Training Quantized Softmax Network...')
+    print('Training Neural Network...')
 
     #train network for N_inter mini batches
-    N_iter = 30000
+    N_iter = 10000
     surrogate.train(N_iter, store_loss = True)
 
 #load a neural network from disk
@@ -199,55 +166,12 @@ else:
     surrogate = es.methods.ANN(X=X_train, y=y_train)
     #the load trained network from disk
     surrogate.load_ANN()
-    
+
 #number of features
 n_feat = surrogate.n_in
 
 #Post processing object
 post_proc = es.methods.Post_Processing()
-
-#if True make a movie of the solution
-if make_movie:
-    
-    print('===============================')
-    print('Making movie...')
-
-    ims = []
-    fig = plt.figure(figsize=[8,4])
-    ax1 = fig.add_subplot(121, xlabel=r'bin number', ylabel=r'probability', 
-                          ylim=[-0.05, 1.05])
-    ax2 = fig.add_subplot(122, xlabel=r'time', ylabel=r'$B_k$')
-    plt.tight_layout()
-
-    #number of time steps to use in movie
-    n_movie = 500
-
-    #allocate memory
-    samples = np.zeros([n_movie, n_softmax])
-
-    #make movie by evaluating the network at TRAINING inputs
-    for i in range(n_movie):
-        
-        #draw a random sample from the network - gives conditional
-        #probability mass function (pmf)
-        o_i, idx_max, idx = surrogate.get_softmax(X_train[i].reshape([1, n_feat]))
-        idx_data = np.where(feat_eng.y_idx_binned[i] == 1.0)[0]
-        
-        #resample reference data based on conditional pmf
-        samples[i, :] = sampler.resample(idx)
-
-        if np.mod(i, 100) == 0:
-            print('i =', i, 'of', n_movie)
-
-        #create a single frame, store in 'ims'
-        animate(i)
-
-    #make a movie of all frame in 'ims'
-    im_ani = animation.ArtistAnimation(fig, ims, interval=80, 
-                                       repeat_delay=2000, blit=True)
-    # im_ani.save('./movies/qsn.mp4')
-
-    print('done')
 
 ##################################
 # make predictions, with ANN SGS #
@@ -283,9 +207,8 @@ if predict:
         #get time lagged features from Feature Engineering object
         feat = feat_eng.get_feat_history(max_lag)
 
-        #SGS solve, draw random sample from network
-        o_i, idx_max, rv_idx = surrogate.get_softmax(feat.reshape([1, n_feat]))
-        B_n = sampler.resample(idx_max)
+        #SGS solve
+        B_n = surrogate.feed_forward(feat.reshape([1, n_feat]))
         B_n = B_n.flatten()
 
         #solve large-scale equation
