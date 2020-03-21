@@ -315,8 +315,8 @@ class CCM:
         for idx_i in self.sample_idx_per_bin.keys():
             
             idx = self.sample_idx_per_bin[idx_i]
-            points_c = self.c[idx]
-            points_r = self.r[idx]
+            points_c = self.c[idx, 0:2]
+            points_r = self.r[idx, 0:2]
                         
             self.plot_local_bin(points_c, idx_i, self.ax1, '--k')               
             self.plot_local_bin(points_r, idx_i, self.ax2, '--k')               
@@ -325,6 +325,34 @@ class CCM:
         
         cid = fig.canvas.mpl_connect('button_press_event', self.onclick)
 
+    def compare_convex_hull_volumes(self):
+        
+        self.vols = {}
+        self.ratio_vols = {}
+        
+        total_vol_c = ConvexHull(self.c).volume
+        total_vol_r = ConvexHull(self.r).volume
+        
+        for idx_i in self.sample_idx_per_bin.keys():
+
+            idx = self.sample_idx_per_bin[idx_i]
+            points_c = self.c[idx]
+            points_r = self.r[idx]     
+
+            if points_c.shape[0] >= self.N_c + 1:
+
+                hull_c = ConvexHull(points_c)
+                hull_r = ConvexHull(points_r)
+                
+                vol_fraction_c = hull_c.volume/total_vol_c
+                vol_fraction_r = hull_r.volume/total_vol_r
+                
+                self.vols[idx_i] = [vol_fraction_c, vol_fraction_r]
+                self.ratio_vols[idx_i] = vol_fraction_c/vol_fraction_r
+                
+        avg_ratio = np.mean(list(self.ratio_vols.values()))
+        
+        print('Average volume ratio binning cell/shadow cell = %.3f' % avg_ratio)
 
     def get_sample(self, c_i, stochastic = False):
     
