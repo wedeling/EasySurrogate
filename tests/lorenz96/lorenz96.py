@@ -149,24 +149,24 @@ plt.close('all')
 #Lorenz96 parameters
 #####################
 
-K = 18
-J = 20
-F = 10.0
-h_x = -1.0
-h_y = 1.0
-epsilon = 0.5
-
-# K = 32
-# J = 16
-# F = 18.0
-# h_x = -3.2
+# K = 18
+# J = 20
+# F = 10.0
+# h_x = -2.0
 # h_y = 1.0
 # epsilon = 0.5
+
+K = 32
+J = 16
+F = 18.0
+h_x = -3.2
+h_y = 1.0
+epsilon = 0.5
 
 ##################
 # Time parameters
 ##################
-dt = 0.01
+dt = 0.001
 t_end = 1000.0
 t = np.arange(0.0, t_end, dt)
 
@@ -234,7 +234,7 @@ ax.set_rorigin(-22)
 ax.set_rgrids([-10, 0, 10], labels=['', '', ''])[0][1]
 ax.legend(loc=1)
 
-burn = 1000
+burn = 10000
 
 post_proc = es.methods.Post_Processing()
 

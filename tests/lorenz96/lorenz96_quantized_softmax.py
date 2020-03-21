@@ -117,7 +117,7 @@ plt.close('all')
 # K = 18
 # J = 20
 # F = 10.0
-# h_x = -1.0
+# h_x = -2.0
 # h_y = 1.0
 # epsilon = 0.5
 
@@ -131,18 +131,18 @@ epsilon = 0.5
 ##################
 # Time parameters
 ##################
-dt = 0.01
+dt = 0.001
 t_end = 1000.0
 t = np.arange(0.0, t_end, dt)
 
 #time lags per feature
-lags = [[1, 10]]
+lags = [[1, 150]]
 max_lag = np.max(list(chain(*lags)))
 
 ###################
 # Simulation flags
 ###################
-train = False           #train the network
+train = True            #train the network
 make_movie = False      #make a movie (of the training)
 predict = True          #predict using the learned SGS term
 store = False           #store the prediction results
@@ -162,7 +162,7 @@ X_data = h5f['X_data'][()]
 B_data = h5f['B_data'][()]
 
 #Lag features as defined in 'lags'
-X_train, y_train = feat_eng.lag_training_data([X_data, B_data], B_data, lags = lags)
+X_train, y_train = feat_eng.lag_training_data([X_data], B_data, lags = lags)
 n_train = X_train.shape[0]
 
 #number of bins per B_k
@@ -184,13 +184,13 @@ if train:
                                n_softmax = K, n_out=K*n_bins, loss = 'cross_entropy',
                                activation='hard_tanh', batch_size=512,
                                lamb=0.0, decay_step=10**4, decay_rate=0.9, 
-                               standardize_X=False, standardize_y=False, save=True)
+                               standardize_X=True, standardize_y=False, save=False)
 
     print('===============================')
     print('Training Quantized Softmax Network...')
 
     #train network for N_inter mini batches
-    N_iter = 30000
+    N_iter = 40000
     surrogate.train(N_iter, store_loss = True)
 
 #load a neural network from disk
@@ -199,6 +199,9 @@ else:
     surrogate = es.methods.ANN(X=X_train, y=y_train)
     #the load trained network from disk
     surrogate.load_ANN()
+    
+X_mean = surrogate.X_mean
+X_std = surrogate.X_std
     
 #number of features
 n_feat = surrogate.n_in
@@ -260,7 +263,7 @@ if predict:
 
     #features are time lagged, use the data to create initial feature set
     for i in range(max_lag):
-        feat_eng.append_feat([X_data[i], B_data[i]], max_lag)
+        feat_eng.append_feat([X_data[i]], max_lag)
 
     #initial conditions
     X_n = X_data[max_lag]
@@ -282,6 +285,8 @@ if predict:
  
         #get time lagged features from Feature Engineering object
         feat = feat_eng.get_feat_history(max_lag)
+        
+        feat = (feat - X_mean)/X_std
 
         #SGS solve, draw random sample from network
         o_i, idx_max, rv_idx = surrogate.get_softmax(feat.reshape([1, n_feat]))
@@ -292,7 +297,7 @@ if predict:
         X_np1, f_n = step_X(X_n, f_nm1, B_n)
         
         #append the features to the Feature Engineering object
-        feat_eng.append_feat([X_np1, B_n], max_lag)
+        feat_eng.append_feat([X_np1], max_lag)
 
         #store solutions
         X_ann[idx, :] = X_n
