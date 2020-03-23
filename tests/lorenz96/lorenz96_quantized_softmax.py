@@ -114,19 +114,19 @@ plt.close('all')
 #####################
 #Lorenz96 parameters
 #####################
-# K = 18
-# J = 20
-# F = 10.0
-# h_x = -2.0
-# h_y = 1.0
-# epsilon = 0.5
-
-K = 32
-J = 16
-F = 18.0
-h_x = -3.2
+K = 18
+J = 20
+F = 10.0
+h_x = -1.0
 h_y = 1.0
 epsilon = 0.5
+
+# K = 32
+# J = 16
+# F = 18.0
+# h_x = -3.2
+# h_y = 1.0
+# epsilon = 0.5
 
 ##################
 # Time parameters
@@ -136,16 +136,16 @@ t_end = 1000.0
 t = np.arange(0.0, t_end, dt)
 
 #time lags per feature
-lags = [[1, 10]]
+lags = [[1]]
 max_lag = np.max(list(chain(*lags)))
 
 ###################
 # Simulation flags
 ###################
-train = True            #train the network
+train = True           #train the network
 make_movie = False      #make a movie (of the training)
 predict = True          #predict using the learned SGS term
-store = False           #store the prediction results
+store = True            #store the prediction 
 make_movie_pred = False #make a movie (of the prediction)
 
 #####################
@@ -181,22 +181,22 @@ n_out = n_bins*n_softmax
 test_frac = 0.5
 n_train = np.int(X_train.shape[0]*(1.0 - test_frac))
 
-
 #train the neural network
 if train:
     surrogate = es.methods.ANN(X=X_train[0:n_train], y=feat_eng.y_idx_binned[0:n_train],
                                n_layers=4, n_neurons=256, 
                                n_softmax = K, n_out=K*n_bins, loss = 'cross_entropy',
-                               activation='relu', batch_size=512,
+                               activation='leaky_relu', batch_size=512,
                                lamb=0.0, decay_step=10**4, decay_rate=0.9, 
-                               standardize_X=True, standardize_y=False, save=False)
+                               standardize_X=True, standardize_y=False, save=True)
 
     print('===============================')
     print('Training Quantized Softmax Network...')
 
     #train network for N_inter mini batches
-    N_iter = 30000
+    N_iter = 10000
     surrogate.train(N_iter, store_loss = True)
+    surrogate.compute_misclass_softmax()
 
 #load a neural network from disk
 else:
@@ -333,17 +333,24 @@ else:
 print('===============================')
 print('Postprocessing results')
 
-fig = plt.figure()
-ax = fig.add_subplot(111, xlabel=r'$X_k$')
+#starting index of the ACF / CCF calculations
+start_idx = n_train     #set to the end of the training / beginning test set
 
-X_dom_surr, X_pde_surr = post_proc.get_pde(X_ann.flatten()[0:-1:10])
-X_dom, X_pde = post_proc.get_pde(X_data.flatten()[0:-1:10])
-
+fig = plt.figure(figsize=[8,4])
+ax = fig.add_subplot(121, xlabel=r'$X_k$')
+X_dom_surr, X_pde_surr = post_proc.get_pdf(X_ann[start_idx:-1:10].flatten())
+X_dom, X_pde = post_proc.get_pdf(X_data[start_idx:-1:10].flatten())
 ax.plot(X_dom, X_pde, 'ko', label='L96')
 ax.plot(X_dom_surr, X_pde_surr, label='QSN')
-
 plt.yticks([])
+plt.legend(loc=0)
 
+ax = fig.add_subplot(122, xlabel=r'$r_k$')
+B_dom_surr, B_pde_surr = post_proc.get_pdf(B_ann[start_idx:-1:10].flatten())
+B_dom, B_pde = post_proc.get_pdf(B_data[start_idx:-1:10].flatten())
+ax.plot(B_dom, B_pde, 'ko', label='L96')
+ax.plot(B_dom_surr, B_pde_surr, label='QSN')
+plt.yticks([])
 plt.legend(loc=0)
 
 plt.tight_layout()
@@ -352,17 +359,31 @@ plt.tight_layout()
 # Plot ACFs #
 #############
 
-fig = plt.figure()
-ax = fig.add_subplot(111, ylabel='ACF', xlabel='time')
+acf_lag = 1000
 
-R_data = post_proc.auto_correlation_function(X_data[:,0], max_lag=1000)
-R_sol = post_proc.auto_correlation_function(X_ann[:, 0], max_lag=1000)
+fig = plt.figure(figsize=[8,4])
+ax1 = fig.add_subplot(121, ylabel='$\mathrm{ACF}\;X_k$', xlabel='time')
+ax2 = fig.add_subplot(122, ylabel='$\mathrm{ACF}\;r_k$', xlabel='time')
 
-dom_acf = np.arange(R_data.size)*dt
+acf_X_data = np.zeros(acf_lag-1); acf_X_sol = np.zeros(acf_lag-1)
+acf_B_data = np.zeros(acf_lag-1); acf_B_sol = np.zeros(acf_lag-1)
 
-ax.plot(dom_acf, R_data, 'ko', label='L96')
-ax.plot(dom_acf, R_sol, label='QSN')
+#average over all spatial points
+for k in range(K):
+    print('k=%d'%k)
+    acf_X_data += 1/K*post_proc.auto_correlation_function(X_data[start_idx:, k], max_lag=acf_lag)
+    acf_X_sol += 1/K*post_proc.auto_correlation_function(X_ann[start_idx:, k], max_lag=acf_lag)
+    
+    acf_B_data += 1/K*post_proc.auto_correlation_function(B_data[start_idx:, k], max_lag=acf_lag)
+    acf_B_sol += 1/K*post_proc.auto_correlation_function(B_ann[start_idx:, k], max_lag=acf_lag)
 
+dom_acf = np.arange(acf_lag-1)*dt
+ax1.plot(dom_acf, acf_X_data, 'ko', label='L96')
+ax1.plot(dom_acf, acf_X_sol, label='QSN')
+leg = plt.legend(loc=0)
+
+ax2.plot(dom_acf, acf_B_data, 'ko', label='L96')
+ax2.plot(dom_acf, acf_B_sol, label='QSN')
 leg = plt.legend(loc=0)
 
 plt.tight_layout()
@@ -371,26 +392,43 @@ plt.tight_layout()
 # Plot CCFs #
 #############
 
-fig = plt.figure()
-ax = fig.add_subplot(111, ylabel='CCF', xlabel='time')
+fig = plt.figure(figsize=[8,4])
+ax1 = fig.add_subplot(121, ylabel='$\mathrm{CCF}\;X_k$', xlabel='time')
+ax2 = fig.add_subplot(122, ylabel='$\mathrm{CCF}\;r_k$', xlabel='time')
 
-C_data = post_proc.cross_correlation_function(X_data[:,0], X_data[:,1], max_lag=1000)
-C_sol = post_proc.cross_correlation_function(X_ann[:, 0], X_ann[:, 1], max_lag=1000)
+ccf_X_data = np.zeros(acf_lag-1); ccf_X_sol = np.zeros(acf_lag-1)
+ccf_B_data = np.zeros(acf_lag-1); ccf_B_sol = np.zeros(acf_lag-1)
 
-dom_ccf = np.arange(C_data.size)*dt
+#average over all spatial points
+for k in range(K-1):
+    print('k=%d'%k)
 
-ax.plot(dom_ccf, C_data, 'ko', label='L96')
-ax.plot(dom_ccf, C_sol, label='QSN')
+    ccf_X_data += 1/K*post_proc.cross_correlation_function(X_data[start_idx:, k], X_data[start_idx:,k+1], max_lag=1000)
+    ccf_X_sol += 1/K*post_proc.cross_correlation_function(X_ann[start_idx:, k], X_ann[start_idx:, k+1], max_lag=1000)
+    
+    ccf_B_data += 1/K*post_proc.cross_correlation_function(B_data[start_idx:, k], B_data[start_idx:,k+1], max_lag=1000)
+    ccf_B_sol += 1/K*post_proc.cross_correlation_function(B_ann[start_idx:, k], B_ann[start_idx:, k+1], max_lag=1000)
 
+dom_ccf = np.arange(acf_lag - 1)*dt
+ax1.plot(dom_ccf, ccf_X_data, 'ko', label='L96')
+ax1.plot(dom_ccf, ccf_X_sol, label='QSN')
+
+ax2.plot(dom_ccf, ccf_B_data, 'ko', label='L96')
+ax2.plot(dom_ccf, ccf_B_sol, label='QSN')
 leg = plt.legend(loc=0)
 
 plt.tight_layout()
 
-#store simulation results
+############################
+# store simulation results #
+############################
 if store:
     samples = {'X': X_ann, 'B':B_ann, \
-               'dom_acf':dom_acf, 'acf_data':R_data, 'acf_ann':R_sol, \
-               'dom_ccf':dom_ccf, 'ccf_data':C_data, 'ccf_ann':C_sol}
+               'dom_acf':dom_acf, 'acf_X_data':acf_X_data, 'acf_X_ann':acf_X_sol, 
+               'dom_ccf':dom_ccf, 'ccf_X_data':ccf_X_data, 'ccf_X_ann':ccf_X_sol, 
+               'acf_B_data':acf_B_data, 'acf_B_ann':acf_B_sol, 
+               'ccf_B_data':ccf_B_data, 'ccf_B_ann':ccf_B_sol, 
+               }
     post_proc.store_samples_hdf5(samples)
 
 #make a mavie of the coupled system    

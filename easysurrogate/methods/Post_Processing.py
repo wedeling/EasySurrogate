@@ -104,7 +104,7 @@ class Post_Processing:
  
         return C
     
-    def get_pde(self, X, Npoints = 100):
+    def get_pdf(self, X, Npoints = 100):
         """
         Computes a kernel density estimate of the samples in X   
         
