@@ -114,6 +114,7 @@ ccm = es.methods.CCM(X_lagged, Y_lagged, [10, 10], lags)
 N_c = ccm.N_c
 ccm.plot_2D_binning_object()
 ccm.plot_2D_shadow_manifold()
+ccm.compare_convex_hull_volumes()
 """
 #################################
 # Run full model to generate IC #

@@ -327,11 +327,13 @@ class CCM:
 
     def compare_convex_hull_volumes(self):
         
-        self.vols = {}
-        self.ratio_vols = {}
+        self.vols = []
+        self.ratio_vols = []
         
         total_vol_c = ConvexHull(self.c).volume
         total_vol_r = ConvexHull(self.r).volume
+        
+        weights = []
         
         for idx_i in self.sample_idx_per_bin.keys():
 
@@ -347,12 +349,24 @@ class CCM:
                 vol_fraction_c = hull_c.volume/total_vol_c
                 vol_fraction_r = hull_r.volume/total_vol_r
                 
-                self.vols[idx_i] = [vol_fraction_c, vol_fraction_r]
-                self.ratio_vols[idx_i] = vol_fraction_c/vol_fraction_r
+                weights.append(vol_fraction_c)
+               
+                self.vols.append([vol_fraction_c, vol_fraction_r])
+                self.ratio_vols.append(vol_fraction_c/vol_fraction_r)
                 
-        avg_ratio = np.mean(list(self.ratio_vols.values()))
+        avg_ratio = np.mean(self.ratio_vols)
+        
+        weights = weights/np.sum(weights)    
+        print(weights)
+        print(np.sum(weights))
+        weighted_ratio = np.mean(weights*self.ratio_vols)
+        self.weights = weights
         
         print('Average volume ratio binning cell/shadow cell = %.3f' % avg_ratio)
+        print('Max volume ratio binning cell/shadow cell = %.3f' % np.max(self.ratio_vols))
+        print('min volume ratio binning cell/shadow cell = %.3f' % np.min(self.ratio_vols))
+        
+        print('Weighted average volume ratio binning cell/shadow cell = %.3f' % weighted_ratio)
 
     def get_sample(self, c_i, stochastic = False):
     
