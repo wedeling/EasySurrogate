@@ -149,19 +149,19 @@ plt.close('all')
 #Lorenz96 parameters
 #####################
 
-# K = 18
-# J = 20
-# F = 10.0
-# h_x = -2.0
-# h_y = 1.0
-# epsilon = 0.5
-
-K = 32
-J = 16
-F = 18.0
-h_x = -3.2
+K = 18
+J = 20
+F = 10.0
+h_x = -1.0
 h_y = 1.0
 epsilon = 0.5
+
+# K = 32
+# J = 16
+# F = 18.0
+# h_x = -3.2
+# h_y = 1.0
+# epsilon = 0.5
 
 ##################
 # Time parameters
@@ -270,7 +270,8 @@ if make_movie:
     print('done')
 else:
     ax.plot(theta, np.append(X_data[-1, :], X_data[-1, 0]), label='X')    
-    ax.plot(theta_Y, np.append(Y_data[-1, :].flatten(), Y_data[-1, 0, 0]), label='Y')    
+    ax.plot(theta_Y, np.append(Y_data[-1, :].flatten(), Y_data[-1, 0, 0]), label='Y')
+        
     
 #plot X_k vs B_k
 fig = plt.figure()
