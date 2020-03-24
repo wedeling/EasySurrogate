@@ -117,7 +117,7 @@ plt.close('all')
 K = 18
 J = 20
 F = 10.0
-h_x = -1.0
+h_x = -2.0
 h_y = 1.0
 epsilon = 0.5
 
@@ -136,7 +136,7 @@ t_end = 1000.0
 t = np.arange(0.0, t_end, dt)
 
 #time lags per feature
-lags = [[1]]
+lags = [[1, 2], [1, 2]]
 max_lag = np.max(list(chain(*lags)))
 
 ###################
@@ -162,7 +162,7 @@ X_data = h5f['X_data'][()]
 B_data = h5f['B_data'][()]
 
 #Lag features as defined in 'lags'
-X_train, y_train = feat_eng.lag_training_data([X_data], B_data, lags = lags)
+X_train, y_train = feat_eng.lag_training_data([X_data, B_data], B_data, lags = lags)
 
 #number of bins per B_k
 n_bins = 10
@@ -190,7 +190,7 @@ if train:
                                lamb=0.0, decay_step=10**4, decay_rate=0.9, 
                                standardize_X=True, standardize_y=False, save=True)
 
-    print('===============================')
+    print('=====================================')
     print('Training Quantized Softmax Network...')
 
     #train network for N_inter mini batches
@@ -268,7 +268,7 @@ if predict:
 
     #features are time lagged, use the data to create initial feature set
     for i in range(max_lag):
-        feat_eng.append_feat([X_data[i]], max_lag)
+        feat_eng.append_feat([X_data[i], B_data[i]], max_lag)
 
     #initial conditions
     X_n = X_data[max_lag]
@@ -302,7 +302,7 @@ if predict:
         X_np1, f_n = step_X(X_n, f_nm1, B_n)
         
         #append the features to the Feature Engineering object
-        feat_eng.append_feat([X_np1], max_lag)
+        feat_eng.append_feat([X_n, B_n], max_lag)
 
         #store solutions
         X_ann[idx, :] = X_n
