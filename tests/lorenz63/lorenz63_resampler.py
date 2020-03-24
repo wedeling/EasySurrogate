@@ -152,7 +152,7 @@ for n in range(n_predict):
     f_nm1 = f_n  
     
 #############   
-# Plot PDEs #
+# Plot pdfs #
 #############
 
 outputs = np.array(outputs)
@@ -164,18 +164,18 @@ print('Postprocessing results')
 fig = plt.figure(figsize=[8, 4])
 
 ax = fig.add_subplot(121, xlabel=r'$x$')
-X_dom_surr, X_pde_surr = post_proc.get_pde(X_surr[0:-1:10, 0])
-X_dom, X_pde = post_proc.get_pde(X[0:-1:10, 0])
-ax.plot(X_dom, X_pde, 'ko', label='L63')
-ax.plot(X_dom_surr, X_pde_surr, label='Resampler')
+X_dom_surr, X_pdf_surr = post_proc.get_pdf(X_surr[0:-1:10, 0])
+X_dom, X_pdf = post_proc.get_pdf(X[0:-1:10, 0])
+ax.plot(X_dom, X_pdf, 'ko', label='L63')
+ax.plot(X_dom_surr, X_pdf_surr, label='Resampler')
 plt.yticks([])
 plt.legend(loc=0)
 
 ax = fig.add_subplot(122, xlabel=r'$y$')
-X_dom_surr, X_pde_surr = post_proc.get_pde(outputs[0:-1:10])
-X_dom, X_pde = post_proc.get_pde(X[0:-1:10, 1])
-ax.plot(X_dom, X_pde, 'ko', label='L63')
-ax.plot(X_dom_surr, X_pde_surr, label='Resampler')
+X_dom_surr, X_pdf_surr = post_proc.get_pdf(outputs[0:-1:10])
+X_dom, X_pdf = post_proc.get_pdf(X[0:-1:10, 1])
+ax.plot(X_dom, X_pdf, 'ko', label='L63')
+ax.plot(X_dom_surr, X_pdf_surr, label='Resampler')
 plt.yticks([])
 plt.legend(loc=0)
 
