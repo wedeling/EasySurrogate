@@ -155,15 +155,15 @@ I = 6
 X_data = X_data[:, I]
 B_data = B_data[:, I]
 
-lags = [[1, 2, 3, 4, 5]]
+lags = [[1, 10]]
 max_lag = np.max(list(chain(*lags)))
 X_lagged, y_train = feat_eng.lag_training_data([X_data], B_data, lags = lags)
 Y_lagged, _ = feat_eng.lag_training_data([B_data], np.zeros(n_steps), 
                                          lags = lags, store = False)
 
-ccm = es.methods.CCM(X_lagged, Y_lagged, [10, 10, 10, 10, 10], lags)
+ccm = es.methods.CCM(X_lagged, Y_lagged, [5, 5, 10, 10, 10], lags)
 N_c = ccm.N_c
-# ccm.plot_2D_shadow_manifold()
+ccm.plot_2D_shadow_manifold()
 ccm.compare_convex_hull_volumes()
 
 """
