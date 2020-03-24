@@ -72,6 +72,9 @@ class Post_Processing:
             idx += 1
             
         print('done')
+        
+        e_fold_idx = np.where(R <= np.e**-1)[0][0]
+        print('E-folding index = %d' %e_fold_idx)
     
         return R
 

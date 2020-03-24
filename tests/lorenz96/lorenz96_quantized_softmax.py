@@ -136,13 +136,13 @@ t_end = 1000.0
 t = np.arange(0.0, t_end, dt)
 
 #time lags per feature
-lags = [[1, 2], [1, 2]]
+lags = [range(1,75)]
 max_lag = np.max(list(chain(*lags)))
 
 ###################
 # Simulation flags
 ###################
-train = True           #train the network
+train = True            #train the network
 make_movie = False      #make a movie (of the training)
 predict = True          #predict using the learned SGS term
 store = True            #store the prediction 
@@ -162,7 +162,7 @@ X_data = h5f['X_data'][()]
 B_data = h5f['B_data'][()]
 
 #Lag features as defined in 'lags'
-X_train, y_train = feat_eng.lag_training_data([X_data, B_data], B_data, lags = lags)
+X_train, y_train = feat_eng.lag_training_data([X_data], B_data, lags = lags)
 
 #number of bins per B_k
 n_bins = 10
@@ -268,7 +268,7 @@ if predict:
 
     #features are time lagged, use the data to create initial feature set
     for i in range(max_lag):
-        feat_eng.append_feat([X_data[i], B_data[i]], max_lag)
+        feat_eng.append_feat([X_data[i]], max_lag)
 
     #initial conditions
     X_n = X_data[max_lag]
@@ -302,7 +302,7 @@ if predict:
         X_np1, f_n = step_X(X_n, f_nm1, B_n)
         
         #append the features to the Feature Engineering object
-        feat_eng.append_feat([X_n, B_n], max_lag)
+        feat_eng.append_feat([X_n], max_lag)
 
         #store solutions
         X_ann[idx, :] = X_n
