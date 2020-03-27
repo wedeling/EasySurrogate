@@ -117,7 +117,7 @@ plt.close('all')
 K = 18
 J = 20
 F = 10.0
-h_x = -2.0
+h_x = -1.0
 h_y = 1.0
 epsilon = 0.5
 
@@ -136,17 +136,17 @@ t_end = 1000.0
 t = np.arange(0.0, t_end, dt)
 
 #time lags per feature
-lags = [range(1, 10)]
+lags = [range(1, 40), range(1, 40)]
 max_lag = np.max(list(chain(*lags)))
 
 ###################
 # Simulation flags
 ###################
-train = False            #train the network
-make_movie = False       #make a movie (of the training)
-predict = True           #predict using the learned SGS term
-store = True             #store the prediction 
-make_movie_pred = False  #make a movie (of the prediction)
+train = True            #train the network
+make_movie = False      #make a movie (of the training)
+predict = True          #predict using the learned SGS term
+store = True            #store the prediction 
+make_movie_pred = False #make a movie (of the prediction)
 
 #####################
 # Network parameters
@@ -162,7 +162,8 @@ X_data = h5f['X_data'][()]
 B_data = h5f['B_data'][()]
 
 #Lag features as defined in 'lags'
-X_train, y_train = feat_eng.lag_training_data([X_data], B_data, lags = lags)
+X_train, y_train = feat_eng.lag_training_data([X_data[:, 0], B_data[:, 0]], 
+                                               B_data[:, 0], lags = lags)
 
 #number of bins per B_k
 n_bins = 10
@@ -172,7 +173,7 @@ feat_eng.bin_data(y_train, n_bins)
 sampler = es.methods.SimpleBin(feat_eng)
 
 #number of softmax layers (one per output)
-n_softmax = K
+n_softmax = 1
 
 #number of output neurons 
 n_out = n_bins*n_softmax
@@ -185,18 +186,18 @@ n_train = np.int(X_train.shape[0]*(1.0 - test_frac))
 if train:
     surrogate = es.methods.ANN(X=X_train[0:n_train], y=feat_eng.y_idx_binned[0:n_train],
                                n_layers=4, n_neurons=256, 
-                               n_softmax = K, n_out=n_out, loss = 'cross_entropy',
+                               n_softmax = 1, n_out = n_out, loss = 'cross_entropy',
                                activation='leaky_relu', batch_size=512,
                                lamb=0.0, decay_step=10**4, decay_rate=0.9, 
                                standardize_X=True, standardize_y=False, save=True)
 
-    print('=====================================')
+    print('===============================')
     print('Training Quantized Softmax Network...')
 
     #train network for N_inter mini batches
     N_iter = 10000
     surrogate.train(N_iter, store_loss = True)
-    surrogate.compute_misclass_softmax()
+    # surrogate.compute_misclass_softmax()
 
 #load a neural network from disk
 else:
@@ -268,7 +269,7 @@ if predict:
 
     #features are time lagged, use the data to create initial feature set
     for i in range(max_lag):
-        feat_eng.append_feat([X_data[i]], max_lag)
+        feat_eng.append_feat([X_data[i], B_data[i]], max_lag)
 
     #initial conditions
     X_n = X_data[max_lag]
@@ -289,21 +290,24 @@ if predict:
     for t_i in t[max_lag:]:
  
         #get time lagged features from Feature Engineering object
-        feat = feat_eng.get_feat_history(max_lag)
+        feats = feat_eng.get_feat_history(max_lag)
+        feats = feats.reshape([n_feat, K])
         
-        feat = (feat - X_mean)/X_std
+        B_n = np.zeros(K)
+        for k in range(K):
+            feat = (feats[:, k] - X_mean)/X_std
+            #SGS solve, draw random sample from network
+            o_i, idx_max, rv_idx = surrogate.get_softmax(feat.reshape([1, n_feat]))
+            B_n[k] = sampler.resample(idx_max)
+            # B_n = sampler.resample_mean(idx_max)
 
-        #SGS solve, draw random sample from network
-        o_i, idx_max, rv_idx = surrogate.get_softmax(feat.reshape([1, n_feat]))
-        B_n = sampler.resample(idx_max)
-        # B_n = sampler.resample_mean(idx_max)
         B_n = B_n.flatten()
 
         #solve large-scale equation
         X_np1, f_n = step_X(X_n, f_nm1, B_n)
         
         #append the features to the Feature Engineering object
-        feat_eng.append_feat([X_n], max_lag)
+        feat_eng.append_feat([X_n, B_n], max_lag)
 
         #store solutions
         X_ann[idx, :] = X_n
