@@ -136,7 +136,7 @@ t_end = 1000.0
 t = np.arange(0.0, t_end, dt)
 
 #time lags per feature
-lags = [range(1, 40), range(1, 40)]
+lags = [range(1, 75), range(1, 2)]
 max_lag = np.max(list(chain(*lags)))
 
 ###################

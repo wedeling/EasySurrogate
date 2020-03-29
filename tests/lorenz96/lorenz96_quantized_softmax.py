@@ -136,16 +136,16 @@ t_end = 1000.0
 t = np.arange(0.0, t_end, dt)
 
 #time lags per feature
-lags = [range(1, 10)]
+lags = [range(1, 75)]
 max_lag = np.max(list(chain(*lags)))
 
 ###################
 # Simulation flags
 ###################
-train = False            #train the network
+train = True            #train the network
 make_movie = False       #make a movie (of the training)
 predict = True           #predict using the learned SGS term
-store = True             #store the prediction 
+store = False             #store the prediction 
 make_movie_pred = False  #make a movie (of the prediction)
 
 #####################
@@ -184,13 +184,13 @@ n_train = np.int(X_train.shape[0]*(1.0 - test_frac))
 #train the neural network
 if train:
     surrogate = es.methods.ANN(X=X_train[0:n_train], y=feat_eng.y_idx_binned[0:n_train],
-                               n_layers=4, n_neurons=256, 
+                               n_layers=4, n_neurons=128, 
                                n_softmax = K, n_out=n_out, loss = 'cross_entropy',
                                activation='leaky_relu', batch_size=512,
                                lamb=0.0, decay_step=10**4, decay_rate=0.9, 
                                standardize_X=True, standardize_y=False, save=True)
 
-    print('=====================================')
+    print('===============================')
     print('Training Quantized Softmax Network...')
 
     #train network for N_inter mini batches
