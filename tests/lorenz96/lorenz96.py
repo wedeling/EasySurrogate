@@ -152,17 +152,9 @@ plt.close('all')
 K = 18
 J = 20
 F = 10.0
-h_x = -2.0
+h_x = -1.0
 h_y = 1.0
 epsilon = 0.5
-
-##trimodal Lorenz96 parameters (!NEEDS dt=1e-3)
-#K = 32
-#J = 16
-#F = 18.0
-#h_x = -3.2
-#h_y = 1.0
-#epsilon = 0.5
 
 ##################
 # Time parameters
@@ -174,7 +166,7 @@ t = np.arange(0.0, t_end, dt)
 ###################
 # Simulation flags
 ###################
-make_movie = True     #make a movie
+make_movie = False     #make a movie
 store = True         #store the prediction results
 
 #equilibrium initial condition for X, zero IC for Y
