@@ -108,7 +108,7 @@ class Feature_Engineering:
     # def normalize_data(self):
         # y = (ymax-ymin)*(x-xmin)/(xmax-xmin) + ymin;
 
-    def lag_training_data(self, X, y, lags, store = True):
+    def lag_training_data(self, X, y, lags, store = True, **kwargs):
         """    
         Create time-lagged supervised training data X, y
 
@@ -141,6 +141,12 @@ class Feature_Engineering:
             tmp = []
             tmp.append(X)
             X = tmp
+            
+        #True/False on wether the X features are symmetric arrays or not
+        if 'X_symmetry' in kwargs:
+            self.X_symmetry = kwargs['X_symmetry']
+        else:
+            self.X_symmetry = np.zeros(len(X), dtype=bool)
 
         #compute target data at next (time) step
         if y.ndim == 2:
@@ -160,11 +166,16 @@ class Feature_Engineering:
         C = []
         idx = 0
         for X_i in X:
-          
+
+            #if X_i features are symmetric arrays, only select upper trian. part
+            if self.X_symmetry[idx] == True:
+                idx0, idx1 = np.triu_indices(X_i.shape[1])
+                X_i = X_i[:, idx0, idx1]
+
             for lag in np.sort(lags[idx])[::-1]:
                 begin = max_lag - lag
                 end = n_samples - lag
-                
+
                 if X_i.ndim == 2:
                     C.append(X_i[begin:end, :])
                 elif X_i.ndim == 1:
