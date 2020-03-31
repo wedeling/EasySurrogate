@@ -117,7 +117,7 @@ plt.close('all')
 K = 18
 J = 20
 F = 10.0
-h_x = -2.0
+h_x = -1.0
 h_y = 1.0
 epsilon = 0.5
 
@@ -136,13 +136,13 @@ t_end = 1000.0
 t = np.arange(0.0, t_end, dt)
 
 #time lags per feature
-lags = [range(1, 75)]
+lags = [[1, 10]]
 max_lag = np.max(list(chain(*lags)))
 
 ###################
 # Simulation flags
 ###################
-train = True            #train the network
+train = False            #train the network
 make_movie = False       #make a movie (of the training)
 predict = True           #predict using the learned SGS term
 store = False             #store the prediction 
@@ -184,7 +184,7 @@ n_train = np.int(X_train.shape[0]*(1.0 - test_frac))
 #train the neural network
 if train:
     surrogate = es.methods.ANN(X=X_train[0:n_train], y=feat_eng.y_idx_binned[0:n_train],
-                               n_layers=4, n_neurons=128, 
+                               n_layers=4, n_neurons=256, 
                                n_softmax = K, n_out=n_out, loss = 'cross_entropy',
                                activation='leaky_relu', batch_size=512,
                                lamb=0.0, decay_step=10**4, decay_rate=0.9, 
@@ -295,7 +295,7 @@ if predict:
 
         #SGS solve, draw random sample from network
         o_i, idx_max, rv_idx = surrogate.get_softmax(feat.reshape([1, n_feat]))
-        B_n = sampler.resample(idx_max)
+        B_n = sampler.resample(rv_idx)
         # B_n = sampler.resample_mean(idx_max)
         B_n = B_n.flatten()
 

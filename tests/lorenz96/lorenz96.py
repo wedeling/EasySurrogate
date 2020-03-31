@@ -152,7 +152,7 @@ plt.close('all')
 K = 18
 J = 20
 F = 10.0
-h_x = -2.0
+h_x = -1.0
 h_y = 1.0
 epsilon = 0.5
 
@@ -284,7 +284,7 @@ plt.plot(X_data[burn:, 0], B_data[burn:, 0], '.')
 fig = plt.figure()
 ax = fig.add_subplot(111, xlabel=r'$X_k$')
 
-X_dom, X_pde = post_proc.get_pde(X_data.flatten()[0:-1:10])
+X_dom, X_pde = post_proc.get_pdf(X_data.flatten()[0:-1:10])
 
 ax.plot(X_dom, X_pde, 'ko', label='L96')
 

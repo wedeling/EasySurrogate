@@ -190,12 +190,12 @@ class ANN:
             
             idx_max.append(np.argmax(o_i))
        
-            # pmf = rv_discrete(values=(np.arange(o_i.size), o_i.flatten()))
+            pmf = rv_discrete(values=(np.arange(o_i.size), o_i.flatten()))
                 
-            # rvs.append(pmf.rvs())
+            rvs.append(pmf.rvs())
                 
         #return values and index of highest probability and random samples from pmf
-        return probs, idx_max, None
+        return probs, idx_max, rvs
         
     #compute jacobian of the neural net via back propagation
     def jacobian(self, X_i, batch_size = 1, feed_forward = False):
