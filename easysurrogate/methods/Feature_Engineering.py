@@ -108,7 +108,7 @@ class Feature_Engineering:
     # def normalize_data(self):
         # y = (ymax-ymin)*(x-xmin)/(xmax-xmin) + ymin;
 
-    def lag_training_data(self, X, y, lags, store = True):
+    def lag_training_data(self, X, y, lags, store = True, **kwargs):
         """    
         Create time-lagged supervised training data X, y
 
@@ -128,7 +128,7 @@ class Feature_Engineering:
             row of X_train is one (time) lagged feature vector. Every row of y_train
             is a target vector at the next (time) step
         """
-        
+       
         #compute the max number of lags in lags
         lags_flattened = list(chain(*lags))
         max_lag = np.max(lags_flattened)
@@ -141,6 +141,7 @@ class Feature_Engineering:
             tmp = []
             tmp.append(X)
             X = tmp
+
 
         #compute target data at next (time) step
         if y.ndim == 2:
@@ -160,7 +161,7 @@ class Feature_Engineering:
         C = []
         idx = 0
         for X_i in X:
-          
+
             for lag in np.sort(lags[idx])[::-1]:
                 begin = max_lag - lag
                 end = n_samples - lag
