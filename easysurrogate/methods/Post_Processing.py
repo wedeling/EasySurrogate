@@ -72,6 +72,9 @@ class Post_Processing:
             idx += 1
             
         print('done')
+        
+        e_fold_idx = np.where(R <= np.e**-1)[0][0]
+        print('E-folding index = %d' %e_fold_idx)
     
         return R
 
@@ -104,7 +107,7 @@ class Post_Processing:
  
         return C
     
-    def get_pde(self, X, Npoints = 100):
+    def get_pdf(self, X, Npoints = 100):
         """
         Computes a kernel density estimate of the samples in X   
         

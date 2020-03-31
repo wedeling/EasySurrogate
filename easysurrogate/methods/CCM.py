@@ -194,7 +194,8 @@ class CCM:
                 progress(i, self.max_binnumber)
             
             #bin is nonempty, just use current idx
-            if np.in1d(i, self.unique_binnumbers) == True:
+            # if np.in1d(i, self.unique_binnumbers) == True:
+            if np.in1d(i, self.binnumbers_nonempty) == True:
                 mapping[i] = i
             #bin is empty, find nearest non-empty bin
             else:
