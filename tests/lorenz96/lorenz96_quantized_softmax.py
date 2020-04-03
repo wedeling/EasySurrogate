@@ -117,7 +117,7 @@ plt.close('all')
 K = 18
 J = 20
 F = 10.0
-h_x = -1.0
+h_x = -2.0
 h_y = 1.0
 epsilon = 0.5
 
@@ -136,7 +136,7 @@ t_end = 1000.0
 t = np.arange(0.0, t_end, dt)
 
 #time lags per feature
-lags = [[1, 10]]
+lags = [range(1, 75)]
 max_lag = np.max(list(chain(*lags)))
 
 ###################
