@@ -2,7 +2,10 @@
 
 This branch of EasySurrogate contains all software required to reproduce the results from:
 
-[ADD PHYSICA D PAPER]
+D. Crommelin, W. Edeling, "Resampling with neural networks for stochastic parameterization in multiscale systems
+", (submitted), 2020. 
+
+[Paper](https://arxiv.org/abs/2004.01457)
 
 ## Requirements
 
