@@ -207,7 +207,7 @@ class Feature_Engineering:
                 
         return X_train, y_train
     
-    def get_feat_history(self, max_lag):
+    def get_feat_history(self):
         """
         Return the features from the feat_history dict based on the lags
         specified in self.lags
@@ -220,7 +220,7 @@ class Feature_Engineering:
         idx = 0
         for i in range(self.n_feat_arrays):
             for lag in self.lags[idx]:
-                begin = max_lag - lag
+                begin = self.max_lag - lag
                 
                 X_i.append(self.feat_history[i][begin])
             idx += 1
@@ -294,6 +294,8 @@ class Feature_Engineering:
         
         for l in lags:
             self.lags.append(np.sort(l)[::-1])
+            
+        self.max_lag = np.max(list(chain(*lags)))
         
 #        self.max_lag = np.max(list(chain(*lags)))
 #        
@@ -311,7 +313,7 @@ class Feature_Engineering:
         for i in range(self.n_feat_arrays):
             self.feat_history[i] = []
 
-    def append_feat(self, X, max_lag):
+    def append_feat(self, X):
         """
         Append the feature vectors in X to feat_history dict
 
@@ -328,8 +330,50 @@ class Feature_Engineering:
             X = tmp
 
         for i in range(self.n_feat_arrays):
+            
+            if type(X[i]) != np.ndarray:
+                X[i] = np.array([X[i]])                
+            
+            #if X_i features are symmetric arrays, only select upper trian. part
+            if self.X_symmetry[i] == True:
+                idx0, idx1 = np.triu_indices(X[i].shape[1])
+                X[i] = X[i][idx0, idx1]
+                
+            if X[i].ndim != 1:
+                X[i] = X[i].flatten()
+            
             self.feat_history[i].append(X[i])
 
             #if max number of features is reached, remove first item
-            if len(self.feat_history[i]) > max_lag:
+            if len(self.feat_history[i]) > self.max_lag:
                 self.feat_history[i].pop(0)
+                
+
+    def estimate_embedding_dimension(self, y, N):
+        
+        for n in range(3, N+1):
+            
+            lags_n = range(1, n)
+            lags_np1 = range(1, n+1)
+            y_n, _ = self.lag_training_data(y, np.zeros(y.size), [lags_n])
+            y_np1, _ = self.lag_training_data(y, np.zeros(y.size), [lags_np1])
+           
+            L = y_np1.shape[0]
+            dist_n = np.zeros(L)
+            dist_np1 = np.zeros(L)
+ 
+            for l in range(L):
+                # d = np.linalg.norm(y_n - y_n[l], axis = 0)
+                d = np.sum((y_n - y_n[l])**2, axis=1)
+                a, d_min = np.partition(d, 1)[0:2]
+                # d = np.linalg.norm(y_np1 - y_np1[l], axis = 0)
+                d = np.sum((y_np1 - y_np1[l])**2, axis=1)
+                _, d_min2 = np.partition(d, 1)[0:2]
+                                
+                dist_n[l] = d_min
+                dist_np1[l] = d_min2
+                
+            test = np.abs((dist_n - dist_np1)/dist_n)
+
+            print(len(lags_n))
+            print(np.where(test > 20)[0].size)

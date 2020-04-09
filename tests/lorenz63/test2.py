@@ -1,65 +1,4 @@
-def rhs(X_n, s=10, r=28, b=8/3):
-
-    x = X_n[0]; y = X_n[1]; z = X_n[2]
-    
-    f_n = np.zeros(3)
-    
-    f_n[0] = s*(y - x)
-    f_n[1] = r*x - y - x*z
-    f_n[2] = x*y - b*z
-    
-    return f_n
-
-def step(X_n, f_nm1):
-    
-    # Derivatives of the X, Y, Z state
-    f_n = rhs(X_n)
-
-    # Adams Bashforth
-    # X_np1 = X_n + dt*(3.0/2.0*f_n - 0.5*f_nm1)
-    
-    # Euler
-    X_np1 = X_n + dt*f_n
-    
-    return X_np1, f_n
-
-def rhs_ccm(X_n, s=10):
-
-    x = X_n
- 
-    feat = feat_eng.get_feat_history(max_lag)
-    y = ccm.get_sample(feat.reshape([1, N_c]), stochastic = False)
-    f_n = s*(y - x)
-    
-    return f_n
-
-def step_ccm(X_n, f_nm1):
-    
-    # Derivatives of the X, Y, Z state
-    f_n = rhs_ccm(X_n)
-
-    # Adams Bashforth
-    # X_np1 = X_n + dt*(3.0/2.0*f_n - 0.5*f_nm1)
-    
-    # Euler
-    X_np1 = X_n + dt*f_n
-    
-    feat_eng.append_feat([[X_np1]], max_lag)
-    
-    return X_np1, f_n
-
-
-def plot_lorenz(xs, ys, zs, title='Lorenz63'):
-
-    fig = plt.figure(title)
-    ax = fig.gca(projection='3d')
-    
-    ax.plot(xs, ys, zs, lw=0.5)
-    ax.set_xlabel("X Axis")
-    ax.set_ylabel("Y Axis")
-    ax.set_zlabel("Z Axis")
-    ax.set_title(title)
-    
+  
 def one_hot(idx):
     
     #this should be the non-empty binnumbers
@@ -86,50 +25,33 @@ from mpl_toolkits.mplot3d import Axes3D
 
 plt.close('all')
 
-###################
-# Simulation flags
-###################
-predict = False         #predict using the learned SGS term
-store = False           #store the prediction results
+#####################
+# Network parameters
+#####################
 
-n_steps = 25000
-dt = 0.01
-X = np.zeros(n_steps); Y = np.zeros(n_steps); Z = np.zeros(n_steps) 
-X_dot = np.zeros(n_steps); Y_dot = np.zeros(n_steps); Z_dot = np.zeros(n_steps) 
+#Feature engineering object - loads data file
+feat_eng = es.methods.Feature_Engineering(load_data = True)
+#get training data
+h5f = feat_eng.get_hdf5_file()
 
-#initial condition
-X_n = np.zeros(3)
-X_n[0] = 0.0; X_n[1]  = 1.0; X_n[2] = 1.05
+#Large-scale and SGS data - convert to numpy array via [()]
+X_data = h5f['X_data'][()]
+# Y_data = h5f['Y_data'][()]
+B_data = h5f['B_data'][()]
+n_steps = X_data.shape[0]
 
-#initial condition right-hand side
-f_nm1 = rhs(X_n)
+I = 6
 
-X = np.zeros([n_steps, 3])
-X_dot = np.zeros([n_steps, 3])
-
-for n in range(n_steps):
-    
-    #step in time
-    X_np1, f_n = step(X_n, f_nm1)
-
-    #update variables
-    X_n = X_np1
-    f_nm1 = f_n
-
-    X[n, :] = X_n
-    X_dot[n, :] = f_n
-
-feat_eng = es.methods.Feature_Engineering()
-lags = [[1, 10]]
-# n_lags = len(list(chain(*lags)))
+lags = [range(1, 75)]
+lags_y = [[1, 10]]
 max_lag = np.max(list(chain(*lags)))
+X_lagged, y_train = feat_eng.lag_training_data([X_data[:, I]], B_data[:, I], lags = lags)
+Y_lagged, _ = feat_eng.lag_training_data([B_data[:, I]], np.zeros(n_steps), 
+                                          lags = lags_y, store = False)
 
-X_lagged, _ = feat_eng.lag_training_data([X[:, 0]], np.zeros(n_steps), lags)
-Y_lagged, _ = feat_eng.lag_training_data([X[:, 1]], np.zeros(n_steps), lags)
-
-ccm = es.methods.CCM(Y_lagged, np.zeros(n_steps), [10, 10], lags)
+ccm = es.methods.CCM(Y_lagged, np.zeros(n_steps), [10, 10], lags_y)
 # N_c = ccm.N_c
-# ccm.plot_2D_binning_object()
+ccm.plot_2D_binning_object()
 # ccm.plot_2D_shadow_manifold()
 # ccm.compare_convex_hull_volumes()
 
@@ -141,7 +63,7 @@ surrogate = es.methods.ANN(X=X_lagged, y=one_hot_enc, n_layers=4, n_neurons=256,
                            n_softmax = 1, n_out=n_out, loss = 'cross_entropy',
                            activation='leaky_relu', batch_size=512,
                            lamb=0.0, decay_step=10**4, decay_rate=0.9, 
-                           standardize_X=True, standardize_y=False, save=True)
+                           standardize_X=True, standardize_y=False, save=False)
 
 print('===============================')
 print('Training Quantized Softmax Network...')
@@ -166,7 +88,7 @@ for i in np.unique(pred):
     
     idx = np.where(pred == i)[0]
 
-    plt.plot(X_lagged[idx, 0], X_lagged[idx, 1], '+')
+    plt.plot(X_lagged[idx, 0], X_lagged[idx, 0], '+')
 
 """
 
