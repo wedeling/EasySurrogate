@@ -1,4 +1,4 @@
-def rhs(X_n, s=10, r=28, b=2.667):
+def rhs(X_n, s=10, r=28, b=8/3):
 
     x = X_n[0]; y = X_n[1]; z = X_n[2]
     
@@ -72,10 +72,10 @@ plt.close('all')
 ###################
 # Simulation flags
 ###################
-predict = False         #predict using the learned SGS term
+predict = True         #predict using the learned SGS term
 store = False           #store the prediction results
 
-n_steps = 10**5
+n_steps = 25000
 dt = 0.01
 X = np.zeros(n_steps); Y = np.zeros(n_steps); Z = np.zeros(n_steps) 
 X_dot = np.zeros(n_steps); Y_dot = np.zeros(n_steps); Z_dot = np.zeros(n_steps) 
@@ -115,6 +115,8 @@ N_c = ccm.N_c
 ccm.plot_2D_binning_object()
 ccm.plot_2D_shadow_manifold()
 ccm.compare_convex_hull_volumes()
+"""
+# feat_eng.estimate_embedding_dimension(X[0:-1:10, 0], 6)
 
 #################################
 # Run full model to generate IC #
@@ -177,8 +179,8 @@ print('Postprocessing results')
 fig = plt.figure(figsize=[4, 4])
 
 ax = fig.add_subplot(111, xlabel=r'$x$')
-X_dom_surr, X_pde_surr = post_proc.get_pde(X_surr[0:-1:10, 0])
-X_dom, X_pde = post_proc.get_pde(X[0:-1:10, 0])
+X_dom_surr, X_pde_surr = post_proc.get_pdf(X_surr[0:-1:10, 0])
+X_dom, X_pde = post_proc.get_pdf(X[0:-1:10, 0])
 ax.plot(X_dom, X_pde, 'ko', label='L63')
 ax.plot(X_dom_surr, X_pde_surr, label='ANN')
 plt.yticks([])
@@ -201,5 +203,5 @@ ax.plot(dom_acf, R_sol, label='ANN')
 leg = plt.legend(loc=0)
 
 plt.tight_layout()
-
+"""
 plt.show()

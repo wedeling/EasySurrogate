@@ -3,6 +3,7 @@ import pickle
 import tkinter as tk
 from tkinter import filedialog
 from scipy.stats import rv_discrete
+import h5py
 
 from .Layer import Layer
 
@@ -13,7 +14,7 @@ class ANN:
                  param_specific_learn_rate = True, loss = 'squared', activation = 'tanh', activation_out = 'linear', \
                  n_softmax = 0, n_layers = 2, n_neurons = 16, \
                  bias = True, neuron_based_compute = False, batch_size = 1, save = True, load=False, name='ANN', on_gpu = False, \
-                 standardize_X = True, standardize_y = True, aux_vars = {}, **kwargs):
+                 standardize_X = True, standardize_y = True, **kwargs):
 
         #the features
         self.X = X
@@ -103,8 +104,8 @@ class ANN:
         self.save = save
         self.name = name
         
-        #ant additional variables/dicts etc that must be stored in the ann object
-        self.aux_vars = aux_vars
+        #additional variables/dicts etc that must be stored in the ann object
+        self.aux_vars = kwargs
         
         #determines where to compute the neuron outputs and gradients 
         #True: locally at the neuron, False: on the Layer level in one shot via linear algebra)
@@ -188,12 +189,12 @@ class ANN:
             
             idx_max.append(np.argmax(o_i))
        
-            pmf = rv_discrete(values=(np.arange(o_i.size), o_i.flatten()))
-                
-            rvs.append(pmf.rvs())
+            # pmf = rv_discrete(values=(np.arange(o_i.size), o_i.flatten()))
+            # 
+            # rvs.append(pmf.rvs())
                 
         #return values and index of highest probability and random samples from pmf
-        return probs, idx_max, rvs
+        return probs, idx_max, None
         
     #compute jacobian of the neural net via back propagation
     def jacobian(self, X_i, batch_size = 1, feed_forward = False):
@@ -358,8 +359,9 @@ class ANN:
         if self.save == True:
             self.save_ANN()
 
-    #save using pickle (maybe too slow for very large ANNs?)
-    def save_ANN(self, file_path = ""):
+    #save using pickle
+    #if too large, do not store data
+    def save_ANN(self, file_path = "", store_data = True):
         
         if len(file_path) == 0:
 
@@ -373,9 +375,18 @@ class ANN:
 
         print('Saving ANN to', file.name)        
         
-        pickle.dump(self.__dict__, file)
+        if store_data:
+            #store everything, also data
+            pickle.dump(self.__dict__, file)
+        else:
+            tmp = self.__dict__.copy()
+            #do not store data to pickle
+            tmp['X'] = []
+            tmp['y'] = []
+            pickle.dump(tmp, file)
+            
         file.close()
-
+        
     #load using pickle
     def load_ANN(self, file_path = ""):
       
@@ -395,6 +406,11 @@ class ANN:
         self.__dict__ = pickle.load(file)
         file.close()
         
+        if self.__dict__['X'] == []:
+            print('===============================')
+            print('**Warning: ANN was saved without training data**')
+            print('===============================')
+            
         self.print_network_info()
         
     def set_batch_size(self, batch_size):

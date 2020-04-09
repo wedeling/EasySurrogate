@@ -133,22 +133,26 @@ h5f = feat_eng.get_hdf5_file()
 
 #Large-scale and SGS data - convert to numpy array via [()]
 X_data = h5f['X_data'][()]
+Y_data = h5f['Y_data'][()]
 B_data = h5f['B_data'][()]
 n_steps = X_data.shape[0]
 
 I = 6
 
-lags = [[1, 20, 40, 60]]
+lags = [[1, 10, 20, 30, 40]]
 max_lag = np.max(list(chain(*lags)))
 X_lagged, y_train = feat_eng.lag_training_data([X_data[:, I]], B_data[:, I], lags = lags)
 Y_lagged, _ = feat_eng.lag_training_data([B_data[:, I]], np.zeros(n_steps), 
-                                         lags = lags, store = False)
+                                          lags = lags, store = False)
 
-ccm = es.methods.CCM(X_lagged, Y_lagged, [10, 10, 10, 10], lags, min_count=5)
+ccm = es.methods.CCM(X_lagged, Y_lagged, [10, 10, 10, 10, 10], lags, min_count=5)
 N_c = ccm.N_c
-ccm.plot_2D_shadow_manifold()
+# ccm.plot_2D_shadow_manifold()
 ccm.compare_convex_hull_volumes()
 
+# feat_eng.estimate_embedding_dimension(X_data[0:-1:10, 0], 8)
+
+"""
 #Post processing object
 post_proc = es.methods.Post_Processing()
 
@@ -383,6 +387,5 @@ if make_movie_pred:
     im_ani = animation.ArtistAnimation(fig, ims, interval=80, 
                                        repeat_delay=2000, blit=True)
     im_ani.save('../movies/qsn_pred.mp4')
-
-
+"""
 plt.show()

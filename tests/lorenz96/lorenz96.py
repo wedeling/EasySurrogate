@@ -235,7 +235,7 @@ post_proc = es.methods.Post_Processing()
 if store == True:
     #store results
     samples = {}
-    QoI = {'X_data', 'B_data'}
+    QoI = {'X_data', 'Y_data', 'B_data'}
     
     for q in QoI:
         print('Saving', q)
@@ -277,7 +277,7 @@ plt.plot(X_data[burn:, 0], B_data[burn:, 0], '.')
 fig = plt.figure()
 ax = fig.add_subplot(111, xlabel=r'$X_k$')
 
-X_dom, X_pde = post_proc.get_pde(X_data.flatten()[0:-1:10])
+X_dom, X_pde = post_proc.get_pdf(X_data.flatten()[0:-1:10])
 
 ax.plot(X_dom, X_pde, 'ko', label='L96')
 
