@@ -12,29 +12,41 @@ CLASS FOR FEATURE ENGINEERING SUBROUTINES
 
 class Feature_Engineering:
         
-    def __init__(self, load_data = False, **kwargs):
+    def __init__(self, **kwargs):
+        """
         
-        if load_data:
-            if 'file_path' in kwargs:
-                file_path = kwargs['file_path']
-            else:
-                root = tk.Tk()
-                root.withdraw()
-                file_path = tk.filedialog.askopenfilename(title="Open data file", 
-                                                          filetypes=(('HDF5 files', '*.hdf5'), 
-                                                                    ('All files', '*.*')))
-            h5f = h5py.File(file_path, 'r')
-    
-            h5f = h5py.File(file_path, 'r')
-            print('Loaded', h5f.keys())
-    
-            self.h5f = h5f
+        Parameters
+        ----------
+        **kwargs : TYPE
+            DESCRIPTION.
 
-    def get_hdf5_file(self):
+        Returns
+        -------
+        None.
+
         """
-        Returns the h5py file object that was loaded when the object was created
-        """
-        return self.h5f
+        
+        # if load_data:
+        #     if 'file_path' in kwargs:
+        #         file_path = kwargs['file_path']
+        #     else:
+        #         root = tk.Tk()
+        #         root.withdraw()
+        #         file_path = tk.filedialog.askopenfilename(title="Open data file", 
+        #                                                   filetypes=(('HDF5 files', '*.hdf5'), 
+        #                                                             ('All files', '*.*')))
+        #     h5f = h5py.File(file_path, 'r')
+    
+        #     h5f = h5py.File(file_path, 'r')
+        #     print('Loaded', h5f.keys())
+    
+        #     self.h5f = h5f
+
+    # def get_hdf5_file(self):
+    #     """
+    #     Returns the h5py file object that was loaded when the object was created
+    #     """
+    #     return self.h5f
 
     def standardize_data(self, standardize_X = True, standardize_y = True):
         """
