@@ -360,6 +360,15 @@ class Feature_Engineering:
             if len(self.feat_history[i]) > self.max_lag:
                 self.feat_history[i].pop(0)
                 
+    #recursive formulas for the mean and variance
+    def recursive_moments(self, X_np1, mu_n, sigma2_n, N):
+    
+        mu_np1 = mu_n + (X_np1 - mu_n)/(N+1)
+    
+        sigma2_np1 = sigma2_n + mu_n**2 - mu_np1**2 + (X_np1**2 - sigma2_n - mu_n**2)/(N+1)
+    
+        return mu_np1, sigma2_np1
+                
 
     def estimate_embedding_dimension(self, y, N):
         

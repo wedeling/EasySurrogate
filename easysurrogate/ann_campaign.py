@@ -6,7 +6,7 @@ from tkinter import filedialog
 from itertools import chain
 import pickle
 
-class QSN_Campaign:
+class ANN_Campaign:
 
 
     def __init__(self, load_data = False, load_state = False, **kwargs):
@@ -31,7 +31,7 @@ class QSN_Campaign:
         if load_state:
             self.load_state()
 
-    def load_quantized_softmax_network(self):
+    def load_artificial_neural_network(self):
         #load the neural network
         surrogate = es.methods.ANN(np.random.rand(10), np.random.rand(10))
         surrogate.load_ANN()
@@ -58,26 +58,18 @@ class QSN_Campaign:
             y_train = y_train[feat_eng.max_lag:, :]
         elif y_train.ndim == 1:
             y_train = y_train[feat_eng.max_lag:]
-        
-        print('Binning reference data')
-        #one-hot encoded training data per B_k
-        feat_eng.bin_data(y_train, self.n_bins)
-        
-        print('Creating bin sampler')
-        #simple sampler to draw random samples from the bins
-        sampler = es.methods.SimpleBin(feat_eng)
-    
+
         # print('Initializing features')
         # #features are time lagged, use the data to create initial feature set
         # for i in range(feat_eng.max_lag):
         #     X = [self.h5f[X_i][i].real for X_i in self.feats]
         #     feat_eng.append_feat(X)
 
-        return surrogate, sampler, feat_eng
+        return surrogate, feat_eng
 
 
-    def train_quantized_softmax_network(self, feats, target, lags, n_iter, 
-                                        n_bins = 10, test_frac = 0.0,
+    def train_artificial_neural_network(self, feats, target, lags, n_iter, 
+                                        test_frac = 0.0,
                                         n_layers = 2, n_neurons = 100, 
                                         activation = 'leaky_relu', 
                                         batch_size = 64, lamb = 0.0, save=True,
@@ -86,7 +78,6 @@ class QSN_Campaign:
         self.feats = feats
         self.target = target
         self.lags = lags
-        self.n_bins = n_bins
         
         #Feature engineering object
         feat_eng = es.methods.Feature_Engineering()
@@ -111,28 +102,20 @@ class QSN_Campaign:
                                                       X_symmetry=self.X_symmetry)
         print('done')
         
-        #one-hot encoded training data per B_k
-        feat_eng.bin_data(y_train, n_bins)
-        #simple sampler to draw random samples from the bins
-        sampler = es.methods.SimpleBin(feat_eng)
-        
-        #number of softmax layers (one per output)
-        n_softmax = y_train.shape[1]
-        
         #number of output neurons 
-        n_out = n_bins*n_softmax
+        n_out = y_train.shape[1]
         
-        surrogate = es.methods.ANN(X=X_train, y=feat_eng.y_idx_binned,
+        surrogate = es.methods.ANN(X=X_train, y=y_train,
                                    n_layers=n_layers, n_neurons=n_neurons, 
-                                   n_softmax=n_softmax, n_out=n_out, 
-                                   loss='cross_entropy',
+                                   n_out=n_out, 
+                                   loss='squared',
                                    activation=activation, batch_size=batch_size,
                                    lamb=lamb, decay_step=10**4, decay_rate=0.9, 
-                                   standardize_X=True, standardize_y=False, 
+                                   standardize_X=True, standardize_y=True, 
                                    save=False)
         
         print('===============================')
-        print('Training Quantized Softmax Network...')
+        print('Training Artificial Neural Network...')
         
         #train network for N_inter mini batches
         surrogate.train(n_iter, store_loss = True)
@@ -142,14 +125,13 @@ class QSN_Campaign:
             
         self.surrogate = surrogate
             
-        return surrogate, sampler
+        return surrogate
 
     
     def save_state(self, file_path = ""):
 
         state = {'feats':self.feats, 'target':self.target, 'lags':self.lags,
-                 'n_bins':self.n_bins, 'X_symmetry':self.X_symmetry, 
-                 'h5f_path':self.h5f_path}
+                 'X_symmetry':self.X_symmetry, 'h5f_path':self.h5f_path}
         
         if len(file_path) == 0:
 
