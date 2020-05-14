@@ -159,6 +159,15 @@ restart = False
 store = True
 store_ID = sim_ID
 
+####################
+# SIMULATION FLAGS #
+####################
+train = False            #train the network
+make_movie = False       #make a movie (of the training)
+predict = True           #predict using the learned SGS term
+store = False            #store the prediction 
+make_movie_pred = False  #make a movie (of the prediction)
+
 ######################
 # NETWORK PARAMETERS #
 ######################
@@ -191,35 +200,42 @@ what_data = np.zeros([S,N,np.int(N/2+1)],dtype='complex')
 for k in range(np.int(Ncutoff+1)):
     for l in range(np.int(Ncutoff+1)):
         rhat_data[:,k,l] = Jhat_data_HR[:,k,l] - Jhat_data[:,k,l]
-        rhat_data[:,-k,-l] = Jhat_data_HR[:,-k,-l] - Jhat_data[:,-k,-l]
+        rhat_data[:,-k,l] = Jhat_data_HR[:,-k,l] - Jhat_data[:,-k,l]
         # rescale the HR vorticity field on the coarser resolution
         what_data[:,k,l] = what_data_HR[:,k,l]
-        what_data[:,-k,-l] = what_data_HR[:,-k,-l]
-        if rhat_data[1,k,l] is None or rhat_data[1,-k,-l] is None:
-            print('Found None in rhat_data')
-            print('k=',k,' l=',l)
-        if what_data[1,k,l] is None or what_data[1,-k,-l] is None:
-            print('Found None in what_data')
-            print('k=',k,' l=',l)
+        what_data[:,-k,l] = what_data_HR[:,-k,l]
 
-# print(rhat_data[3,np.int(Ncutoff),np.int(Ncutoff)-2:np.int(Ncutoff)+2])
+# print(rhat_data[3,np.int(Ncutoff),np.int(Ncutoff)-1:np.int(Ncutoff)+2])
 # print(what_data[4,20,np.int(Ncutoff-1):np.int(Ncutoff)+2])
-print(rhat_data.ndim)
+# print(rhat_data.ndim)
+
+#number of bins per B_k
+n_bins = 10
 
 #time lags per feature
 lags = [range(1, 10)]
 max_lag = np.max(list(chain(*lags)))
-#Lag features as defined in 'lags'
-what_train, rhat_train = feat_eng.lag_training_data(what_data, rhat_data, lags = lags)
+#number of softmax layers (one per output)
+n_softmax = 2*np.int(Ncutoff+1)
 
-####################
-# SIMULATION FLAGS #
-####################
-train = False            #train the network
-make_movie = False       #make a movie (of the training)
-predict = True           #predict using the learned SGS term
-store = False            #store the prediction 
-make_movie_pred = False  #make a movie (of the prediction)
+#number of output neurons 
+n_out = n_bins*n_softmax
+
+#test set fraction
+test_frac = 0.5
+
+#Lag features as defined in 'lags'
+for l in range(np.int(Ncutoff+1)):
+    what_train, rhat_train = feat_eng.lag_training_data(what_data[:,:,l], rhat_data[:,:,l], lags = lags)
+    print(rhat_train.dtype)
+    #one-hot encoded training data per B_k
+    feat_eng.bin_data(rhat_train, n_bins)
+    #simple sampler to draw random samples from the bins
+    sampler = es.methods.SimpleBin(feat_eng)
+
+    n_train = np.int(what_train.shape[0]*(1.0 - test_frac))
+
+#train the neural network
 
 ###############################
 # SPECIFY WHICH DATA TO STORE #
