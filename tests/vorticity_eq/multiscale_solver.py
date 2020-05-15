@@ -143,7 +143,7 @@ nu_LF = 1.0/(day*Ncutoff**2*decay_time_nu)
 mu = 1.0/(day*decay_time_mu)
 
 #start, end time (in days) + time step
-t = 250*day
+t = 0*day
 t_end = t + 100*day
 dt = 0.01
 
@@ -168,12 +168,12 @@ sim_ID = 'run1'
 #store the state at the end of the simulation
 state_store = True
 #restart from a stored state
-restart = True
+restart = False
 #store data
-store = True
+store = False
 store_ID = sim_ID 
 #plot while running
-plot = False
+plot = True
 
 ###############################
 # SPECIFY WHICH DATA TO STORE #
@@ -286,8 +286,8 @@ for n in range(n_steps):
     if j1 == plot_frame_rate and plot == True:
         
         j1 = 0
-        Q1 = np.fft.irfft2(w_hat_n_LF)
-        Q2 = np.fft.irfft2(r_hat_nm1)
+        Q1 = np.fft.irfft2(P_LF*w_hat_n_HF)
+        Q2 = np.fft.irfft2(w_hat_n_LF)
         draw()
 
     #update variables
