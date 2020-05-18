@@ -240,10 +240,9 @@ class Feature_Engineering:
             n_vars = 1
             y = y.reshape([n_samples, 1])
 
-        self.binnumbers = np.zeros([n_samples, n_vars]).astype('int')
+        self.binnumbers = np.zeros([n_samples, n_vars], dtype='int')
         self.y_binned = {}
         self.y_binned_mean = {}
-        self.y_idx_binned = np.zeros([n_samples, n_bins*n_vars])
         self.bins = {}
         self.n_vars = n_vars
 
@@ -252,13 +251,21 @@ class Feature_Engineering:
             self.y_binned[i] = {}
             self.y_binned_mean[i] = {}
                        
-            bins = np.linspace(np.min(y[:, i]), np.max(y[:, i]), n_bins+1)
-            self.bins[i] = bins
-
-            count, _, self.binnumbers[:, i] = \
-            stats.binned_statistic(y[:, i], np.zeros(n_samples), statistic='count', bins=bins)
+            if y.dtype == 'complex128':
+                bins = [np.linspace(np.min(y[:, i].real), np.max(y[:, i].real), n_bins+1), \
+                np.linspace(np.min(y[:, i].imag), np.max(y[:, i].imag), n_bins+1)]
+                self.bins[i] = bins
+                count, _, _, self.binnumbers[:, i] = \
+                stats.binned_statistic_2d(y[:, i].real, y[:, i].imag, np.zeros(n_samples), statistic='count', bins=bins)
+            else:
+                bins = np.linspace(np.min(y[:, i]), np.max(y[:, i]), n_bins+1)
+                self.bins[i] = bins
+                count, _, self.binnumbers[:, i] = \
+                stats.binned_statistic(y[:, i], np.zeros(n_samples), statistic='count', bins=bins)
 
             unique_binnumbers = np.unique(self.binnumbers[:, i])
+            print('unique_binnumbers=',unique_binnumbers)
+            self.y_idx_binned = np.zeros([n_samples, max(unique_binnumbers)*n_vars])
 
             offset = i*n_bins
 
