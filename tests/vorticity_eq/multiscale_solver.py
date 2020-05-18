@@ -164,7 +164,7 @@ store_frame_rate = np.floor(0.25*day/dt).astype('int')
 plot_frame_rate = np.floor(1*day/dt).astype('int')
 
 #length of data array
-S = np.floor((n_steps-n_burn)/store_frame_rate).astype('int')
+S = np.ceil((n_steps-n_burn)/store_frame_rate).astype('int')
 
 sim_ID = 'run1'
 #store the state at the end of the simulation
@@ -284,7 +284,7 @@ for n in range(n_steps):
                 #store full fields
                 # samples[qoi][idx] = np.fft.irfft2(eval(qoi))
 
-        idx += 1
+            idx += 1
         
     if j1 == plot_frame_rate and plot == True:
         
