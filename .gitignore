@@ -6,3 +6,4 @@ build/
 dist/
 tests/vorticity_eq/restart
 tests/vorticity_eq/samples
+tests/vorticity_eq/vorticity_quantized_softmax.py
