@@ -143,11 +143,13 @@ nu_LF = 1.0/(day*Ncutoff**2*decay_time_nu)
 mu = 1.0/(day*decay_time_mu)
 
 #start, end time (in days) + time step
+t_burn = 365*day
 t = 0*day
-t_end = t + 100*day
+t_end = t + 5*365*day
 dt = 0.01
 
 n_steps = np.ceil((t_end-t)/dt).astype('int')
+n_burn = np.ceil((t_burn-t)/dt).astype('int')
 
 #constant factor that appears in AB/BDI2 time stepping scheme, multiplying the Fourier coefficient w_hat_np1
 norm_factor = 1.0/(3.0/(2.0*dt) - nu*k_squared + mu)
@@ -162,7 +164,7 @@ store_frame_rate = np.floor(0.25*day/dt).astype('int')
 plot_frame_rate = np.floor(1*day/dt).astype('int')
 
 #length of data array
-S = np.floor(n_steps/store_frame_rate).astype('int')
+S = np.floor((n_steps-n_burn)/store_frame_rate).astype('int')
 
 sim_ID = 'run1'
 #store the state at the end of the simulation
@@ -170,10 +172,10 @@ state_store = True
 #restart from a stored state
 restart = False
 #store data
-store = False
+store = True
 store_ID = sim_ID 
 #plot while running
-plot = True
+plot = False
 
 ###############################
 # SPECIFY WHICH DATA TO STORE #
@@ -275,11 +277,12 @@ for n in range(n_steps):
     if j2 == store_frame_rate and store == True:
         j2 = 0
 
-        for qoi in QoI:
-            #store Fourier coefs
-            samples[qoi][idx] = eval(qoi)
-            #store full fields
-            # samples[qoi][idx] = np.fft.irfft2(eval(qoi))
+        if t > t_burn:
+            for qoi in QoI:
+                #store Fourier coefs
+                samples[qoi][idx] = eval(qoi)
+                #store full fields
+                # samples[qoi][idx] = np.fft.irfft2(eval(qoi))
 
         idx += 1
         
