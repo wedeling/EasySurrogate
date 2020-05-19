@@ -251,7 +251,7 @@ class Feature_Engineering:
             self.y_binned[i] = {}
             self.y_binned_mean[i] = {}
                        
-            if y.dtype == 'complex128':
+            if np.iscomplexobj(y):
                 bins = [np.linspace(np.min(y[:, i].real), np.max(y[:, i].real), n_bins+1), \
                 np.linspace(np.min(y[:, i].imag), np.max(y[:, i].imag), n_bins+1)]
                 self.bins[i] = bins
@@ -263,17 +263,36 @@ class Feature_Engineering:
                 count, _, self.binnumbers[:, i] = \
                 stats.binned_statistic(y[:, i], np.zeros(n_samples), statistic='count', bins=bins)
 
-            unique_binnumbers = np.unique(self.binnumbers[:, i])
-            print('unique_binnumbers=',unique_binnumbers)
-            self.y_idx_binned = np.zeros([n_samples, max(unique_binnumbers)*n_vars])
+            self.unique_binnumbers = np.unique(self.binnumbers[:, i])
+            
+            #unravel the binnumbers from 1D to either 1D or to 2D
+            x_idx = np.unravel_index(self.unique_binnumbers, 
+                                     [len(b) + 1 for b in self.bins[i]])
+            d = len(x_idx)
+            x_idx = [x_idx[i] - 1 for i in range(d)]
+ 
+            #print the bins that contain samples
+            print("Samples located in bins:")
+            for k in range(x_idx[0].size):
+                s = []
+                for j in range(d):
+                    s.append(x_idx[j][k])
+                print("bin", self.unique_binnumbers[k], "=", s)
+                  
+            #TODO: FIX THIS FOR WHEN n_vars > 1
+            
+            #the number of unique binnumbers for the current output variable
+            L = self.unique_binnumbers.size            
+            self.y_idx_binned = np.zeros([n_samples, L])
 
-            offset = i*n_bins
+            # offset = i*n_bins
+            offset = 0
 
-            for j in unique_binnumbers:
-                idx = np.where(self.binnumbers[:, i] == j)
-                self.y_binned[i][j-1] = y[idx, i]
-                self.y_binned_mean[i][j-1] = np.mean(y[idx, i])
-                self.y_idx_binned[idx, offset + j - 1] = 1.0
+            for j in range(L):
+                idx = np.where(self.binnumbers[:, i] == self.unique_binnumbers[j])
+                self.y_binned[i][j] = y[idx, i]
+                self.y_binned_mean[i][j] = np.mean(y[idx, i])
+                self.y_idx_binned[idx, offset + j] = 1.0
 
     def init_feature_history(self, lags):
         """
