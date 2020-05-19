@@ -156,7 +156,7 @@ class ANN:
         if self.bias == False:
             self.layers[0].h = X_i.T
         else:
-            self.layers[0].h = xp.ones([self.n_in + 1, batch_size])
+            self.layers[0].h = xp.ones([self.n_in + 1, batch_size],dtype=X_i.dtype)
             self.layers[0].h[0:self.n_in, :] = X_i.T
                     
         for i in range(1, self.n_layers+1):
