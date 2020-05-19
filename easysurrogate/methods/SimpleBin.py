@@ -46,7 +46,7 @@ class SimpleBin:
 
         """
         
-        pred = np.zeros(self.n_vars)
+        pred = np.zeros(self.n_vars,dtype=self.y_binned[0][bin_idx[0]][0].dtype)
         
         for i in range(self.n_vars):
             pred[i] = np.random.choice(self.y_binned[i][bin_idx[i]][0])
