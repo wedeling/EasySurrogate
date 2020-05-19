@@ -59,6 +59,18 @@ def get_P(cutoff):
                 
     return P
 
+def get_P_full(cutoff):
+
+    P = np.ones([N, N])
+
+    for i in range(N):
+        for j in range(N):
+
+            if np.abs(kx_full[i, j]) > cutoff or np.abs(ky_full[i, j]) > cutoff:
+                P[i, j] = 0.0
+
+    return P
+
 #store samples in hierarchical data format, when sample size become very large
 def store_samples_hdf5():
   
@@ -82,6 +94,54 @@ def store_samples_hdf5():
 def spatial_corr_coef(X, Y):
     return np.mean((X - np.mean(X))*(Y - np.mean(Y)))/(np.std(X)*np.std(Y))
 
+def freq_map():
+    """
+    Map 2D frequencies to a 1D bin (kx, ky) --> k
+    where k = 0, 1, ..., sqrt(2)*Ncutoff
+    """
+   
+    #edges of 1D wavenumber bins
+    bins = np.arange(-0.5, np.ceil(2**0.5*Ncutoff)+1)
+    #fmap = np.zeros([N,N]).astype('int')
+    
+    dist = np.zeros([N,N])
+    
+    for i in range(N):
+        for j in range(N):
+            #Euclidian distance of frequencies kx and ky
+            dist[i, j] = np.sqrt(kx_full[i,j]**2 + ky_full[i,j]**2).imag
+                
+    #find 1D bin index of dist
+    _, _, binnumbers = stats.binned_statistic(dist.flatten(), np.zeros(N**2), bins=bins)
+    
+    binnumbers -= 1
+            
+    return binnumbers.reshape([N, N]), bins
+
+def spectrum(w_hat, P):
+
+    #convert rfft2 coefficients to fft2 coefficients
+    w_hat_full = np.zeros([N, N]) + 0.0j
+    w_hat_full[0:N, 0:int(N/2+1)] = w_hat
+    w_hat_full[map_I, map_J] = np.conjugate(w_hat[I, J])
+    w_hat_full *= P
+    
+    psi_hat_full = w_hat_full/k_squared_no_zero_full
+    psi_hat_full[0,0] = 0.0
+    
+    E_hat = -0.5*psi_hat_full*np.conjugate(w_hat_full)/N**4
+    Z_hat = 0.5*w_hat_full*np.conjugate(w_hat_full)/N**4
+    
+    E_spec = np.zeros(N_bins)
+    Z_spec = np.zeros(N_bins)
+    
+    for i in range(N):
+        for j in range(N):
+            bin_idx = binnumbers[i, j]
+            E_spec[bin_idx] += E_hat[i, j].real
+            Z_spec[bin_idx] += Z_hat[i, j].real
+            
+    return E_spec, Z_spec
 """
 ***************************
 * M A I N   P R O G R A M *
@@ -90,7 +150,11 @@ def spatial_corr_coef(X, Y):
 
 import numpy as np
 import matplotlib.pyplot as plt
+plt.rcParams.update({'font.size': 15})
+plt.rcParams['figure.figsize'] = 6,6
 import os, h5py
+import easysurrogate as es
+from scipy import stats 
 
 plt.close('all')
 plt.rcParams['image.cmap'] = 'seismic'
@@ -123,13 +187,41 @@ k_squared = kx**2 + ky**2
 k_squared_no_zero = np.copy(k_squared)
 k_squared_no_zero[0,0] = 1.0
 
+kx_full = np.zeros([N, N]) + 0.0j
+ky_full = np.zeros([N, N]) + 0.0j
+
+for i in range(N):
+    for j in range(N):
+        kx_full[i, j] = 1j*k[j]
+        ky_full[i, j] = 1j*k[i]
+
+k_squared_full = kx_full**2 + ky_full**2
+k_squared_no_zero_full = np.copy(k_squared_full)
+k_squared_no_zero_full[0,0] = 1.0
+
 #cutoff in pseudospectral method
 Ncutoff = N/3
 Ncutoff_LF = N_LF/3
 
+shift = np.zeros(N).astype('int')
+for i in range(1,N):
+    shift[i] = np.int(N-i)
+I = range(N);J = range(np.int(N/2+1))
+map_I, map_J = np.meshgrid(shift[I], shift[J])
+I, J = np.meshgrid(I, J)
+
+binnumbers, bins = freq_map()
+N_bins = bins.size
+
 #spectral filter
 P = get_P(Ncutoff)
 P_LF = get_P(Ncutoff_LF)
+#spectral filter for the full FFT2 
+P_full = get_P_full(Ncutoff)
+P_LF_full = get_P_full(Ncutoff_LF)
+
+#filter out all the zeros from the 2/3 rule
+kk, ll = np.where(P_LF == 1.0)
 
 #time scale
 Omega = 7.292*10**-5
@@ -143,9 +235,9 @@ nu_LF = 1.0/(day*Ncutoff**2*decay_time_nu)
 mu = 1.0/(day*decay_time_mu)
 
 #start, end time (in days) + time step
-t_burn = 365*day
+t_burn = 0*day
 t = 0*day
-t_end = t + 5*365*day
+t_end = t + 1*day
 dt = 0.01
 
 n_steps = np.ceil((t_end-t)/dt).astype('int')
@@ -180,6 +272,9 @@ plot = False
 ###############################
 # SPECIFY WHICH DATA TO STORE #
 ###############################
+
+vorticity = np.zeros([N**2,S])
+jacobian = np.zeros([N**2,S])
 
 #TRAINING DATA SET
 QoI = ['w_hat_nm1_LF', 'VgradW_hat_nm1_LF', 'r_hat_nm1']
@@ -284,6 +379,9 @@ for n in range(n_steps):
                 #store full fields
                 # samples[qoi][idx] = np.fft.irfft2(eval(qoi))
 
+            vorticity[:,idx] = np.fft.irfft2(w_hat_n_HF).flatten()
+            jacobian[:,idx] = np.fft.irfft2(VgradW_hat_nm1_HF).flatten()
+
             idx += 1
         
     if j1 == plot_frame_rate and plot == True:
@@ -334,9 +432,36 @@ if state_store == True:
 if store == True:
     store_samples_hdf5() 
     
+post_proc = es.methods.Post_Processing()
+# plot PDFs
+w_dom, w_pdf = post_proc.get_pdf(vorticity.flatten())
+J_dom, J_pdf = post_proc.get_pdf(jacobian.flatten())
+
+fig = plt.figure(figsize=[12,6])
+ax1 = fig.add_subplot(121, xlabel=r'w')
+ax1.plot(w_dom,w_pdf,lw=2,label='vorticity')
+ax2 = fig.add_subplot(122, xlabel=r'J')
+ax2.plot(J_dom,J_pdf,lw=2,label='Jacobian')
+plt.tight_layout()
+
+# compute energy and enstrophy spectrum
+ehat_HF, zhat_HF = spectrum(w_hat_np1_HF,P_full)
+ehat_LF, zhat_LF = spectrum(w_hat_np1_LF,P_LF_full)
+
+fig = plt.figure(figsize=[12,6])
+ax1 = fig.add_subplot(121, xlabel=r'wavenumber',ylabel=r'Energy spectra')
+ax1.loglog(ehat_HF,lw=2,label='HF')
+ax1.loglog(ehat_LF,lw=2,label='LF')
+ax1.legend(loc='best')
+ax2 = fig.add_subplot(122, xlabel=r'wavenumber',ylabel=r'Enstrophy spectra')
+ax2.loglog(zhat_HF,lw=2,label='HF')
+ax2.loglog(zhat_LF,lw=2,label='LF')
+ax2.legend(loc='best')
+plt.tight_layout()
+
 if plot == False:
     #plot vorticity field
-    fig = plt.figure(figsize=[8, 4])
+    fig = plt.figure(figsize=[12,6])
     ax = fig.add_subplot(121, xlabel=r'x', ylabel=r'y', title='t = ' + str(np.around(t/day, 2)) + ' days')
     ct = ax.contourf(x, y, np.fft.irfft2(w_hat_np1_HF), 100)
     plt.colorbar(ct)
