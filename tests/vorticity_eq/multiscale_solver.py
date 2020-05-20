@@ -221,7 +221,7 @@ P_full = get_P_full(Ncutoff)
 P_LF_full = get_P_full(Ncutoff_LF)
 
 #filter out all the zeros from the 2/3 rule
-kk, ll = np.where(P_LF == 1.0)
+K, L = np.where(P_LF == 1.0)
 
 #time scale
 Omega = 7.292*10**-5
@@ -235,9 +235,9 @@ nu_LF = 1.0/(day*Ncutoff**2*decay_time_nu)
 mu = 1.0/(day*decay_time_mu)
 
 #start, end time (in days) + time step
-t_burn = 0*day
+t_burn = 365*day
 t = 0*day
-t_end = t + 1*day
+t_end = t + 2*365*day
 dt = 0.01
 
 n_steps = np.ceil((t_end-t)/dt).astype('int')
@@ -290,7 +290,7 @@ if store == True:
         #assume a field contains the string '_hat_'
         if '_hat' in QoI[q]:
             #store Fourier coefs
-            samples[QoI[q]] = np.zeros([S, N, int(N/2+1)]) + 0.0j
+            samples[QoI[q]] = np.zeros([S, 2*np.int(Ncutoff_LF)+1, np.int(Ncutoff_LF)+1],dtype='complex') 
             #store full fields
             # samples[QoI[q]] = np.zeros([S, N, N]) 
         #a scalar
@@ -374,8 +374,8 @@ for n in range(n_steps):
 
         if t > t_burn:
             for qoi in QoI:
-                #store Fourier coefs
-                samples[qoi][idx] = eval(qoi)
+                #store non-zero Fourier coefs
+                samples[qoi][idx] = eval(qoi)[K,L].reshape(2*np.int(Ncutoff_LF)+1,np.int(Ncutoff_LF)+1)
                 #store full fields
                 # samples[qoi][idx] = np.fft.irfft2(eval(qoi))
 
