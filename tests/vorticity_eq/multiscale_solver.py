@@ -75,7 +75,10 @@ def store_samples_hdf5():
     #store numpy sample arrays as individual datasets in the hdf5 file
     for q in QoI:
         h5f.create_dataset(q, data = samples[q])
-        
+
+    #store the projector
+    h5f.create_dataset('P_LF', data = P_LF)
+
     h5f.close()  
 
 #compute the spatial correlation coeffient at a given time
