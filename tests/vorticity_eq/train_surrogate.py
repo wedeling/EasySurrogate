@@ -37,7 +37,7 @@ def animate(i):
 ####################
 # Simulation flags #
 ####################
-train = False            #train the network
+train = True            #train the network
 make_movie = True        #make a movie (of the training)
 predict = False          #predict using the learned SGS term
 store = False            #store the prediction 
@@ -53,16 +53,13 @@ feat_eng = es.methods.Feature_Engineering(load_data = True)
 #get training data
 h5f = feat_eng.get_hdf5_file()
 
-#extract features
-vort = h5f['w_hat_nm1_LF'][()]
-jac = h5f['VgradW_hat_nm1_LF'][()]
-sgs = h5f['r_hat_nm1'][()]
+#filter out all the zeros from the 3/2 rule
+I, J = np.where(h5f['P_LF'][()] == 1.0)
 
-# Reshape vectors into vectors
-# I = vort.shape[0]; J = vort.shape[1]; K = vort.shape[2]
-# vort = vort.reshape([I, J*K])
-# jac = jac.reshape([I, J*K])
-# sgs = sgs.reshape([I, J*K])
+#extract features
+vort = h5f['w_hat_nm1_LF'][()][:, I, J]
+jac = h5f['VgradW_hat_nm1_LF'][()][:, I, J]
+sgs = h5f['r_hat_nm1'][()][:, I, J]
 
 # Reshape features into scalars
 vort = vort.flatten()
@@ -79,26 +76,26 @@ dt = 0.25*day
 t0 = 365*day
 t_end = 4*365*day
 t = np.arange(t0, t_end, dt)
+
 #Lag features as defined in 'lags'
-lags = [[1, 10]]
+lags = [[1, 10], [1, 10]]
 max_lag = np.max(list(chain(*lags)))
 
-X_train, y_train = feat_eng.lag_training_data([jac], sgs, lags = lags)
-# test = np.zeros(3, dtype=y_train.dtype)
-# print(test)
+X_train, y_train = feat_eng.lag_training_data([jac.real, jac.imag], sgs, lags = lags)
 
 #number of bins per B_k
-n_bins = 3
+n_bins = 10
 #one-hot encoded training data per B_k
 feat_eng.bin_data(y_train, n_bins)
 #simple sampler to draw random samples from the bins
 sampler = es.methods.SimpleBin(feat_eng)
 
+
 #number of softmax layers (one per output)
 n_softmax = 1
 
 #number of output neurons 
-n_out = max(np.unique(feat_eng.binnumbers[:, 0]))*n_softmax
+n_out = feat_eng.y_idx_binned.shape[1]
 
 #test set fraction
 test_frac = 0.5
@@ -111,7 +108,7 @@ if train:
                                n_softmax=n_softmax, n_out=n_out, loss='cross_entropy',
                                activation='leaky_relu', batch_size=512,
                                lamb=0.0, decay_step=10**4, decay_rate=0.9, 
-                               standardize_X=True, standardize_y=False, save=True)
+                               standardize_X=True, standardize_y=False, save=False)
 
     print('=====================================')
     print('Training Quantized Softmax Network...')
@@ -127,6 +124,7 @@ else:
     #the load trained network from disk
     surrogate.load_ANN()
 
+"""
 X_mean = surrogate.X_mean
 X_std = surrogate.X_std
     
@@ -176,3 +174,4 @@ if make_movie:
     # im_ani.save('./movies/test.mp4')
 
     print('done')
+"""
