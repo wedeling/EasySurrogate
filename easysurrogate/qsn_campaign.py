@@ -1,3 +1,4 @@
+from .campaign import Campaign
 import easysurrogate as es
 import numpy as np
 import h5py
@@ -6,30 +7,11 @@ from tkinter import filedialog
 from itertools import chain
 import pickle
 
-class QSN_Campaign:
+class QSN_Surrogate(Campaign):
 
-
-    def __init__(self, load_data = False, load_state = False, **kwargs):
-        
-        if load_data:
-            if 'file_path' in kwargs:
-                file_path = kwargs['file_path']
-            else:
-                root = tk.Tk()
-                root.withdraw()
-                file_path = tk.filedialog.askopenfilename(title="Post processing: Open data file", 
-                                                          filetypes=(('HDF5 files', '*.hdf5'), 
-                                                                    ('All files', '*.*')))
-            h5f = h5py.File(file_path, 'r')
-    
-            h5f = h5py.File(file_path, 'r')
-            print('Loaded', h5f.keys())
-    
-            self.h5f_path = file_path
-            self.h5f = h5f
-            
-        if load_state:
-            self.load_state()
+    def __init__(**kwargs):
+    """
+    """        
 
     def load_quantized_softmax_network(self):
         #load the neural network
@@ -134,7 +116,7 @@ class QSN_Campaign:
         print('===============================')
         print('Training Quantized Softmax Network...')
         
-        #train network for N_inter mini batches
+        #train network for N_iter mini batches
         surrogate.train(n_iter, store_loss = True)
         
         if save:
@@ -145,45 +127,22 @@ class QSN_Campaign:
         return surrogate, sampler
 
     
-    def save_state(self, file_path = ""):
+    def save_state(self, **kwargs):
 
         state = {'feats':self.feats, 'target':self.target, 'lags':self.lags,
                  'n_bins':self.n_bins, 'X_symmetry':self.X_symmetry, 
                  'h5f_path':self.h5f_path}
-        
-        if len(file_path) == 0:
+        super().save_state(state, kwargs)
+        # if len(file_path) == 0:
 
-            root = tk.Tk()
-            root.withdraw()
+        #     root = tk.Tk()
+        #     root.withdraw()
             
-            file = filedialog.asksaveasfile(title="Save campaign state",
-                                            mode='wb', defaultextension=".pickle")
-        else:
-            file = open(file_path, 'wb')
+        #     file = filedialog.asksaveasfile(title="Save campaign state",
+        #                                     mode='wb', defaultextension=".pickle")
+        # else:
+        #     file = open(file_path, 'wb')
         
-        pickle.dump(state, file)
+        # pickle.dump(state, file)
             
-        file.close()
-
-
-    def load_state(self, file_path = ""):
-      
-        #select file via GUI is file_path is not specified
-        if len(file_path) == 0:
-
-            root = tk.Tk()
-            root.withdraw()
-            
-            file_path = filedialog.askopenfilename(title="Open campaign state", 
-                                           filetypes=(('pickle files', '*.pickle'), 
-                                                      ('All files', '*.*')))
-
-        print('Loading state from', file_path)
-
-        file = open(file_path, 'rb')
-        state = pickle.load(file)
-        file.close()
-        
-        for key in state:
-            print('Loading:', key)
-            vars(self)[key] = state[key]
+        # file.close()
