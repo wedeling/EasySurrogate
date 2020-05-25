@@ -283,7 +283,7 @@ Q = len(QoI)
 #allocate memory
 samples = {}
 
-if store == True:
+if store:
     
     for q in range(Q):
         
@@ -302,7 +302,7 @@ F = 2**1.5*np.cos(5*x)*np.cos(5*y);
 F_hat = np.fft.rfft2(F);
 
 #restart from a previous stored state (set restart = True, and set t to the end time of previous simulation)
-if restart == True:
+if restart:
     
     fname = HOME + '/restart/' + sim_ID + '_t_' + str(np.around(t/day,1)) + '.hdf5'
     
@@ -369,7 +369,7 @@ for n in range(n_steps):
     w_hat_np1_LF, VgradW_hat_n_LF = get_w_hat_np1(w_hat_n_LF, w_hat_nm1_LF, VgradW_hat_nm1_LF, P_LF, norm_factor_LF, sgs_hat = r_hat_nm1)
 
     #store samples to dict
-    if j2 == store_frame_rate and store == True:
+    if (j2 == store_frame_rate) and store:
         j2 = 0
 
         if t > t_burn:
@@ -384,7 +384,7 @@ for n in range(n_steps):
 
             idx += 1
         
-    if j1 == plot_frame_rate and plot == True:
+    if (j1 == plot_frame_rate) and plot:
         
         j1 = 0
         Q1 = np.fft.irfft2(P_LF*w_hat_n_HF)
@@ -408,14 +408,14 @@ for n in range(n_steps):
         print('n = ', n, 'of', n_steps)
     
 #store the state of the system to allow for a simulation restart at t > 0
-if state_store == True:
+if state_store:
 
     keys = ['w_hat_nm1_HF', 'w_hat_n_HF', 'VgradW_hat_nm1_HF', \
             'w_hat_nm1_LF', 'w_hat_n_LF', 'VgradW_hat_nm1_LF']
 
     fname = HOME + '/restart/' + sim_ID + '_t_' + str(np.around(t_end/day,1)) + '.hdf5'
     
-    if os.path.exists(HOME + '/restart') == False:
+    if not os.path.exists(HOME + '/restart'):
         os.makedirs(HOME + '/restart')
     
     #create HDF5 file
@@ -429,7 +429,7 @@ if state_store == True:
     h5f.close()
     
 #store the samples
-if store == True:
+if store:
     store_samples_hdf5() 
     
 post_proc = es.methods.Post_Processing()
@@ -459,7 +459,7 @@ ax2.loglog(zhat_LF,lw=2,label='LF')
 ax2.legend(loc='best')
 plt.tight_layout()
 
-if plot == False:
+if not plot:
     #plot vorticity field
     fig = plt.figure(figsize=[12,6])
     ax = fig.add_subplot(121, xlabel=r'x', ylabel=r'y', title='t = ' + str(np.around(t/day, 2)) + ' days')
