@@ -19,12 +19,10 @@ def animate(i):
         c = 'b'
     else:
         c = 'r'
-    print('Test')
     plt1 = ax1.vlines(np.arange(max(np.unique(feat_eng.binnumbers[:, 0]))), \
     	ymin = np.zeros(max(np.unique(feat_eng.binnumbers[:, 0]))), ymax = o_i[0],
                       colors = c, label=r'conditional pmf')
     plt2 = ax1.plot(idx_data[0], 0.0, 'ro', label=r'SGS data')
-    print('Test1')
     plt3 = ax2.plot(t[0:i], abs(y_train[0:i]), 'ro', alpha = 0.5, label=r'SGS data')
     plt4 = ax2.plot(t[0:i], abs(samples[0:i, 0]), 'b', label='random sample')
 
@@ -37,7 +35,7 @@ def animate(i):
 ####################
 # Simulation flags #
 ####################
-train = True            #train the network
+train = True             #train the network
 make_movie = True        #make a movie (of the training)
 predict = False          #predict using the learned SGS term
 store = False            #store the prediction 
@@ -78,13 +76,17 @@ t_end = 4*365*day
 t = np.arange(t0, t_end, dt)
 
 #Lag features as defined in 'lags'
-lags = [[1, 10], [1, 10]]
+lags = [[1,10], [1,10]]
 max_lag = np.max(list(chain(*lags)))
 
-X_train, y_train = feat_eng.lag_training_data([jac.real, jac.imag], sgs, lags = lags)
+# X_train, y_train = feat_eng.lag_training_data([jac], sgs, lags = lags)
+jac_re = jac.real.flatten()
+jac_im = jac.imag.flatten()
+X_train, y_train = feat_eng.lag_training_data([jac_re, jac_im], sgs, lags = lags)
 
 #number of bins per B_k
-n_bins = 10
+n_bins = 5
+
 #one-hot encoded training data per B_k
 feat_eng.bin_data(y_train, n_bins)
 #simple sampler to draw random samples from the bins
@@ -101,10 +103,11 @@ n_out = feat_eng.y_idx_binned.shape[1]
 test_frac = 0.5
 n_train = np.int(X_train.shape[0]*(1.0 - test_frac))
 
+print(feat_eng.y_idx_binned[10]) 
 #train the neural network
 if train:
     surrogate = es.methods.ANN(X=X_train[0:n_train], y=feat_eng.y_idx_binned[0:n_train],
-                               n_layers=1, n_neurons=20, 
+                               n_layers=2, n_neurons=20, 
                                n_softmax=n_softmax, n_out=n_out, loss='cross_entropy',
                                activation='leaky_relu', batch_size=512,
                                lamb=0.0, decay_step=10**4, decay_rate=0.9, 
@@ -148,7 +151,7 @@ if make_movie:
     n_movie = 500
 
     #allocate memory
-    samples = np.zeros([n_movie, n_softmax],dtype=X_train.dtype)
+    samples = np.zeros([n_movie, n_softmax],dtype=y_train.dtype)
 
     #make movie by evaluating the network at TRAINING inputs
     for i in range(n_movie):
