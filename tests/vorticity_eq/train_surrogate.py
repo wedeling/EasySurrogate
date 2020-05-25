@@ -19,12 +19,11 @@ def animate(i):
         c = 'b'
     else:
         c = 'r'
-    plt1 = ax1.vlines(np.arange(max(np.unique(feat_eng.binnumbers[:, 0]))), \
-    	ymin = np.zeros(max(np.unique(feat_eng.binnumbers[:, 0]))), ymax = o_i[0],
+    plt1 = ax1.vlines(range(n_out), ymin = np.zeros(n_out), ymax = o_i[0],
                       colors = c, label=r'conditional pmf')
     plt2 = ax1.plot(idx_data[0], 0.0, 'ro', label=r'SGS data')
-    plt3 = ax2.plot(t[0:i], abs(y_train[0:i]), 'ro', alpha = 0.5, label=r'SGS data')
-    plt4 = ax2.plot(t[0:i], abs(samples[0:i, 0]), 'b', label='random sample')
+    plt3 = ax2.plot(y_train[0:i].real, y_train[0:i].imag, 'r', label=r'SGS data')
+    plt4 = ax2.plot(samples[0:i].real, samples[0:i].imag, 'b', label='random sample')
 
     if i == 0:
         ax1.legend(loc=1, fontsize=9)
@@ -52,12 +51,12 @@ feat_eng = es.methods.Feature_Engineering(load_data = True)
 h5f = feat_eng.get_hdf5_file()
 
 #filter out all the zeros from the 3/2 rule
-I, J = np.where(h5f['P_LF'][()] == 1.0)
+# I, J = np.where(h5f['P_LF'][()] == 1.0)
 
 #extract features
-vort = h5f['w_hat_nm1_LF'][()][:, I, J]
-jac = h5f['VgradW_hat_nm1_LF'][()][:, I, J]
-sgs = h5f['r_hat_nm1'][()][:, I, J]
+vort = h5f['w_hat_nm1_LF'][()]
+jac = h5f['VgradW_hat_nm1_LF'][()]
+sgs = h5f['r_hat_nm1'][()]
 
 # Reshape features into scalars
 vort = vort.flatten()
@@ -76,7 +75,7 @@ t_end = 4*365*day
 t = np.arange(t0, t_end, dt)
 
 #Lag features as defined in 'lags'
-lags = [[1,10], [1,10]]
+lags = [range(1, 10), range(1, 10)]
 max_lag = np.max(list(chain(*lags)))
 
 # X_train, y_train = feat_eng.lag_training_data([jac], sgs, lags = lags)
@@ -107,7 +106,7 @@ print(feat_eng.y_idx_binned[10])
 #train the neural network
 if train:
     surrogate = es.methods.ANN(X=X_train[0:n_train], y=feat_eng.y_idx_binned[0:n_train],
-                               n_layers=2, n_neurons=20, 
+                               n_layers=4, n_neurons=50, 
                                n_softmax=n_softmax, n_out=n_out, loss='cross_entropy',
                                activation='leaky_relu', batch_size=512,
                                lamb=0.0, decay_step=10**4, decay_rate=0.9, 
@@ -119,7 +118,9 @@ if train:
     #train network for N_inter mini batches
     N_iter = 10000
     surrogate.train(N_iter, store_loss = True)
-    surrogate.compute_misclass_softmax()
+    rnd_idx = np.random.randint(0, n_train, 10000)
+    surrogate.compute_misclass_softmax(X = X_train[rnd_idx],
+                                       y = feat_eng.y_idx_binned[rnd_idx])
 #load a neural network from disk
 else:
     #first create dummy ANN object    
@@ -127,7 +128,7 @@ else:
     #the load trained network from disk
     surrogate.load_ANN()
 
-"""
+
 X_mean = surrogate.X_mean
 X_std = surrogate.X_std
     
@@ -144,7 +145,7 @@ if make_movie:
     fig = plt.figure(figsize=[8,4])
     ax1 = fig.add_subplot(121, xlabel=r'bin number', ylabel=r'probability', 
                           ylim=[-0.05, 1.05])
-    ax2 = fig.add_subplot(122, xlabel=r'time', ylabel=r'$B_k$')
+    ax2 = fig.add_subplot(122, xlabel=r'real', ylabel=r'imag')
     plt.tight_layout()
 
     #number of time steps to use in movie
@@ -158,7 +159,7 @@ if make_movie:
         
         #draw a random sample from the network - gives conditional
         #probability mass function (pmf)
-        o_i, idx_max, idx = surrogate.get_softmax(X_train[i].reshape([1, n_feat]))
+        o_i, idx_max, idx = surrogate.get_softmax(surrogate.X[i].reshape([1, n_feat]))
         idx_data = np.where(feat_eng.y_idx_binned[i] == 1.0)[0]
         
         #resample reference data based on conditional pmf
@@ -177,4 +178,3 @@ if make_movie:
     # im_ani.save('./movies/test.mp4')
 
     print('done')
-"""
