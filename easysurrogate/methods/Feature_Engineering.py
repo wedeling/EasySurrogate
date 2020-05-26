@@ -217,7 +217,7 @@ class Feature_Engineering:
 
         return np.array(list(chain(*X_i)))
 
-    def bin_data(self, y, n_bins):
+    def bin_data(self, y, n_bins, method = 'equidistant'):
         """
         Bin the data y. 
         
@@ -252,8 +252,23 @@ class Feature_Engineering:
             self.y_binned_mean[i] = {}
                        
             if np.iscomplexobj(y):
-                bins = [np.linspace(np.min(y[:, i].real), np.max(y[:, i].real), n_bins+1), \
-                np.linspace(np.min(y[:, i].imag), np.max(y[:, i].imag), n_bins+1)]
+                if method == 'equidistant':
+                    bins = [np.linspace(np.min(y[:, i].real), np.max(y[:, i].real), n_bins+1), \
+                    np.linspace(np.min(y[:, i].imag), np.max(y[:, i].imag), n_bins+1)]
+                elif method == 'cdf-based': 
+                    y_re_sorted = np.sort(y[:, i].real)
+                    y_im_sorted = np.sort(y[:, i].imag)
+                    p = 1. * np.arange(len(y[:, i].real)) / (len(y[:, i].real) - 1)
+                    cdf_intervals = np.linspace(0, 1, n_bins+1)
+                    bins_re = np.zeros(len(cdf_intervals))
+                    bins_im = np.zeros(len(cdf_intervals))
+                    for j in range(len(cdf_intervals)):
+                        cdf_coord = np.where(abs(p-cdf_intervals[j])<1e-15)
+                        bins_re[j] = y_re_sorted[cdf_coord]
+                        bins_im[j] = y_im_sorted[cdf_coord]
+                    bins = [bins_re, bins_im]
+                else:
+                    print('Invalid method selected. Available choices are: equidistant and cdf-based')
                 self.bins[i] = bins
                 count, _, _, self.binnumbers[:, i] = \
                 stats.binned_statistic_2d(y[:, i].real, y[:, i].imag, np.zeros(n_samples), statistic='count', bins=bins)
@@ -265,19 +280,19 @@ class Feature_Engineering:
 
             self.unique_binnumbers = np.unique(self.binnumbers[:, i])
             
-            #unravel the binnumbers from 1D to either 1D or to 2D
-            x_idx = np.unravel_index(self.unique_binnumbers, 
-                                     [len(b) + 1 for b in self.bins[i]])
-            d = len(x_idx)
-            x_idx = [x_idx[i] - 1 for i in range(d)]
+            # #unravel the binnumbers from 1D to either 1D or to 2D
+            # x_idx = np.unravel_index(self.unique_binnumbers, 
+            #                          [len(b) + 1 for b in self.bins[i]])
+            # d = len(x_idx)
+            # x_idx = [x_idx[i] - 1 for i in range(d)]
  
-            #print the bins that contain samples
-            print("Samples located in bins:")
-            for k in range(x_idx[0].size):
-                s = []
-                for j in range(d):
-                    s.append(x_idx[j][k])
-                print("bin", self.unique_binnumbers[k], "=", s)
+            # #print the bins that contain samples
+            # print("Samples located in bins:")
+            # for k in range(x_idx[0].size):
+            #     s = []
+            #     for j in range(d):
+            #         s.append(x_idx[j][k])
+            #     print("bin", self.unique_binnumbers[k], "=", s)
                   
             #TODO: FIX THIS FOR WHEN n_vars > 1
             
