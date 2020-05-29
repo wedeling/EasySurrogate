@@ -165,9 +165,9 @@ plt.rcParams['image.cmap'] = 'seismic'
 HOME = os.path.abspath(os.path.dirname(__file__))
 
 #number of gridpoints in 1D
-I = 6
+I = 8
 N = 2**I            #HF (High-fidelity or reference grid)
-N_LF = 2**(I-1)     #LF (Low-Fidelity or resolved grid)
+N_LF = 2**(I-2)     #LF (Low-Fidelity or resolved grid)
 
 #2D grid
 h = 2*np.pi/N
@@ -240,11 +240,11 @@ mu = 1.0/(day*decay_time_mu)
 #start, end time (in days) + time step
 t_burn = 365*day
 t = 0*day
-t_end = t + 2*365*day
+t_end = t + 365*day
 dt = 0.01
 
 n_steps = np.ceil((t_end-t)/dt).astype('int')
-n_burn = np.ceil((t_burn-t)/dt).astype('int')
+n_burn = max(0,np.ceil((t_burn-t)/dt).astype('int'))
 
 #constant factor that appears in AB/BDI2 time stepping scheme, multiplying the Fourier coefficient w_hat_np1
 norm_factor = 1.0/(3.0/(2.0*dt) - nu*k_squared + mu)
@@ -440,7 +440,7 @@ post_proc = es.methods.Post_Processing()
 w_dom, w_pdf = post_proc.get_pdf(vorticity.flatten())
 J_dom, J_pdf = post_proc.get_pdf(jacobian.flatten())
 
-fig = plt.figure(figsize=[12,6])
+fig = plt.figure('PDFs',figsize=[12,6])
 ax1 = fig.add_subplot(121, xlabel=r'w')
 ax1.plot(w_dom,w_pdf,lw=2,label='vorticity')
 ax2 = fig.add_subplot(122, xlabel=r'J')
@@ -451,7 +451,7 @@ plt.tight_layout()
 ehat_HF, zhat_HF = spectrum(w_hat_np1_HF,P_full)
 ehat_LF, zhat_LF = spectrum(w_hat_np1_LF,P_LF_full)
 
-fig = plt.figure(figsize=[12,6])
+fig = plt.figure('EZ_spectra',figsize=[12,6])
 ax1 = fig.add_subplot(121, xlabel=r'wavenumber',ylabel=r'Energy spectra')
 ax1.loglog(ehat_HF,lw=2,label='HF')
 ax1.loglog(ehat_LF,lw=2,label='LF')
@@ -464,7 +464,7 @@ plt.tight_layout()
 
 if not plot:
     #plot vorticity field
-    fig = plt.figure(figsize=[12,6])
+    fig = plt.figure('vorticity',figsize=[12,6])
     ax = fig.add_subplot(121, xlabel=r'x', ylabel=r'y', title='t = ' + str(np.around(t/day, 2)) + ' days')
     ct = ax.contourf(x, y, np.fft.irfft2(w_hat_np1_HF), 100)
     plt.colorbar(ct)
