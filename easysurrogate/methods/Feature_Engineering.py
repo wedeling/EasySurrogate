@@ -273,7 +273,18 @@ class Feature_Engineering:
                 count, _, _, self.binnumbers[:, i] = \
                 stats.binned_statistic_2d(y[:, i].real, y[:, i].imag, np.zeros(n_samples), statistic='count', bins=bins)
             else:
-                bins = np.linspace(np.min(y[:, i]), np.max(y[:, i]), n_bins+1)
+                if method == 'equidistant':
+                    bins = np.linspace(np.min(y[:, i]), np.max(y[:, i]), n_bins+1)
+                elif method == 'cdf-based': 
+                    y_sorted = np.sort(y[:, i])
+                    p = 1. * np.arange(len(y[:, i])) / (len(y[:, i]) - 1)
+                    cdf_intervals = np.linspace(0, 1, n_bins+1)
+                    bins = np.zeros(len(cdf_intervals))
+                    for j in range(len(cdf_intervals)):
+                        cdf_coord = np.where(abs(p-cdf_intervals[j])<1e-15)
+                        bins[j] = y_sorted[cdf_coord]
+                else:
+                    print('Invalid method selected. Available choices are: equidistant and cdf-based')
                 self.bins[i] = bins
                 count, _, self.binnumbers[:, i] = \
                 stats.binned_statistic(y[:, i], np.zeros(n_samples), statistic='count', bins=bins)
