@@ -78,7 +78,7 @@ t = np.arange(t0, t_end, dt)
 lags = [range(1, 10), range(1, 10)]
 max_lag = np.max(list(chain(*lags)))
 
-# X_train, y_train = feat_eng.lag_training_data([jac], sgs, lags = lags)
+# X_train, y_train = feat_eng.lag_training_data([jac.real], sgs.real, lags = [range(1, 10)])
 jac_re = jac.real.flatten()
 jac_im = jac.imag.flatten()
 X_train, y_train = feat_eng.lag_training_data([jac_re, jac_im], sgs, lags = lags)
@@ -87,7 +87,7 @@ X_train, y_train = feat_eng.lag_training_data([jac_re, jac_im], sgs, lags = lags
 n_bins = 5
 
 #one-hot encoded training data per B_k
-feat_eng.bin_data(y_train, n_bins)
+feat_eng.bin_data(y_train, n_bins,method='cdf-based')
 #simple sampler to draw random samples from the bins
 sampler = es.methods.SimpleBin(feat_eng)
 
@@ -102,15 +102,25 @@ n_out = feat_eng.y_idx_binned.shape[1]
 test_frac = 0.5
 n_train = np.int(X_train.shape[0]*(1.0 - test_frac))
 
-print(feat_eng.y_idx_binned[10]) 
+# # compute and plot empirical CDFs
+# y_train_re_sorted = np.sort(y_train.real)
+# y_train_im_sorted = np.sort(y_train.imag)
+# p = 1. * np.arange(len(y_train.real)) / (len(y_train.real) - 1)
+
+# fig = plt.figure('CDFs',figsize=[12,6])
+# ax1 = fig.add_subplot(121,xlabel='Re(y_train)',ylabel='p')
+# ax1.plot(y_train_re_sorted,p)
+# ax2 = fig.add_subplot(122,xlabel='Im(y_train)',ylabel='p')
+# ax2.plot(y_train_im_sorted,p)
+
 #train the neural network
 if train:
     surrogate = es.methods.ANN(X=X_train[0:n_train], y=feat_eng.y_idx_binned[0:n_train],
-                               n_layers=4, n_neurons=50, 
+                               n_layers=3, n_neurons=150, 
                                n_softmax=n_softmax, n_out=n_out, loss='cross_entropy',
                                activation='leaky_relu', batch_size=512,
                                lamb=0.0, decay_step=10**4, decay_rate=0.9, 
-                               standardize_X=True, standardize_y=False, save=False)
+                               standardize_X=True, standardize_y=False, save=True)
 
     print('=====================================')
     print('Training Quantized Softmax Network...')
