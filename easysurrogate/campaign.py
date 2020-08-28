@@ -50,11 +50,19 @@ class Campaign:
                                                       filetypes=(('HDF5 files', '*.hdf5'),
                                                                  ('All files', '*.*')))
 
-        self.h5f = h5py.File(file_path, 'r')
+        self.data_frame = h5py.File(file_path, 'r')
         self.file_path = file_path
 
-        h5f = h5py.File(file_path, 'r')
-        print('Loaded', h5f.keys())
+        data_frame = h5py.File(file_path, 'r')
+        print('Loaded', data_frame.keys())
+
+        return data_frame
+        
+    def get_data_frame(self):
+        """
+        Returns the HDF5 data frame
+        """
+        return self.data_frame
 
     def load_state(self, **kwargs):
         """
