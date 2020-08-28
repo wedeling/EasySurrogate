@@ -1,6 +1,5 @@
 from .Neuron import Neuron
-import autograd.numpy as np
-from autograd import elementwise_grad
+import numpy as np
 from scipy.stats import norm
 
 class Layer:

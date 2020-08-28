@@ -6,3 +6,4 @@ from .Post_Processing import Post_Processing
 from .RNN import RNN
 from .Input_Layer import Input_Layer
 from .CCM import CCM
+from .qsn_surrogate import QSN_Surrogate
