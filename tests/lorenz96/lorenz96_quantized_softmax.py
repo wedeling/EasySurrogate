@@ -142,7 +142,7 @@ max_lag = np.max(list(chain(*lags)))
 ###################
 # Simulation flags
 ###################
-train = False            #train the network
+train = True           #train the network
 make_movie = False       #make a movie (of the training)
 predict = True           #predict using the learned SGS term
 store = False             #store the prediction 
