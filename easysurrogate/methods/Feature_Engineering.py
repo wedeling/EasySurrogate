@@ -239,24 +239,24 @@ class Feature_Engineering:
         """
 
         #if X is one array, add it to a list anyway
-        if type(X) == np.ndarray:
-            tmp = []
-            tmp.append(X)
-            X = tmp
+        if type(X) == np.ndarray: X = [X]
+            # tmp = []
+            # tmp.append(X)
+            # X = tmp
 
         for i in range(self.n_feat_arrays):
-            
+
             if type(X[i]) != np.ndarray:
                 X[i] = np.array([X[i]])                
-            
+
             #if X_i features are symmetric arrays, only select upper trian. part
             if self.X_symmetry[i] == True:
                 idx0, idx1 = np.triu_indices(X[i].shape[1])
                 X[i] = X[i][idx0, idx1]
-                
+
             if X[i].ndim != 1:
                 X[i] = X[i].flatten()
-            
+
             self.feat_history[i].append(X[i])
 
             #if max number of features is reached, remove first item

@@ -31,25 +31,26 @@ class ANN:
         except IndexError:
             self.n_in = 1
         
-        #use either numpy or cupy via xp based on the on_gpu flag
-        global xp
-        if on_gpu == False:
-            import numpy as xp
-        else:
-            import cupy as xp
+        # #use either numpy or cupy via xp based on the on_gpu flag
+        # global xp
+        # if on_gpu == False:
+        #     import numpy as xp
+        # else:
+        #     import cupy as xp
             
-        self.on_gpu = on_gpu
+        # self.on_gpu = on_gpu
+        self.on_gpu = False
 
         #standardize the training data
         if standardize_X == True:
             
-            self.X_mean = xp.mean(X, axis = 0)
-            self.X_std = xp.std(X, axis = 0)
+            self.X_mean = np.mean(X, axis = 0)
+            self.X_std = np.std(X, axis = 0)
             self.X = (X - self.X_mean)/self.X_std
         
         if standardize_y == True:
-            self.y_mean = xp.mean(y, axis = 0)
-            self.y_std = xp.std(y, axis = 0)
+            self.y_mean = np.mean(y, axis = 0)
+            self.y_std = np.std(y, axis = 0)
             self.y = (y - self.y_mean)/self.y_std
         
         #number of layers (hidden + output)
@@ -155,7 +156,7 @@ class ANN:
         if self.bias == False:
             self.layers[0].h = X_i.T
         else:
-            self.layers[0].h = xp.ones([self.n_in + 1, batch_size])
+            self.layers[0].h = np.ones([self.n_in + 1, batch_size])
             self.layers[0].h[0:self.n_in, :] = X_i.T
                     
         for i in range(1, self.n_layers+1):
@@ -182,7 +183,7 @@ class ANN:
         rvs = []        
         
         for h_i in np.split(h, self.n_softmax):
-            o_i = xp.exp(h_i)/xp.sum(np.exp(h_i), axis=0)
+            o_i = np.exp(h_i)/np.sum(np.exp(h_i), axis=0)
             o_i = o_i/np.sum(o_i)
 
             probs.append(o_i)
@@ -273,11 +274,11 @@ class ANN:
             #param specific learning rate
             else:
                 #RMSProp
-                alpha_i = alpha/(xp.sqrt(layer_r.A + 1e-8))
+                alpha_i = alpha/(np.sqrt(layer_r.A + 1e-8))
                 
                 #Adam
-                #alpha_t = alpha*xp.sqrt(1.0 - beta2**t)/(1.0 - beta1**t)
-                #alpha_i = alpha_t/(xp.sqrt(layer_r.A + 1e-8))
+                #alpha_t = alpha*np.sqrt(1.0 - beta2**t)/(1.0 - beta1**t)
+                #alpha_i = alpha_t/(np.sqrt(layer_r.A + 1e-8))
 
             #gradient descent update step
             if self.lamb > 0.0:
@@ -350,7 +351,7 @@ class ANN:
                         l += self.layers[-1].L_i
                 
                 if np.mod(i, 1000) == 0:
-                    loss_i = xp.mean(l)
+                    loss_i = np.mean(l)
                     print('Batch', i, 'learning rate', alpha ,'loss:', loss_i)
                     #note: appending a cupy value to a list is inefficient - if done every iteration
                     #it will slow down executing significantly
@@ -467,18 +468,18 @@ class ANN:
 
         print('==============================================')
       
-    #compute the number of misclassifications
-    def compute_misclass(self):
+    # #compute the number of misclassifications
+    # def compute_misclass(self):
         
-        n_misclass = 0.0
+    #     n_misclass = 0.0
         
-        for i in range(self.n_train):
-            y_hat_i = xp.sign(self.feed_forward(self.X[i]))
+    #     for i in range(self.n_train):
+    #         y_hat_i = np.sign(self.feed_forward(self.X[i]))
             
-            if y_hat_i != self.y[i]:
-                n_misclass += 1
+    #         if y_hat_i != self.y[i]:
+    #             n_misclass += 1
                 
-        print('Number of misclassifications = ', n_misclass)
+    #     print('Number of misclassifications = ', n_misclass)
      
     #compute the number of misclassifications for a sofmax layer
     def compute_misclass_softmax(self, X = [], y = []):
