@@ -118,22 +118,6 @@ def step_Y(Y_n, g_nm1, X_n):
     
     return Y_np1, g_n, multistep_rhs
 
-#####################
-# Other subroutines #
-#####################
-    
-def animate(s):
-    """
-    Generate a movie frame
-    """
-    plt1 = ax.plot(theta, np.append(X_data[s, :], X_data[s, 0]), 'b', label='X')    
-    plt2 = ax.plot(theta_Y, np.append(Y_data[s, :].flatten(), Y_data[s, 0, 0]), 'r', label='Y')
-    
-    if s == 0:
-        ax.legend(loc=1, fontsize=9)
-        
-    ims.append((plt1[0], plt2[0],))
-
 ###############
 # Main program
 ###############
@@ -184,6 +168,24 @@ g_nm1 = np.zeros([J, K])
 for k in range(K):
     g_nm1[:, k] = rhs_Y_k(Y_n, X_n[k], k)
 
+##############################
+# Easysurrogate modification #
+##############################
+
+#load pre-trained campaign
+campaign = es.Campaign(load_state=True)
+
+#change IC
+data_frame = campaign.load_data()
+X_n = data_frame['X_data'][campaign.surrogate.max_lag]
+B_n = data_frame['B_data'][campaign.surrogate.max_lag]
+#initial right-hand side
+f_nm1 = rhs_X(X_n, B_n)
+
+##################################
+# End Easysurrogate modification #
+##################################
+
 #allocate memory for solutions
 X_data = np.zeros([t.size, K])
 Y_data = np.zeros([t.size, J, K])
@@ -192,99 +194,50 @@ B_data = np.zeros([t.size, K])
 #start time integration
 idx = 0
 for t_i in t:
-    #solve small-scale equation
-    Y_np1, g_n, multistep_n = step_Y(Y_n, g_nm1, X_n)
+    ##############################
+    # Easysurrogate modification #
+    ##############################
     
+    #Turn off call to small-scale model
+    #solve small-scale equation
+    # Y_np1, g_n, multistep_n = step_Y(Y_n, g_nm1, X_n)
+    #compute SGS term
+    # B_n = h_x*np.mean(Y_n, axis=0)
+
+    #replace SGS call with call to surrogate
+    B_n = campaign.surrogate.predict(X_n)
+
+    ##################################
+    # End Easysurrogate modification #
+    ##################################
+
     #solve large-scale equation
     X_np1, f_n = step_X(X_n, f_nm1, B_n)
-    
-    #compute SGS term
-    B_n = h_x*np.mean(Y_n, axis=0)
 
     #store solutions
     X_data[idx, :] = X_np1
-    Y_data[idx, :] = Y_np1
+    # Y_data[idx, :] = Y_np1
     B_data[idx, :] = B_n
     idx += 1
-   
+
     #update variables
     X_n = np.copy(X_np1)
-    Y_n = np.copy(Y_np1)
+    # Y_n = np.copy(Y_np1)
     f_nm1 = np.copy(f_n)
-    g_nm1 = np.copy(g_n)
-    
+    # g_nm1 = np.copy(g_n)
+
     if np.mod(idx, 1000) == 0:
         print('t =', np.around(t_i, 1), 'of', t_end)
-    
+
 #plot results
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='polar')
 theta = np.linspace(0.0, 2.0*np.pi, K+1)
-theta_Y = np.linspace(0.0, 2.0*np.pi, J*K+1)
 #create a while in the middle to the plot, scales plot better
 ax.set_rorigin(-22)
 #remove set radial tickmarks, no labels
 ax.set_rgrids([-10, 0, 10], labels=['', '', ''])[0][1]
 ax.legend(loc=1)
-
-burn = 500
-
-post_proc = es.methods.Post_Processing()
-
-#store results
-if store == True:
-    #store results
-    samples = {}
-    QoI = {'X_data', 'Y_data', 'B_data'}
-    
-    for q in QoI:
-        print('Saving', q)
-        samples[q] = eval(q)[burn:,:]
-
-    post_proc.store_samples_hdf5(samples)
-
-#if True make a movie of the solution, if not just plot final solution
-if make_movie:
-
-    print('===============================')
-    print('Making movie...')
-
-    ims = []
-    n_movie = 500
-    
-    for s in range(n_movie):
-        animate(s) 
-
-    #make a movie of all frame in 'ims'
-    im_ani = animation.ArtistAnimation(fig, ims, interval=80, 
-                                       repeat_delay=2000, blit=True)
-    im_ani.save('.l96.mp4')
-
-    print('done')
-else:
-    ax.plot(theta, np.append(X_data[-1, :], X_data[-1, 0]), label='X')    
-    ax.plot(theta_Y, np.append(Y_data[-1, :].flatten(), Y_data[-1, 0, 0]), label='Y')    
-    
-#plot X_k vs B_k
-fig = plt.figure()
-burn = 500
-plt.plot(X_data[burn:, 0], B_data[burn:, 0], '.')
-
-#############   
-# Plot PDEs #
-#############
-    
-fig = plt.figure()
-ax = fig.add_subplot(111, xlabel=r'$X_k$')
-
-X_dom, X_pde = post_proc.get_pdf(X_data.flatten()[0:-1:10])
-
-ax.plot(X_dom, X_pde, 'ko', label='L96')
-
-plt.yticks([])
-
-plt.legend(loc=0)
-
-plt.tight_layout()
-
+ax.plot(theta, np.append(X_data[-1, :], X_data[-1, 0]), label='X')    
+ax.plot(theta, np.append(B_data[-1, :], B_data[-1, 0]), label='B')    
 plt.show()
