@@ -112,6 +112,8 @@ class CCM_analysis(BaseAnalysis):
         elif self.ccm_surrogate.n_feats > 2:
             print('Dimension manifold > 2, will only plot first 2 dimensions')
 
+        print('Click on the bins on the left to show the corresponding shadow bins.')
+
         fig = plt.figure('manifolds_and_binnumbers', figsize = [8, 4])
         # colors = cycle(['--r', '--g', '--b', '--m', '--k'])
         self.ax1 = fig.add_subplot(121, title = 'Manifold')
@@ -209,7 +211,6 @@ class CCM_analysis(BaseAnalysis):
         # else:
         #     x_mid = np.mean(points, axis=0)
         #     ax.text(x_mid[0], x_mid[1], str(binnumber))
-
 
     def compare_convex_hull_volumes(self):
         """
