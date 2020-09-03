@@ -176,7 +176,7 @@ class Feature_Engineering:
         self.binnumbers = np.zeros([n_samples, n_vars]).astype('int')
         self.y_binned = {}
         self.y_binned_mean = {}
-        self.y_idx_binned = np.zeros([n_samples, n_bins*n_vars])
+        y_idx_binned = np.zeros([n_samples, n_bins*n_vars])
         self.bins = {}
         self.n_vars = n_vars
 
@@ -199,7 +199,9 @@ class Feature_Engineering:
                 idx = np.where(self.binnumbers[:, i] == j)
                 self.y_binned[i][j-1] = y[idx, i]
                 self.y_binned_mean[i][j-1] = np.mean(y[idx, i])
-                self.y_idx_binned[idx, offset + j - 1] = 1.0
+                y_idx_binned[idx, offset + j - 1] = 1.0
+
+        return y_idx_binned
 
     def init_feature_history(self, lags):
         """
@@ -227,6 +229,7 @@ class Feature_Engineering:
 
         for i in range(self.n_feat_arrays):
             self.feat_history[i] = []
+        
 
     def append_feat(self, X):
         """
