@@ -64,15 +64,15 @@ class QSN_Surrogate(Campaign):
         self.feat_eng = es.methods.Feature_Engineering()
 
         #number of training samples
-        n_samples = feats[0].shape[0]
+        self.n_samples = feats[0].shape[0]
         #compute the size of the training set based on value of test_frac
-        n_train = np.int(n_samples*(1.0 - test_frac))
-        print('Using first', n_train, 'of', n_samples, 'samples to train QSN')
+        self.n_train = np.int(self.n_samples*(1.0 - test_frac))
+        print('Using first %d/%d samples to train QSN' % (self.n_train, self.n_samples))
 
         #list of features 
-        X = [X_i[0:n_train] for X_i in feats]
+        X = [X_i[0:self.n_train] for X_i in feats]
         #the data 
-        y = target[0:n_train]
+        y = target[0:self.n_train]
 
         #True/False on wether the X features are symmetric arrays or not
         if 'X_symmetry' in kwargs:

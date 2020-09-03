@@ -483,9 +483,9 @@ class ANN:
      
     #compute the number of misclassifications for a sofmax layer
     def compute_misclass_softmax(self, X = [], y = []):
-        
+
         n_misclass = np.zeros(self.n_softmax)
-        
+
         #compute misclassification error of the training set if X and y are not set
         if y == []:
             print('Computing number of misclassifications wrt all training data.')
@@ -494,25 +494,25 @@ class ANN:
         else:
             print('Computing number of misclassifications wrt specified data (',
                   X.shape[0], 'samples)')
-            
+
         n_samples = X.shape[0]
-        
+
         for i in range(n_samples):
             o_i, max_idx_ann, _ = self.get_softmax(X[i].reshape([1, self.n_in]))
-         
+
             max_idx_data = np.array([np.where(y_j == 1.0)[0] for y_j in np.split(y[i], self.n_softmax)])
 
             for j in range(self.n_softmax):
                 if max_idx_ann[j] != max_idx_data[j]:
                     n_misclass[j] += 1
-                    
+ 
             if np.mod(i, 1000) == 0:
                 print('Computing misclassification error:', 
                       np.around(i/n_samples*100, 1), '%')                
 
         print('Number of misclassifications =', n_misclass)
         print('Misclassification percentage =', n_misclass/n_samples*100, '%')
-        
+
         return n_misclass/n_samples
         
     #return the number of weights
