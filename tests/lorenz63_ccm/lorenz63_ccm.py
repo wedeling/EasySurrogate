@@ -72,7 +72,7 @@ campaign = es.Campaign(load_state=True)
 
 #change IC
 data_frame = campaign.load_hdf5_data()
-X_n = data_frame['X'][campaign.surrogate.max_lag]
+X_n = data_frame['X'][campaign.surrogate.max_lag] #+ np.random.rand()*0.1
 X = np.zeros([n_steps, 2])
 
 ##################################
