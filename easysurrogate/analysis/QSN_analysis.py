@@ -83,4 +83,7 @@ class QSN_analysis(BaseAnalysis):
         X, y = self.qsn_surrogate.feat_eng.lag_training_data(features, target,
                                                              lags=self.qsn_surrogate.lags, 
                                                              X_symmetry=X_symmetry)
-        self.qsn_surrogate.surrogate.compute_misclass_softmax(X = X, y = y)
+        #create one-hot encoded training data per y sample
+        one_hot_encoded_data = self.qsn_surrogate.feat_eng.bin_data(y, self.qsn_surrogate.n_bins)
+
+        self.qsn_surrogate.surrogate.compute_misclass_softmax(X = X, y = one_hot_encoded_data)

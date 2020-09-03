@@ -85,12 +85,6 @@ class QSN_Surrogate(Campaign):
                                                            X_symmetry=self.X_symmetry)
         print('done')
 
-        #create one-hot encoded training data per y sample
-        self.feat_eng.bin_data(y_train, n_bins)
-
-        #simple sampler to draw random samples from the bins
-        self.sampler = es.methods.SimpleBin(self.feat_eng)
-
         #number of softmax layers (one per output)
         n_softmax = y_train.shape[1]
 
@@ -99,7 +93,10 @@ class QSN_Surrogate(Campaign):
 
         #one-hot encoded y data e.g. [0, 0, 1, 0, ..., 0] if the y sample
         #falls in the 3rd bin
-        one_hot_encoded_data = self.feat_eng.y_idx_binned
+        one_hot_encoded_data = self.feat_eng.bin_data(y_train, n_bins)
+
+        #simple sampler to draw random samples from the bins
+        self.sampler = es.methods.SimpleBin(self.feat_eng)
 
         #create the feed-forward QSN
         self.surrogate = es.methods.ANN(X=X_train, y=one_hot_encoded_data,
