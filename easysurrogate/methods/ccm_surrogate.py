@@ -1,3 +1,7 @@
+"""
+CLASS FOR A CONVERGENT CROSS MAPPING SURROGATE
+"""
+
 import numpy as np
 from scipy import stats
 from itertools import chain, product, cycle
@@ -366,174 +370,12 @@ class CCM_Surrogate:
             
         self.mapping = mapping
 
-    def plot_2D_binning_object(self):
-        """
-        Visual representation of a 2D binning object. Also shows the mapping
-        between empty to nearest non-empty bins.
-
-        Returns
-        -------
-        None.
-
-        """
-        if self.n_feats != 2:
-            print('Only works for N_c = 2')
-            return
-
-        fig = plt.figure()
-        ax = fig.add_subplot(111, xlabel=r'conditioning variable 1', ylabel=r'conditioning variable 2')
-        
-        #plot bins and (c1, c2) which corresponding to a r sample point
-        ax.plot(self.feats[:,0], self.feats[:,1], '+', color='lightgray', alpha=0.3)
-        ax.vlines(self.bins[0], np.min(self.feats[:,1]), np.max(self.feats[:,1]))
-        ax.hlines(self.bins[1], np.min(self.feats[:,0]), np.max(self.feats[:,0]))
-       
-        ax.plot(self.x_mid_pad_tensor[:,0], self.x_mid_pad_tensor[:,1], 'g+')
-
-        #plot the mapping
-        for i in range(self.max_binnumber):
-            ax.plot([self.x_mid_pad_tensor[i][0], self.x_mid_pad_tensor[self.mapping[i]][0]], \
-                    [self.x_mid_pad_tensor[i][1], self.x_mid_pad_tensor[self.mapping[i]][1]], 'b', alpha=0.6)
-
-        ax.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
-        ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
-        plt.tight_layout()
-        plt.show()
-        
-    def onclick(self, event):
-
-        if event.inaxes != self.ax1: return
-        
-        # print('%s click: button=%d, x=%d, y=%d, xdata=%f, ydata=%f' %
-        #       ('double' if event.dblclick else 'single', event.button,
-        #        event.x, event.y, event.xdata, event.ydata))
-        
-        c_i = np.array([event.xdata, event.ydata]).reshape([1, 2])
-        _, _, binnumber_i = stats.binned_statistic_dd(c_i, np.zeros(1), 
-                                                      bins=self.bins)
-
-        print('Bin', binnumber_i[0])
-        binnumber_i = self.mapping[binnumber_i][0]
-        idx = self.sample_idx_per_bin[binnumber_i]
-        points_c = self.feats[idx]
-        points_r = self.target[idx]
-                    
-        self.plot_local_bin(points_c, binnumber_i, self.ax1, 'r', width = 4)               
-        self.plot_local_bin(points_r, binnumber_i, self.ax2, 'r', width = 4)
-        
-        plt.draw()
-    
-    def plot_local_bin(self, points, binnumber, ax, marker, width=2):
-        #if  there are 3 or more samples in current bin, plot the
-        #convex hull of all samples in this bin
-        if points.shape[0] >= 3:        
-            # marker = next(colors)
-            hull = ConvexHull(points)
-            ax.plot(points[hull.vertices, 0], points[hull.vertices, 1], marker, linewidth=width)
-            ax.plot([points[hull.vertices[0], 0], points[hull.vertices[-1], 0]],
-                    [points[hull.vertices[0], 1], points[hull.vertices[-1], 1]], marker, linewidth=width)
-            print(hull.volume)
-        #     #plot the binnumber
-        #     x_mid = np.mean(points[hull.vertices, :], axis=0)
-        #     ax.text(x_mid[0], x_mid[1], str(binnumber))
-        # # ax.plot(X[idx_i, 0], X[idx_i, 1], '+')
-        # else:
-        #     x_mid = np.mean(points, axis=0)
-        #     ax.text(x_mid[0], x_mid[1], str(binnumber))
-        
-    def plot_2D_shadow_manifold(self):
-        """
-        Plots the bins on the manifold of the conditioning variables, and
-        the corresponding neighborhoods on the shadow manifold.   
-
-        Returns
-        -------
-        None.
-
-        """
-
-        if self.n_feats == 1:
-            print('Dimension manifold = 1, only works for dimension of 2 or higher')
-            return
-        elif self.n_feats > 2:
-            print('Dimension manifold > 2, will only plot first 2 dimensions')
-
-        fig = plt.figure('manifolds_and_binnumbers', figsize = [8, 4])
-        # colors = cycle(['--r', '--g', '--b', '--m', '--k'])
-        self.ax1 = fig.add_subplot(121, title = 'Manifold')
-        self.ax2 = fig.add_subplot(122, title = 'Shawdow manifold')       
-        self.ax1.set_xlabel(r'$\mathrm{conditioning\;variable\;at\;t-\tau}$')
-        self.ax1.set_ylabel(r'$\mathrm{conditioning\;variable\;at\;t}$')
-        self.ax2.set_xlabel(r'$\mathrm{shadow\;variable\;at\;t-\tau}$')
-        self.ax2.set_ylabel(r'$\mathrm{shadow\;variable\;at\;t}$')
-        
-        #plot the samples
-        self.ax1.plot(self.feats[:,0], self.feats[:,1], '+', color='lightgray', alpha=0.3)
-        self.ax2.plot(self.target[:,0], self.target[:,1], '+', color='lightgray', alpha=0.3)
-        
-        for idx_i in self.sample_idx_per_bin.keys():
-            
-            idx = self.sample_idx_per_bin[idx_i]
-            points_c = self.feats[idx, 0:2]
-            points_r = self.target[idx, 0:2]
-                        
-            self.plot_local_bin(points_c, idx_i, self.ax1, '--k')               
-            self.plot_local_bin(points_r, idx_i, self.ax2, '--k')               
-
-        plt.tight_layout()
-        
-        cid = fig.canvas.mpl_connect('button_press_event', self.onclick)
-
-    def compare_convex_hull_volumes(self):
-        
-        self.vols = []
-        self.ratio_vols = []
-        
-        total_vol_c = ConvexHull(self.feats).volume
-        total_vol_r = ConvexHull(self.target).volume
-        
-        weights = []
-        
-        for idx_i in self.sample_idx_per_bin.keys():
-
-            idx = self.sample_idx_per_bin[idx_i]
-            points_c = self.feats[idx]
-            points_r = self.target[idx]     
-
-            if points_c.shape[0] >= self.n_feats + 1:
-
-                hull_c = ConvexHull(points_c)
-                hull_r = ConvexHull(points_r)
-                
-                vol_fraction_c = hull_c.volume/total_vol_c
-                vol_fraction_r = hull_r.volume/total_vol_r
-                
-                weights.append(vol_fraction_c)
-               
-                self.vols.append([vol_fraction_c, vol_fraction_r])
-                self.targetatio_vols.append(vol_fraction_c/vol_fraction_r)
-                
-        avg_ratio = np.mean(self.ratio_vols)
-        
-        weights = weights/np.sum(weights)    
-        print(weights)
-        print(np.sum(weights))
-        weighted_ratio = np.mean(weights*self.ratio_vols)
-        self.weights = weights
-        
-        print('Average volume ratio binning cell/shadow cell = %.3f' % avg_ratio)
-        print('Max volume ratio binning cell/shadow cell = %.3f' % np.max(self.ratio_vols))
-        print('min volume ratio binning cell/shadow cell = %.3f' % np.min(self.ratio_vols))
-        print('Weighted average volume ratio binning cell/shadow cell = %.3f' % weighted_ratio)
-         
     def print_bin_info(self):
         print('-------------------------------')
         print('Total number of samples= ', self.r_ip1.size)
-        # print('Total number of bins = ', self.N_bins**self.n_feats)
         print('Total number of non-empty bins = ', self.binnumbers_nonempty.size)
-        # print('Percentage filled = ', np.double(self.binnumbers_nonempty.size)/self.N_bins**self.n_feats*100., ' %')
         print('-------------------------------')
-        
+
     #compute the uniform bins of the conditional variables in c
     def get_bins(self, N_bins):
         
