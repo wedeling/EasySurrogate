@@ -176,7 +176,7 @@ for k in range(K):
 campaign = es.Campaign(load_state=True)
 
 #change IC
-data_frame = campaign.load_data()
+data_frame = campaign.load_hdf5_data()
 X_n = data_frame['X_data'][campaign.surrogate.max_lag]
 B_n = data_frame['B_data'][campaign.surrogate.max_lag]
 #initial right-hand side

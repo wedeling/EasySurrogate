@@ -18,7 +18,7 @@ X_qsn = data_frame_qsn['X_data']
 B_qsn = data_frame_qsn['B_data']
 
 #create QSN analysis object
-analysis = es.analysis.QSN_analysis()
+analysis = es.analysis.QSN_analysis(campaign.surrogate)
 
 #############   
 # Plot PDEs #

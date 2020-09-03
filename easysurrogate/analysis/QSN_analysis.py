@@ -10,8 +10,9 @@ class QSN_analysis(BaseAnalysis):
     QSN analysis class
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, qsn_surrogate, **kwargs):
         print('Creating QSN_analysis object')
+        self.qsn_surrogate = qsn_surrogate
 
     def auto_correlation_function(self, X, max_lag):
         """
@@ -54,3 +55,32 @@ class QSN_analysis(BaseAnalysis):
             - kde (array of size (Npoints,): the kernel-density estimate
         """
         return super().get_pdf(X, Npoints=Npoints)
+
+    def get_classification_error(self, features, target, **kwargs):
+        """
+        Compute the misclassification error of the QSN surrogate.
+
+        Parameters
+        ----------
+        + features : an array of multiple input features.
+        + y : an array of multiple target data points
+
+        Returns
+        -------
+        Prints classification error to screen for every softmax layer
+
+        """
+
+        if not type(features) is list: features = [features]
+
+        #True/False on wether the X features are symmetric arrays or not
+        if 'X_symmetry' in kwargs:
+            X_symmetry = kwargs['X_symmetry']
+        else:
+            X_symmetry = np.zeros(len(features), dtype=bool)
+
+        print('Creating time-lagged training data...')
+        X, y = self.qsn_surrogate.feat_eng.lag_training_data(features, target,
+                                                             lags=self.qsn_surrogate.lags, 
+                                                             X_symmetry=X_symmetry)
+        self.qsn_surrogate.surrogate.compute_misclass_softmax(X = X, y = y)
