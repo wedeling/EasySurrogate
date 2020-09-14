@@ -9,7 +9,7 @@ arXiv preprint arXiv:2004.01457
 """
 from itertools import chain
 import numpy as np
-import h5py
+# import h5py
 from ..campaign import Campaign
 import easysurrogate as es
 
