@@ -104,7 +104,7 @@ make_movie_pred = False #make a movie (of the prediction)
 + `store` (Boolean): store the prediction results
 + `make_movie_pred`: make a movie of the *prediction* for one spatial point. Example shown below, which shows eventual divergence of the data and prediction trajectories due to the chaotic nature of L96.
 
-![alt text](https://github.com/wedeling/EasySurrogate/blob/phys_D/tests/movies/qsn_pred.gif)
+![alt text](qsn_pred.gif)
 
 Pre-generated statistical results van be found in `tests/figures`, e.g. the probability density function of X_k computed from the full two-layer L96 system and the one-layer model forced by the QSN SGS model:
 
