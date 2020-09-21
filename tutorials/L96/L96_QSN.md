@@ -1,6 +1,6 @@
 # Tutorial: Quantized Softmax Network for the Lorenz 96 system
 
-The two layer Lorenz 96 system is given by:
+The two layer Lorenz 96 (L96) system is given by:
 
 ![equation](https://latex.codecogs.com/svg.latex?%5Cdot%7BX%7D_k%20%3D%20X_%7Bk-1%7D%28X_%7Bk&plus;1%7D%20-X_%7Bk-2%7D%29%20-%20X_k%20&plus;%20F%20&plus;%20B_k)
 
@@ -10,102 +10,79 @@ The two layer Lorenz 96 system is given by:
 
 ![equation](https://latex.codecogs.com/gif.latex?k%20%3D%201%2C%5Ccdots%2C%20K%20%5Cquad%5Cquad%20j%20%3D%201%2C%5Ccdots%2CJ)
 
-Here B_k is the subgrid-scale (SGS) term for which we create a surrogate model in the form of a quantized softmax network, see the paper 
+It can be considered as a simplified atmospheric model on a circle of constant latitude. The `X_k` variables are the large-scale components of the system, whereas the `Y_{k,j}` are the small-scale counterparts. Each spatial location indexed by `k=1,...,K` has `J` small-scale components `Y_{k,j}`, with `j=1,...,J`. Thus the system consists of `JK` coupled ordinary differential equations (ODEs). In this tutorial we will use `K=18` and `J=20` such that we have 360 couples ODEs. Finally, the `B_k` term is the subgrid-scale (SGS) term, through which the small-scale information enters the large-scale `X_k` ODEs. If we are able to create a surrogate for `B_k`, conditional on large-scale variables only, the dimension of the system drops from 360 down to 18. Here, we will create a surrogate model in the form of a quantized softmax network (QSN), which is stochastic in nature. 
+
+Our general aim is to create a surrogate such that the long-term statistics of the large-scale system match those generated from validation data. Thus we do not expect accuracy from the large-scale `X_k` system forced by the QSN surrogate at any given point in time.
+
+The details of the QSN approach can be found in [this](https://arxiv.org/abs/2004.01457) preprint.
+
 ## Files
 
-The `tests/` folder constains following numerical experiments: 
+The `tests/lorenz96_qsn` folder constains all required scripts to execute this tutorial: 
 
-+ `tests/lorenz96/lorenz96.py`: the solver for the Lorenz 96 system
-+ `tests/lorenz96/lorenz96_quantized_softmax.py`: applies a quantized softmax network to learn subgrid-scale term of the Lorenz96 system.
-+ `tests/lorenz96/figures`: contains the figures of the results
-+ `tests/lorenz96/movies`: contains the movies of the results
++ `tests/lorenz96_qsn/lorenz96.py`: the unmodified solver for the Lorenz 96 system, used to generate the training data.
++ `tests/lorenz96_qsn/train_surrogate.py`: script to train a QSN surrogate on L96 data.
++ `tests/lorenz96_qsn/lorenz96_qsn.py`: this is the L96 solver again, where the call to the small-scale system is replaced by a call to the QSN surrogate.
++ `lorenz96_analysis.py`: the post-processing of the results of `lorenz96_qsn.py`.
 
-To recreate the results, perform the following steps
+Execute these script in the specified order to run the tutorial. Details are given below.
 
 ## Generate training data
 
-The first step is to generate the training data, by executing `python3 tests/lorenz96/lorenz96.py`. This will generate training pairs that are used in `tests/lorenz_96/lorenz96_quantized_softmax.py`. You will be asked for a location to store the data (HDF5 format).
+The first step is to generate the training data, by executing `python3 tests/lorenz96_qsn/lorenz96.py`. This will generate training pairs that are used in `tests/lorenz96_qsn/train_surrogate.py`. You will be asked for a location to store the data (HDF5 format).
 
-## Setup the Quantized Softmax Network
+## Train the Quantized Softmax Network
 
-The first step is to time lag the generated training data. This is done via:
+As explained in the general EasySurrogate tutorial (`tutorials/General`), we begin by creating a EasySurrogate campaign, and loading the training data:
 
 ```python
-#Feature engineering object - loads data file
-feat_eng = es.methods.Feature_Engineering(load_data = True)
+# create EasySurrogate campaign
+campaign = es.Campaign()
 
-#get training data
-h5f = feat_eng.get_hdf5_file()
+# load HDF5 data frame
+data_frame = campaign.load_hdf5_data()
 
-#Large-scale and SGS data - convert to numpy array via [()]
-X_data = h5f['X_data'][()]
-B_data = h5f['B_data'][()]
+# supervised training data set
+features = data_frame['X_data']
+target = data_frame['B_data']
+```
 
-#Lag features as defined in 'lags'
+Here our large-scale features will the the `K` time series of the `X_k` variables, and our target data are the `K` times series of the subgrid-scale term `B_k`. The next step is to create a QSN surrogate object via:
+
+```
+# create Quantized Softmax Network surrogate
+surrogate = es.methods.QSN_Surrogate()
+```
+
+At this point the specifics of a QSN surrogate come into play. One of our aims is to create a surrogate with 'memory', i.e. a surrogate that is non-Markovian. At the heart of our QSN surrogate is a feed-forward neural network. To add a memory dependence here, we create time-lagged feature vectors. Another means of doing so would be to use a recurrent neural network, which is an option planned for future releases. Say we wish to train a QSN surrogate using time-lagged input fearures at 1 and 10 time steps into the past. This is done via:
+
+```
+# create time-lagged features
 lags = [[1, 10]]
-X_train, y_train = feat_eng.lag_training_data([X_data], B_data, lags = lags)
+
+# train the surrogate on the data
+n_iter = 2000
+surrogate.train([features], target, lags, n_iter, n_layers=4, n_neurons=256,
+                batch_size=50)
 ```
 
-+ `feat_eng` is a `Feature_Engineering` object that we (amongst others) use to lag the training data.
-+ `lags` is a nested list of time lags. Every conditioning variable has one list of time lags in `lags`. Since we only condition on X here, there is only a single list. In this example we lag X by 1 and 10 time steps.
-+ `X_train` are the time-lagged training features. In this example, every entry consists of 2 X *vectors* (each of size K), one lagged behind the corresponding SGS data B by one time step, and the other vector by 10 steps.
-+ `y_train` are the SGS data vectors B (size K).
-
-Next, we divide the SGS data B_k (at each spatial location index by k) into `n_bins` non-overlapping bins, and create one-hot encoded training data. This is done via:
-
-```python
-#number of bins per B_k
-n_bins = 10
-#one-hot encoded training data per B_k
-feat_eng.bin_data(y_train, n_bins)
-#simple sampler to draw random samples from the bins
-sampler = es.methods.SimpleBin(feat_eng)
 ```
+campaign.add_app(name='test_campaign', surrogate=surrogate)
+campaign.save_state()
 
-+ `feat_eng.bin_data(y_train, n_bins)` creates the one-hot encoded data from y_train. Here, we bin each B_k into 10 bins, meaning that the number of output neurons of the QSN is 10K (K=18 in our L96 setup). The one-hot encoded data is stored in `feat_eng.y_idx_binned`.
-+ `sampler` is a `SimpleBin` object that is used to draw random samples from the bins identified by the QSN output.
-
-Finally, a QSN object is created via:
-
+# QSN analysis object
+analysis = es.analysis.QSN_analysis(surrogate)
+analysis.get_classification_error(features[0:1000], target[0:1000])
 ```
-#number of softmax layers (one per output location k)
-n_softmax = K
-
-#number of output neurons 
-n_out = n_bins*n_softmax
-
-#train the neural network
-surrogate = es.methods.ANN(X=X_train, y=feat_eng.y_idx_binned, n_layers=4, n_neurons=256, 
-                           n_softmax = K, n_out=K*n_bins, loss = 'cross_entropy',
-                           activation='hard_tanh', batch_size=512,
-                           lamb=0.0, decay_step=10**4, decay_rate=0.9, 
-                           standardize_X=False, standardize_y=False, save=True)
-```
-This is all fairly self explanatory. We use an in-house Artificial Neural Network (ANN) code to create a QSN. This consists of a feed-forward network of a specified number of layers and neurons per layer, with K separate softmax layers at the output to predict the probability mass function (pmf) of the bins, for each B_k. We can sample the binnumbers from these pmfs, or just take the bin with the highest probablity. These binnumbers are then fed to the `sampler` to randomly resample reference data from the identified bins.
-
-## Training / predicting with the Quantized Softmax Network
-
-As mentioned, the file `tests/lorenz_96/lorenz96_quantized_softmax.py` contains the QSN applied in conjunction with the L96 system. It contains the following flags:
-
-```python
-train = True            #train the network
-make_movie = False      #make a movie (of the training)
-predict = True          #predict using the learned SGS term
-store = True            #store the prediction results
-make_movie_pred = False #make a movie (of the prediction)
-```
-
-+ `train` (Boolean): train the QSN network on L96 data.
-+ `make_movie` (Boolean): make a movie as displayed below. This is the QSN evaluated on the *training* data.
 
 ![alt text](qsn.gif)
 
-+ `predict` (Boolean): use the QSN to replace the subgrid-scale term of the L96 system. Only the large scale X equation is solved.
-+ `store` (Boolean): store the prediction results
-+ `make_movie_pred`: make a movie of the *prediction* for one spatial point. Example shown below, which shows eventual divergence of the data and prediction trajectories due to the chaotic nature of L96.
+## Prediction with a QSN surrogate
 
 ![alt text](qsn_pred.gif)
 
 Pre-generated statistical results van be found in `tests/figures`, e.g. the probability density function of X_k computed from the full two-layer L96 system and the one-layer model forced by the QSN SGS model:
+
+## Analysis
 
 ![alt text](https://github.com/wedeling/EasySurrogate/blob/phys_D/tests/figures/L96_pdf_QSN.png)
