@@ -5,6 +5,7 @@ from .base import BaseAnalysis
 import numpy as np
 # from sklearn.neighbors import KernelDensity
 
+
 class QSN_analysis(BaseAnalysis):
     """
     QSN analysis class
@@ -14,56 +15,21 @@ class QSN_analysis(BaseAnalysis):
         print('Creating QSN_analysis object')
         self.qsn_surrogate = qsn_surrogate
 
-    def auto_correlation_function(self, X, max_lag):
-        """
-        Compute the autocorrelation of X over max_lag time steps
-
-        Parameters:
-            - X (array, size (N,)): the samples from which to compute the ACF 
-            - max_lag (int): the max number of time steps, determines max 
-              lead time
-
-        Returns:
-            - R (array): array of ACF values
-        """
-        return super().auto_correlation_function(X, max_lag)
-
-    def cross_correlation_function(self, X, Y, max_lag):
-        """
-        Compute the crosscorrelation between X and Y over max_lag time steps
-        
-        Parameters:
-            - X, Y (array, size (N,)): the samples from which to compute the CCF 
-            - max_lag (int): the max number of time steps, determines max 
-              lead time
-
-        Returns:
-            - C (array): array of CCF values
-        """
-        return super().cross_correlation_function(X, Y, max_lag)
-
-    def get_pdf(self, X, Npoints = 100):
-        """
-        Computes a kernel density estimate of the samples in X   
-        
-        Parameters:
-            - X (array): the samples
-            - Npoints (int, default = 100): the number of points in the domain of X
-            
-        Returns:
-            - domain (array of size (Npoints,): the domain of X
-            - kde (array of size (Npoints,): the kernel-density estimate
-        """
-        return super().get_pdf(X, Npoints=Npoints)
-
-    def get_classification_error(self, features, target, **kwargs):
+    def get_classification_error(self, features, targets, index=None, **kwargs):
         """
         Compute the misclassification error of the QSN surrogate.
 
         Parameters
         ----------
-        + features : an array of multiple input features.
-        + y : an array of multiple target data points
+        features : list of array
+            a list of multiple feature arrays or a single feature array
+
+        y : array
+            an array of target data points
+
+        index : array, default is None
+            indices to select a subset of feature/data points to perform test on. When None
+            the classification error is computed on the entire dataset.
 
         Returns
         -------
@@ -71,19 +37,33 @@ class QSN_analysis(BaseAnalysis):
 
         """
 
-        if not type(features) is list: features = [features]
+        if not isinstance(features, list):
+            features = [features]
 
-        #True/False on wether the X features are symmetric arrays or not
+        if (type(index) is not None) and (type(index) is not np.ndarray):
+            print('QSNAnalysis.get_classification_error: index argument must be None or an array')
+            return
+
+        # True/False on wether the X features are symmetric arrays or not
         if 'X_symmetry' in kwargs:
             X_symmetry = kwargs['X_symmetry']
         else:
             X_symmetry = np.zeros(len(features), dtype=bool)
 
+        #select a subset of the data if provided
+        if index is not None:
+            features = [feature[index] for feature in features]        
+            targets = targets[index]
+
         print('Creating time-lagged training data...')
-        X, y = self.qsn_surrogate.feat_eng.lag_training_data(features, target,
-                                                             lags=self.qsn_surrogate.lags, 
+        X, y = self.qsn_surrogate.feat_eng.lag_training_data(features, targets,
+                                                             lags=self.qsn_surrogate.lags,
                                                              X_symmetry=X_symmetry)
-        #create one-hot encoded training data per y sample
+
+        if hasattr(self.qsn_surrogate, 'feat_mean'):
+            X = (X - self.qsn_surrogate.feat_mean)/self.qsn_surrogate.feat_std
+
+        # create one-hot encoded training data per y sample
         one_hot_encoded_data = self.qsn_surrogate.feat_eng.bin_data(y, self.qsn_surrogate.n_bins)
 
-        self.qsn_surrogate.surrogate.compute_misclass_softmax(X = X, y = one_hot_encoded_data)
+        self.qsn_surrogate.surrogate.compute_misclass_softmax(X=X, y=one_hot_encoded_data)

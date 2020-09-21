@@ -1,27 +1,29 @@
-  
+
+import numpy as np
+from mpl_toolkits.mplot3d import Axes3D
+from itertools import chain
+import matplotlib.pyplot as plt
+import easysurrogate as es
+
+
 def one_hot(idx):
-    
-    #this should be the non-empty binnumbers
+
+    # this should be the non-empty binnumbers
     unique_idx = np.unique(idx)
     B = unique_idx.size
     S = idx.size
-    
+
     y_idx_binned = np.zeros([S, B])
-    
+
     count = 0
-    
+
     for idx_i in unique_idx:
         i = np.where(idx == idx_i)[0]
         y_idx_binned[i, count] = 1.0
         count += 1
-    
+
     return y_idx_binned
 
-import numpy as np
-import easysurrogate as es
-import matplotlib.pyplot as plt
-from itertools import chain
-from mpl_toolkits.mplot3d import Axes3D
 
 plt.close('all')
 
@@ -29,12 +31,12 @@ plt.close('all')
 # Network parameters
 #####################
 
-#Feature engineering object - loads data file
-feat_eng = es.methods.Feature_Engineering(load_data = True)
-#get training data
+# Feature engineering object - loads data file
+feat_eng = es.methods.Feature_Engineering(load_data=True)
+# get training data
 h5f = feat_eng.get_hdf5_file()
 
-#Large-scale and SGS data - convert to numpy array via [()]
+# Large-scale and SGS data - convert to numpy array via [()]
 X_data = h5f['X_data'][()]
 # Y_data = h5f['Y_data'][()]
 B_data = h5f['B_data'][()]
@@ -45,9 +47,9 @@ I = 6
 lags = [range(1, 75)]
 lags_y = [[1, 10]]
 max_lag = np.max(list(chain(*lags)))
-X_lagged, y_train = feat_eng.lag_training_data([X_data[:, I]], B_data[:, I], lags = lags)
-Y_lagged, _ = feat_eng.lag_training_data([B_data[:, I]], np.zeros(n_steps), 
-                                          lags = lags_y, store = False)
+X_lagged, y_train = feat_eng.lag_training_data([X_data[:, I]], B_data[:, I], lags=lags)
+Y_lagged, _ = feat_eng.lag_training_data([B_data[:, I]], np.zeros(n_steps),
+                                         lags=lags_y, store=False)
 
 ccm = es.methods.CCM(Y_lagged, np.zeros(n_steps), [10, 10], lags_y)
 # N_c = ccm.N_c
@@ -59,18 +61,18 @@ one_hot_enc = one_hot(ccm.binnumber)
 
 n_out = one_hot_enc.shape[1]
 
-surrogate = es.methods.ANN(X=X_lagged, y=one_hot_enc, n_layers=4, n_neurons=256, 
-                           n_softmax = 1, n_out=n_out, loss = 'cross_entropy',
+surrogate = es.methods.ANN(X=X_lagged, y=one_hot_enc, n_layers=4, n_neurons=256,
+                           n_softmax=1, n_out=n_out, loss='cross_entropy',
                            activation='leaky_relu', batch_size=512,
-                           lamb=0.0, decay_step=10**4, decay_rate=0.9, 
+                           lamb=0.0, decay_step=10**4, decay_rate=0.9,
                            standardize_X=True, standardize_y=False, save=False)
 
 print('===============================')
 print('Training Quantized Softmax Network...')
 
-#train network for N_inter mini batches
+# train network for N_inter mini batches
 N_iter = 5000
-surrogate.train(N_iter, store_loss = True)
+surrogate.train(N_iter, store_loss=True)
 
 n_train = X_lagged.shape[0]
 n_feat = X_lagged.shape[1]
@@ -81,11 +83,11 @@ for i in range(n_train):
     o_i, idx_max, rvs = surrogate.get_softmax(surrogate.X[i].reshape([1, n_feat]))
 
     pred[i] = idx_max[0]
-    
-plt.figure()    
-    
+
+plt.figure()
+
 for i in np.unique(pred):
-    
+
     idx = np.where(pred == i)[0]
 
     plt.plot(X_lagged[idx, 0], X_lagged[idx, 0], '+')
@@ -109,7 +111,7 @@ X_n[0] = 0.20; X_n[1] = 0.75; X_n[2] = 1.0
 f_nm1 = rhs(X_n)
 
 for n in range(max_lag):
-    
+
     #step in time
     X_np1, f_n = step(X_n, f_nm1)
 
@@ -130,10 +132,10 @@ n_pred = n_steps - max_lag
 X_n = X_n[0]
 f_nm1 = f_nm1[0]
 
-X_surr = np.zeros([n_pred, 1])   
+X_surr = np.zeros([n_pred, 1])
 
 for i in range(n_pred):
-    
+
     #step in time
     X_np1, f_n = step_ccm(X_n, f_nm1)
 
@@ -142,8 +144,8 @@ for i in range(n_pred):
     f_nm1 = f_n
 
     X_surr[i, :] = X_n
-    
-#############   
+
+#############
 # Plot PDEs #
 #############
 
@@ -164,7 +166,7 @@ plt.legend(loc=0)
 
 plt.tight_layout()
 
-#############   
+#############
 # Plot ACFs #
 #############
 
