@@ -2,7 +2,7 @@
 
 This tutorial describes some general features about EasySurrogate, without delving into the details of any specific surrogate method. Our overall target are multiscale problems, in which case the small-scale component of the simulation tends to be the one which carries the most computational burden, and is therefore an obvious candidate for replacement by a surrogate.
 
-##Campaign object
+## Campaign object
 
 EasySurrogate follows a similar design as [EasyVVUQ](https://github.com/UCL-CCS/EasyVVUQ), a library for forward uncertainty propagation. The overarching object is called a 'Campaign', and is created via
 
