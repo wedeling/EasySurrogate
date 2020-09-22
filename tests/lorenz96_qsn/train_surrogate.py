@@ -19,9 +19,9 @@ surrogate = es.methods.QSN_Surrogate()
 lags = [[1, 10]]
 
 # train the surrogate on the data
-n_iter = 2000
+n_iter = 10000
 surrogate.train([features], target, lags, n_iter, n_layers=4, n_neurons=256,
-                batch_size=50)
+                batch_size=512)
 
 campaign.add_app(name='test_campaign', surrogate=surrogate)
 campaign.save_state()

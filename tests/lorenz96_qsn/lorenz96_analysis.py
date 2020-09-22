@@ -5,8 +5,11 @@ import easysurrogate as es
 
 home = os.path.abspath(os.path.dirname(__file__))
 
+#load the campaign
 campaign = es.Campaign(load_state=True)
+#load the training data (from lorenz96.py)
 data_frame_ref = campaign.load_hdf5_data()
+#load the data from lorenz96_qsn.py here
 data_frame_qsn = campaign.load_hdf5_data()
 
 # load reference data
@@ -26,7 +29,7 @@ analysis = es.analysis.QSN_analysis(campaign.surrogate)
 
 start_idx = 0
 fig = plt.figure(figsize=[8, 4])
-ax = fig.add_subplot(121, xlabel=r'$X_n$')
+ax = fig.add_subplot(121, xlabel=r'$X_k$')
 X_dom_surr, X_pde_surr = analysis.get_pdf(X_qsn[start_idx:-1:10].flatten())
 X_dom, X_pde = analysis.get_pdf(X_ref[start_idx:-1:10].flatten())
 ax.plot(X_dom, X_pde, 'k+', label='L96')
@@ -34,7 +37,7 @@ ax.plot(X_dom_surr, X_pde_surr, label='QSN')
 plt.yticks([])
 plt.legend(loc=0)
 
-ax = fig.add_subplot(122, xlabel=r'$r_n$')
+ax = fig.add_subplot(122, xlabel=r'$B_k$')
 B_dom_surr, B_pde_surr = analysis.get_pdf(B_qsn[start_idx:-1:10].flatten())
 B_dom, B_pde = analysis.get_pdf(B_ref[start_idx:-1:10].flatten())
 ax.plot(B_dom, B_pde, 'k+', label='L96')
