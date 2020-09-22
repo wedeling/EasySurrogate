@@ -116,22 +116,22 @@ Here, `campaign = es.Campaign(load_state=True)` loads the pre-trained QSN surrog
 The second modification involves replacing the call to the surrogate with a call to `surrogate.predict`:
 
 ```python
-    ##############################
-    # Easysurrogate modification #
-    ##############################
+##############################
+# Easysurrogate modification #
+##############################
 
-    # Turn off call to small-scale model
-    # solve small-scale equation
-    # Y_np1, g_n, multistep_n = step_Y(Y_n, g_nm1, X_n)
-    # compute SGS term
-    # B_n = h_x*np.mean(Y_n, axis=0)
+# Turn off call to small-scale model
+# solve small-scale equation
+# Y_np1, g_n, multistep_n = step_Y(Y_n, g_nm1, X_n)
+# compute SGS term
+# B_n = h_x*np.mean(Y_n, axis=0)
 
-    # replace SGS call with call to surrogate
-    B_n = campaign.surrogate.predict(X_n)
+# replace SGS call with call to surrogate
+B_n = campaign.surrogate.predict(X_n)
 
-    ##################################
-    # End Easysurrogate modification #
-    ##################################
+##################################
+# End Easysurrogate modification #
+##################################
 ```
 
 Here, `B_n` is the current state of the subgrid-scale term, and `X_n` is the state of the large-scale variables. The subroutine `predict(X_n)` updates the time-lagged input features and return a stochastic prediction for `B_n` as described above. The rest of the code is unmodified.
@@ -169,21 +169,17 @@ analysis = es.analysis.QSN_analysis(campaign.surrogate)
 
 start_idx = 0
 fig = plt.figure(figsize=[8, 4])
-ax = fig.add_subplot(121, xlabel=r'$X_n$')
-
+ax = fig.add_subplot(121, xlabel=r'$X_k$')
 X_dom_surr, X_pde_surr = analysis.get_pdf(X_qsn[start_idx:-1:10].flatten())
 X_dom, X_pde = analysis.get_pdf(X_ref[start_idx:-1:10].flatten())
-
 ax.plot(X_dom, X_pde, 'k+', label='L96')
 ax.plot(X_dom_surr, X_pde_surr, label='QSN')
 plt.yticks([])
 plt.legend(loc=0)
 
-ax = fig.add_subplot(122, xlabel=r'$r_n$')
-
+ax = fig.add_subplot(122, xlabel=r'$B_k$')
 B_dom_surr, B_pde_surr = analysis.get_pdf(B_qsn[start_idx:-1:10].flatten())
 B_dom, B_pde = analysis.get_pdf(B_ref[start_idx:-1:10].flatten())
-
 ax.plot(B_dom, B_pde, 'k+', label='L96')
 ax.plot(B_dom_surr, B_pde_surr, label='QSN')
 plt.yticks([])
