@@ -116,22 +116,22 @@ Here, `campaign = es.Campaign(load_state=True)` loads the pre-trained QSN surrog
 The second modification involves replacing the call to the surrogate with a call to `surrogate.predict`:
 
 ```python
-    ##############################
-    # Easysurrogate modification #
-    ##############################
+##############################
+# Easysurrogate modification #
+##############################
 
-    # Turn off call to small-scale model
-    # solve small-scale equation
-    # Y_np1, g_n, multistep_n = step_Y(Y_n, g_nm1, X_n)
-    # compute SGS term
-    # B_n = h_x*np.mean(Y_n, axis=0)
+# Turn off call to small-scale model
+# solve small-scale equation
+# Y_np1, g_n, multistep_n = step_Y(Y_n, g_nm1, X_n)
+# compute SGS term
+# B_n = h_x*np.mean(Y_n, axis=0)
 
-    # replace SGS call with call to surrogate
-    B_n = campaign.surrogate.predict(X_n)
+# replace SGS call with call to surrogate
+B_n = campaign.surrogate.predict(X_n)
 
-    ##################################
-    # End Easysurrogate modification #
-    ##################################
+##################################
+# End Easysurrogate modification #
+##################################
 ```
 
 Here, `B_n` is the current state of the subgrid-scale term, and `X_n` is the state of the large-scale variables. The subroutine `predict(X_n)` updates the time-lagged input features and returns a stochastic prediction for `B_n` as described above. The rest of the code is unmodified.
