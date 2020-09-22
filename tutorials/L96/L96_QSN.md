@@ -10,7 +10,7 @@ The two layer Lorenz 96 (L96) system is given by:
 
 ![equation](https://latex.codecogs.com/gif.latex?k%20%3D%201%2C%5Ccdots%2C%20K%20%5Cquad%5Cquad%20j%20%3D%201%2C%5Ccdots%2CJ)
 
-It can be considered as a simplified atmospheric model on a circle of constant latitude. The `X_k` variables are the large-scale components of the system, whereas the `Y_{k,j}` are the small-scale counterparts. Each spatial location indexed by `k=1,...,K` has `J` small-scale components `Y_{k,j}`, with `j=1,...,J`. Thus the system consists of `JK` coupled ordinary differential equations (ODEs). In this tutorial we will use `K=18` and `J=20` such that we have 360 couples ODEs. Finally, the `B_k` term is the subgrid-scale (SGS) term, through which the small-scale information enters the large-scale `X_k` ODEs. If we are able to create a surrogate for `B_k`, conditional on large-scale variables only, the dimension of the system drops from 360 down to 18. Here, we will create a surrogate model in the form of a quantized softmax network (QSN), which is stochastic in nature. 
+It can be considered as a simplified atmospheric model on a circle of constant latitude. The `X_k` variables are the large-scale components of the system, whereas the `Y_{k,j}` are the small-scale counterparts. Each spatial location indexed by `k=1,...,K` has `J` small-scale components `Y_{k,j}`, with `j=1,...,J`. Thus the system consists of `JK` coupled ordinary differential equations (ODEs). In this tutorial we will use `K=18` and `J=20` such that we have 360 coupled ODEs. Finally, the `B_k` term is the subgrid-scale (SGS) term, through which the small-scale information enters the large-scale `X_k` ODEs. If we are able to create a surrogate for `B_k`, conditional on large-scale variables only, the dimension of the system drops from 360 down to 18. Here, we will create a surrogate model in the form of a quantized softmax network (QSN), which is stochastic in nature. 
 
 Our general aim is to create a surrogate such that the long-term statistics of the large-scale system match those generated from validation data. Thus we do not expect accuracy from the large-scale `X_k` system forced by the QSN surrogate at any given point in time.
 
@@ -64,16 +64,16 @@ lags = [[1, 10]]
 n_iter = 2000
 surrogate.train([features], target, lags, n_iter, 
 		n_bins=10, test_frac=0.5,
-		n_layers=4, n_neurons=256, batch_size=512)
+		n_layers=4, n_neurons=256, activation='leaky_relu', batch_size=512)
 ```
 
-The `train` method should be supplied with a list of (different) input features, and an array of target data points, in this case an array of `nx18` subgrid-scale data points. Here, `n` is the number of training points. If `test_frac > 0` as above, the specified fraction of the data is withheld as a test set, lowering the value of `n`. 
+The `train` method should be supplied with a list of (different) input features, and an array of target data points, in this case an array of `nx18` subgrid-scale data points. Here, `n` is the number of training points. If `test_frac > 0` as above, the specified fraction of the data is withheld as a test set, lowering the value of `n`. Various aspects of the feed-forward neural network are defined here as well, such as the number of layers, the number of neurons per layers, the type of activation function and the minibatch size used in stochastic gradient descent. Other activation options are `tanh`, `hard_tan` and `relu`.
 
-For each of the 18 spatial locations, the QSN surrogate will predict a discrete probability mass function (pmf) over `n_bins=10` non-overlapping `B_k` intervals or 'bins', for `k=1,...,K=18`. These 18 pmfs can then be sampled to identify an interval of `B_k` data, conditional on the time-lagged, large-scale input features. To obtain a stochastic surrogate, `B_k` values are randomly resampled from the identified intervals. This process is repeated every time step. A movie of this can be found below, where the QSN surrogate is evaluated off-line on the training dataset. Left shows the QSN prediction for a single spatial location, alongside the bin of the training data. Right show the corresponding `B_k` time series, for both the stochastic QSN surrogate and the actual time evolution of the training data.
+For each of the 18 spatial locations, the QSN surrogate will predict a discrete probability mass function (pmf) over `n_bins=10` non-overlapping `B_k` intervals or 'bins', for `k=1,...,K=18`. These 18 pmfs can then be sampled to identify 18 intervals of `B_k` data, conditional on the time-lagged, large-scale input features. To obtain a stochastic surrogate, `B_k` values are randomly resampled from the identified intervals. This process is repeated every time step. A movie of this can be found below, where the QSN surrogate is evaluated off-line on the training dataset. Left shows the QSN prediction for a single spatial location, alongside the bin of the training data. Right show the corresponding `B_k` time series, for both the stochastic QSN surrogate and the actual time evolution of the training data.
 
 ![alt text](qsn.gif)
 
-To evaluate the classification error on (a subset of) the training data, an analysis object must be created:
+To evaluate the classification error of (a subset of) the training data, an analysis object must be created:
 
 ```
 # QSN analysis object
@@ -134,9 +134,9 @@ The second modification involves replacing the call to the surrogate with a call
     ##################################
 ```
 
-Here, `B_n` is the current state of the subgrid-scale term, and `X_n` is the state of the large-scale variables. The subroutine `predict(X_n)` updates the time-lagged input features and return a stochastic prediction for `B_n` as described above. The rest of the code is unmodified.
+Here, `B_n` is the current state of the subgrid-scale term, and `X_n` is the state of the large-scale variables. The subroutine `predict(X_n)` updates the time-lagged input features and returns a stochastic prediction for `B_n` as described above. The rest of the code is unmodified.
 
-Note that due to the stochastic nature of the surrogate, as well as the chaotic nature of L96, we cannot expect that the trajectories of `X_k` and `B_k` will follow those of the full system. Below we show a movie of the time evolution of the stochastic QSN `B_k` and the `B_k` of the full system. Eventually the two trajectories start to diverge. That said, we reiterate that our quantities of interest are time-averaged statistics, dicussed next.
+Note that due to the stochastic nature of the surrogate, as well as the chaotic nature of L96, we cannot expect that the trajectories of `X_k` and `B_k` will follow those of the full system. Below we show a movie of the time evolution of the stochastic QSN `B_k` (in the 'online' phase, when the QSN surrogate is a source term in the `X_k` ODEs) and the `B_k` of the full system. Eventually the two trajectories start to diverge. That said, we reiterate that our quantities of interest are time-averaged statistics, dicussed next.
 
 ![alt text](qsn_pred.gif)
 
@@ -169,21 +169,17 @@ analysis = es.analysis.QSN_analysis(campaign.surrogate)
 
 start_idx = 0
 fig = plt.figure(figsize=[8, 4])
-ax = fig.add_subplot(121, xlabel=r'$X_n$')
-
+ax = fig.add_subplot(121, xlabel=r'$X_k$')
 X_dom_surr, X_pde_surr = analysis.get_pdf(X_qsn[start_idx:-1:10].flatten())
 X_dom, X_pde = analysis.get_pdf(X_ref[start_idx:-1:10].flatten())
-
 ax.plot(X_dom, X_pde, 'k+', label='L96')
 ax.plot(X_dom_surr, X_pde_surr, label='QSN')
 plt.yticks([])
 plt.legend(loc=0)
 
-ax = fig.add_subplot(122, xlabel=r'$r_n$')
-
+ax = fig.add_subplot(122, xlabel=r'$B_k$')
 B_dom_surr, B_pde_surr = analysis.get_pdf(B_qsn[start_idx:-1:10].flatten())
 B_dom, B_pde = analysis.get_pdf(B_ref[start_idx:-1:10].flatten())
-
 ax.plot(B_dom, B_pde, 'k+', label='L96')
 ax.plot(B_dom_surr, B_pde_surr, label='QSN')
 plt.yticks([])
