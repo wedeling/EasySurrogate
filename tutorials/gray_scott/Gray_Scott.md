@@ -28,11 +28,15 @@ Here, `P_i^u` and `P_i^v` are the spatiotemporal modes of the expansions, which 
 
 In this tutorial we will focus on the training phase only. That is, we will use EasySurrogate to train a reduced source term `G_u` and `G_v` such that the lower-resolution model tracks the 4 (spatially-integrated) quantities of interest of the higher-resolution model in time. This will result in 4 times series for the aforementioned `tau` terms, which in a next step could function as (reduced) training data for a surrogate method, e.g. a quantized softmax network, or a recurrent neural net.
 
+## Limitations
+
+The current beta version has only been tested on 2D problems, and is only suited for PDEs discretized by means of the spectral method. This will be generalized in future releases of the toolkit.
+
 ## Files
 
 + `tests/gray_scott_reduced/gray_scott_rk4.py`: the unmodified solver for the Gray Scott system, used to generate the training data. The discretization is achieved using the spectral method, and time stepping is done with the 4-th order Runge-Kutta scheme. Note the we have already pre-generated the necessary training data, which is is stored in `tests/gray_scott_reduced/samples/gray_scott_f0p02_k0p05_1024.hdf5`.
 
-+ `tests/gray_scott_reduced/train_reduced_surrogate`: this is again the same Gray-Scott solver, except with reduced subgrid-scale terms. Execute this file to complete the tutorial.
++ `tests/gray_scott_reduced/train_reduced_surrogate`: this is again the same Gray-Scott solver, except with reduced subgrid-scale terms. Execute this file to run the tutorial.
 
 ## Training a reduced surrogate
 
@@ -88,4 +92,4 @@ Here, the `Q_ref` and `Q_model` contain the data and the computed values of the 
 
 ![equation](https://latex.codecogs.com/gif.latex?%5Cfrac%7B%5Cpartial%20q_1%7D%7B%5Cpartial%20u%7D%20%3D%201%2C%20%5Cquad%20%5Cfrac%7B%5Cpartial%20q_2%7D%7B%5Cpartial%20u%7D%20%3D%20u%2C%20%5Cfrac%7B%5Cpartial%20q_3%7D%7B%5Cpartial%20v%7D%20%3D%201%2C%20%5Cquad%20%5Cfrac%7B%5Cpartial%20q_4%7D%7B%5Cpartial%20v%7D%20%3D%20v)
 
-`V_hat_1` is the FFT of `np.ones([N, N])`, which is precomputed.
+`V_hat_1` is the FFT (since it is a spectral code) of `np.ones([N, N])`.
