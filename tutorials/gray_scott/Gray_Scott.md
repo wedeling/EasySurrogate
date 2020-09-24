@@ -6,15 +6,15 @@ The two-dimensional Gray-Scott reaction-diffusion equations model two chemical s
 
 ![equation](https://latex.codecogs.com/gif.latex?%5Cfrac%7B%5Cpartial%20%5Cbar%7Bv%7D%7D%7B%5Cpartial%20t%7D%20%3D%20D_v%5Cnabla%5E2%5Cbar%7Bv%7D%20&plus;%20%5Cbar%7Bu%7D%5Cbar%7Bv%7D%5E2%20-%20%5Cleft%28f%20&plus;%20k%5Cright%29%5Cbar%7Bv%7D%20&plus;%20%5Coverline%7BG_v%28u%2Cv%29%7D.)
 
-The overline above `u` and `v` denotes the fact that this is a macroscopic variable, defined in this tutorial as the part of `u` and `v` which can be resolved on a spatial grid of `128x128` points. The `G_u` and `G_v` are subgrid-scale terms, meant to take the effect of unresolved scale into account. 
+The overline above `u` and `v` denotes the fact that this is a macroscopic variable, defined in this tutorial as the part of `u` and `v` which can be resolved on a spatial grid of `128x128` points. The `G_u` and `G_v` are subgrid-scale terms, meant to take the effect of unresolved scales into account. 
 
-Chemical `U` is added to the system at a feed rate given by the model constant `f`, and `V` is removed at a 'kill' rate `f+k`, where `k` is another model constant. The system is very sensitive to `f` and `k`, and a wide variety of spatiotemporal patterns are possible (Pearson, 1993), see the figure below for a snapshot of `u`.Conversion from `U` to `V` is governed by the nonlinear term `uv^2`, which is subtracted from the right-hand side of `u` and added to the right-hand side of `v`. Finally, two diffusion terms are present, configured such that `U` diffuses faster than `V`. We specify `D_u = 2*10^{-5}` and `D_v = 10^{-5}`, and use a `2.5 x 2.5` spatial domain with periodic boundary conditions. 
+Chemical `U` is added to the system at a feed rate given by the model constant `f`, and `V` is removed at a 'kill' rate `f+k`, where `k` is another model constant. The system is very sensitive to `f` and `k`, and a wide variety of spatiotemporal patterns are possible ([Pearson](https://science.sciencemag.org/content/261/5118/189.abstract), 1993), see the figure below for a snapshot of `u`. Conversion from `U` to `V` is governed by the nonlinear term `uv^2`, which is subtracted from the right-hand side of `u` and added to the right-hand side of `v`. Finally, two diffusion terms are present, configured such that `U` diffuses faster than `V`. We specify `D_u = 2*10^{-5}` and `D_v = 10^{-5}`, and use a `2.5 x 2.5` spatial domain with periodic boundary conditions. 
 
 ![alt text](snapshot_0.png)
 
 ## Training data compression via reduced surrogates
 
-Our aim here is to close the system by replacing the subgrid-scale terms `G_u` and `G_v` with data-driven surrogates. We generate a database of training data by solving the Gray-Scott equations for u and v at a higher spatial resolution of `1024 x 1024` nodes. Instead of creating a surrogate for the spatially dependent subgrid-scale terms, we will create so-called *reduced surrogates* using EasySurrogate. These are specifically geared towards predicting global (i.e. spatially integrated) quantities of interest of the form
+Our aim here is to close the system by replacing the subgrid-scale terms `G_u` and `G_v` with data-driven surrogates. We generate a database of training data by solving the Gray-Scott equations for u and v at a higher spatial resolution of `256 x 256` nodes. Instead of directly creating a surrogate for the spatially dependent subgrid-scale terms, we will create so-called *reduced surrogates* using EasySurrogate. These are specifically geared towards predicting global (i.e. spatially integrated) quantities of interest of the form
 
 ![equation](https://latex.codecogs.com/gif.latex?Q_i%28t%29%20%3D%20%5Cfrac%7B1%7D%7BA%7D%5Cint%5Cint%20q_i%28%5Cbar%7Bu%7D%2C%20%5Cbar%7Bv%7D%3B%20x%2C%20y%2C%20t%29%5C%3Bdxdy.)
 
@@ -34,7 +34,7 @@ The current beta version has only been tested on 2D problems, and is only suited
 
 ## Files
 
-+ `tests/gray_scott_reduced/gray_scott_rk4.py`: the unmodified solver for the Gray Scott system, used to generate the training data. The discretization is achieved using the spectral method, and time stepping is done with the 4-th order Runge-Kutta scheme. Note the we have already pre-generated the necessary training data, which is is stored in `tests/gray_scott_reduced/samples/gray_scott_f0p02_k0p05_1024.hdf5`.
++ `tests/gray_scott_reduced/gray_scott_rk4.py`: the unmodified solver for the Gray Scott system, used to generate the training data. The discretization is achieved using the spectral method, and time stepping is done with the 4-th order Runge-Kutta scheme. Note that we have already pre-generated the necessary training data, which is is stored in `tests/gray_scott_reduced/samples/gray_scott_f0p02_k0p05_1024.hdf5`.
 
 + `tests/gray_scott_reduced/train_reduced_surrogate.py`: this is again the same Gray-Scott solver, except with reduced subgrid-scale terms. Execute this file to run the tutorial.
 
@@ -76,7 +76,7 @@ campaign.add_app(name="gray_scott_reduced", surrogate=surrogate)
 
 ```
 
-Here, `N_Q` is the number of QoIs that we wish to track per PDE. Remember that we'll let `G_u` track the spatial average of `u` and `u^2/2`, and `G_v` will track the average of `v` and `v^2/2`. Since both will track 2 PDEs we can create a single surrogate object.
+Here, `N_Q` is the number of QoIs that we wish to track per PDE. Remember that we'll let `G_u` track the spatial average of `u` and `u^2/2`, and `G_v` will track the average of `v` and `v^2/2`. Since both PDEs will track 2 QoIs we can create a single surrogate object.
 
 Next, `G_u` and `G_v` must be included on the right-hand sides of both PDEs. The following modification to the original code occurs in the `rhs_hat` subroutine. At every time step, the reduced surrogate model is trained via
 
@@ -94,7 +94,7 @@ Here, the `Q_ref` and `Q_model` contain the data and the computed values of the 
 
 ![equation](https://latex.codecogs.com/gif.latex?%5Cfrac%7B%5Cpartial%20q_1%7D%7B%5Cpartial%20u%7D%20%3D%201%2C%20%5Cquad%20%5Cfrac%7B%5Cpartial%20q_2%7D%7B%5Cpartial%20u%7D%20%3D%20u%2C%20%5Cfrac%7B%5Cpartial%20q_3%7D%7B%5Cpartial%20v%7D%20%3D%201%2C%20%5Cquad%20%5Cfrac%7B%5Cpartial%20q_4%7D%7B%5Cpartial%20v%7D%20%3D%20v)
 
-`V_hat_1` is the FFT (since it is a spectral code) of `np.ones([N, N])`. The `reduced_dict_u` and `reduced_dict_v` dictionaries contain, amongst others, the reduced subgrid-scale terms and the `\tau` time series. Now the right-hand sides can be modified
+`V_hat_1` is the FFT (since it is a spectral code) of `np.ones([N, N])`. The `reduced_dict_u` and `reduced_dict_v` dictionaries contain, amongst others, the reduced subgrid-scale terms and the `\tau` time series. Now the right-hand sides can be modified to include the new subgrid-scale terms:
 
 ```python
 #get the two reduced sgs terms from the dict
@@ -122,7 +122,7 @@ campaign = es.Campaign()
 analysis = es.analysis.BaseAnalysis()
 ```
 
-The pdfs for all 4 QoI, computed from the trained reduced model and the training data are given below. The peaks which can be observed in each pdf represent the  statistically stationary state, while the 'flat' part comes from the spinup period. 
+The pdfs for all 4 QoI, computed from the trained reduced model and the high-resolution training data are given below. The peaks which can be observed in each pdf represent the  statistically stationary state, while the 'flat' part comes from the spinup period. 
 
 ![alt text](pdfs.png)
 
