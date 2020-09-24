@@ -79,13 +79,13 @@ Here, `N_Q` is the number of QoIs that we wish to track per PDE. Remember that w
 Next, `G_u` and `G_v` must be included on the right-hand sides of both PDEs. The following modification to the original code occurs in the `rhs_hat` subroutine. At every time step, the reduced surrogate model is trained via
 
 ```python
-    #get the reference QoI data and the QoI computed by the model
-    Q_ref = kwargs['Q_ref']
-    Q_model = kwargs['Q_model']
+#get the reference QoI data and the QoI computed by the model
+Q_ref = kwargs['Q_ref']
+Q_model = kwargs['Q_model']
     
-    #train the two reduced sgs source terms
-    reduced_dict_u = surrogate.train([V_hat_1, u_hat], Q_ref[0:N_Q], Q_model[0:N_Q])
-    reduced_dict_v = surrogate.train([V_hat_1, v_hat], Q_ref[N_Q:], Q_model[N_Q:])
+#train the two reduced sgs source terms
+reduced_dict_u = surrogate.train([V_hat_1, u_hat], Q_ref[0:N_Q], Q_model[0:N_Q])
+reduced_dict_v = surrogate.train([V_hat_1, v_hat], Q_ref[N_Q:], Q_model[N_Q:])
 ```
 
 Here, the `Q_ref` and `Q_model` contain the data and the computed values of the 4 QoIs. These are passed along to the `train` method of the reduced surrogate object, in addition to `[V_hat_1, u_hat]` and `[V_hat_1, v_hat]`. The latter define the QoIs we wish to track, and are defined as the partial derivatives of the integrands `q_i` with respect to the primitive variable, see the paper above for details. In this case we have
@@ -95,13 +95,17 @@ Here, the `Q_ref` and `Q_model` contain the data and the computed values of the 
 `V_hat_1` is the FFT (since it is a spectral code) of `np.ones([N, N])`. The `reduced_dict_u` and `reduced_dict_v` dictionaries contain, amongst others, the reduced subgrid-scale terms and the `\tau` time series. Now the right-hand sides can be modified
 
 ```python
-    #get the two reduced sgs terms from the dict
-    reduced_sgs_u = np.fft.ifft2(reduced_dict_u['sgs_hat'])
-    reduced_sgs_v = np.fft.ifft2(reduced_dict_v['sgs_hat'])
+#get the two reduced sgs terms from the dict
+reduced_sgs_u = np.fft.ifft2(reduced_dict_u['sgs_hat'])
+reduced_sgs_v = np.fft.ifft2(reduced_dict_v['sgs_hat'])
 
-    #compute right-hand sides of each PDE
-    u = np.fft.ifft2(u_hat)
-    v = np.fft.ifft2(v_hat)
-    f = -u * v * v + feed * (1 - u) - reduced_sgs_u
-    g = u * v * v - (feed + kill) * v - reduced_sgs_v
+#compute right-hand sides of each PDE
+u = np.fft.ifft2(u_hat)
+v = np.fft.ifft2(v_hat)
+f = -u * v * v + feed * (1 - u) - reduced_sgs_u
+g = u * v * v - (feed + kill) * v - reduced_sgs_v
 ```
+
+The script `tests/gray_scott_reduced/train_reduced_surrogate` will run for 10000 time steps, after which it will store data in the `samples` directory.
+
+## Analysis
