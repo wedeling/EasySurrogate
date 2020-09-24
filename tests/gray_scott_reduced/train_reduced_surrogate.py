@@ -186,6 +186,7 @@ def rhs_hat(u_hat, v_hat, **kwargs):
     #train the two reduced sgs source terms
     reduced_dict_u = surrogate.train([V_hat_1, u_hat], Q_ref[0:N_Q], Q_model[0:N_Q])
     reduced_dict_v = surrogate.train([V_hat_1, v_hat], Q_ref[N_Q:], Q_model[N_Q:])
+
     #get the two reduced sgs terms from the dict
     reduced_sgs_u = np.fft.ifft2(reduced_dict_u['sgs_hat'])
     reduced_sgs_v = np.fft.ifft2(reduced_dict_v['sgs_hat'])
@@ -311,7 +312,7 @@ HOME = os.path.abspath(os.path.dirname(__file__))
 campaign = es.Campaign()
 
 #load reference data of the statistics of interest
-data_frame = campaign.load_hdf5_data()
+data_frame = campaign.load_hdf5_data(file_path = HOME + '/samples/gray_scott_ref.hdf5')
 Q_ref = data_frame['Q_HF']
 
 # lower the number of gridpoints in 1D compared to ref data
@@ -341,7 +342,7 @@ L = 1.25
 plot = True
 store = True
 state_store = True
-restart = False
+restart = True
 
 sim_ID = 'test_gray_scott_reduced'
 
