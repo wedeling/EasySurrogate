@@ -15,8 +15,6 @@ analysis = es.analysis.BaseAnalysis()
 data_frame_ref = campaign.load_hdf5_data(file_path = home + '/samples/gray_scott_reference.hdf5')
 #load the data from the trained reduced model
 data_frame_red = campaign.load_hdf5_data(file_path = home + '/samples/gray_scott_model.hdf5')
-#load the tau time series
-data_frame_tau = campaign.load_hdf5_data(file_path = home + '/samples/gray_scott_tau.hdf5')
 
 # load reference data
 Q_ref  = data_frame_ref['Q_HF']
