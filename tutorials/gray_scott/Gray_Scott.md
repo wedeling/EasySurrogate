@@ -36,7 +36,9 @@ The current beta version has only been tested on 2D problems, and is only suited
 
 + `tests/gray_scott_reduced/gray_scott_rk4.py`: the unmodified solver for the Gray Scott system, used to generate the training data. The discretization is achieved using the spectral method, and time stepping is done with the 4-th order Runge-Kutta scheme. Note the we have already pre-generated the necessary training data, which is is stored in `tests/gray_scott_reduced/samples/gray_scott_f0p02_k0p05_1024.hdf5`.
 
-+ `tests/gray_scott_reduced/train_reduced_surrogate`: this is again the same Gray-Scott solver, except with reduced subgrid-scale terms. Execute this file to run the tutorial.
++ `tests/gray_scott_reduced/train_reduced_surrogate.py`: this is again the same Gray-Scott solver, except with reduced subgrid-scale terms. Execute this file to run the tutorial.
+
++ `tests/gray_scott_reduced/gray_scott_analysis.py`: a post-processing script, which computes some statistics.
 
 ## Training a reduced surrogate
 
@@ -110,7 +112,7 @@ The script `tests/gray_scott_reduced/train_reduced_surrogate` will run for 10000
 
 ## Analysis
 
-In this case we will just use the `BaseAnalysis` class to perform the post processing:
+To perform the analysis, run `tests/gray_scott_reduced/gray_scott_analysis.py`. In this case we will just use the `BaseAnalysis` class to perform the post processing:
 
 ```
 #create a campaign
@@ -123,3 +125,5 @@ analysis = es.analysis.BaseAnalysis()
 The pdfs for all 4 QoI, computed from the trained reduced model and the training data are given below
 
 ![alt text](pdfs.png)
+
+Clearly, the reduced model and the refernce model are identical for our 4 QoIs during the trainig phase. This means that, as far as our 4 QoIs are concerned, the training data of the 4 `tau` times are sufficient, and we do not need to extract snapshots of the exact, `128 x 128` subgrid-scale terms from the data. 
