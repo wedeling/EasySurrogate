@@ -109,3 +109,17 @@ g = u * v * v - (feed + kill) * v - reduced_sgs_v
 The script `tests/gray_scott_reduced/train_reduced_surrogate` will run for 10000 time steps, after which it will store data in the `samples` directory.
 
 ## Analysis
+
+In this case we will just use the `BaseAnalysis` class to perform the post processing:
+
+```
+#create a campaign
+campaign = es.Campaign()
+
+#use a the base analysis here
+analysis = es.analysis.BaseAnalysis()
+```
+
+The pdfs for all 4 QoI, computed from the trained reduced model and the training data are given below
+
+![alt text](pdfs.png)
