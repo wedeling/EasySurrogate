@@ -24,7 +24,7 @@ B_qsn = data_frame_qsn['B_data']
 analysis = es.analysis.QSN_analysis(campaign.surrogate)
 
 #############
-# Plot PDEs #
+# Plot PDFs #
 #############
 
 start_idx = 0
