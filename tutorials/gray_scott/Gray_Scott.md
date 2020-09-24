@@ -76,7 +76,7 @@ campaign.add_app(name="gray_scott_reduced", surrogate=surrogate)
 
 Here, `N_Q` is the number of QoIs that we wish to track per PDE. Remember that we'll let `G_u` track the spatial average of `u` and `u^2/2`, and `G_v` will track the average of `v` and `v^2/2`. Since both will track 2 PDEs we can create a single surrogate object.
 
-Next, `G_u` and `G_v` must be included on the right-hand sides of both PDEs. The following modification to the original code occur in the `rhs_hat` subroutine. At every time step, the reduced surrogate model is trained via
+Next, `G_u` and `G_v` must be included on the right-hand sides of both PDEs. The following modification to the original code occurs in the `rhs_hat` subroutine. At every time step, the reduced surrogate model is trained via
 
 ```python
     #get the reference QoI data and the QoI computed by the model
@@ -92,4 +92,16 @@ Here, the `Q_ref` and `Q_model` contain the data and the computed values of the 
 
 ![equation](https://latex.codecogs.com/gif.latex?%5Cfrac%7B%5Cpartial%20q_1%7D%7B%5Cpartial%20u%7D%20%3D%201%2C%20%5Cquad%20%5Cfrac%7B%5Cpartial%20q_2%7D%7B%5Cpartial%20u%7D%20%3D%20u%2C%20%5Cfrac%7B%5Cpartial%20q_3%7D%7B%5Cpartial%20v%7D%20%3D%201%2C%20%5Cquad%20%5Cfrac%7B%5Cpartial%20q_4%7D%7B%5Cpartial%20v%7D%20%3D%20v)
 
-`V_hat_1` is the FFT (since it is a spectral code) of `np.ones([N, N])`.
+`V_hat_1` is the FFT (since it is a spectral code) of `np.ones([N, N])`. The `reduced_dict_u` and `reduced_dict_v` dictionaries contain, amongst others, the reduced subgrid-scale terms and the `\tau` time series. Now the right-hand sides can be modified
+
+```python
+    #get the two reduced sgs terms from the dict
+    reduced_sgs_u = np.fft.ifft2(reduced_dict_u['sgs_hat'])
+    reduced_sgs_v = np.fft.ifft2(reduced_dict_v['sgs_hat'])
+
+    #compute right-hand sides of each PDE
+    u = np.fft.ifft2(u_hat)
+    v = np.fft.ifft2(v_hat)
+    f = -u * v * v + feed * (1 - u) - reduced_sgs_u
+    g = u * v * v - (feed + kill) * v - reduced_sgs_v
+```
