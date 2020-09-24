@@ -31,3 +31,5 @@ In this tutorial we will focus on the training phase only. That is, we will use 
 ## Files
 
 + `tests/gray_scott_reduced/gray_scott_rk4.py`: the unmodified solver for the Gray Scott system, used to generate the training data. The discretization is achieved using the spectral method, and time stepping is done with the 4-th order Runge-Kutta scheme. Note the we have already pre-generated the necessary training data, which is is stored in `tests/gray_scott_reduced/samples/gray_scott_f0p02_k0p05_1024.hdf5`.
+
++ `tests/gray_scott_reduced/train_reduced_surrogate`: the is again the same Gray-Scott solver, e
