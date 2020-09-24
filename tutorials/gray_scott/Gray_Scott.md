@@ -126,4 +126,4 @@ The pdfs for all 4 QoI, computed from the trained reduced model and the training
 
 ![alt text](pdfs.png)
 
-Clearly, the reduced model and the refernce model are identical for our 4 QoIs during the trainig phase. This means that, as far as our 4 QoIs are concerned, the training data of the 4 `tau` times are sufficient, and we do not need to extract snapshots of the exact, `128 x 128` subgrid-scale terms from the data. 
+Clearly, the reduced model and the reference model are identical for our 4 QoIs during the training phase. This means that, as far as our 4 QoIs are concerned, the training data of the 4 `tau` times are sufficient, and we do not need to extract snapshots of the exact, `128 x 128` subgrid-scale terms from the data. 
