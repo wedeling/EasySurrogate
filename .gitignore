@@ -1,6 +1,5 @@
 tests/saved_neural_nets
 tests/samples
-tests/figures
 easysurrogate.egg-info
-dist/
 build/
+dist/
