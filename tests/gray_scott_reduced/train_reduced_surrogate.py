@@ -312,7 +312,7 @@ HOME = os.path.abspath(os.path.dirname(__file__))
 campaign = es.Campaign()
 
 #load reference data of the statistics of interest
-data_frame = campaign.load_hdf5_data(file_path = HOME + '/samples/gray_scott_ref.hdf5')
+data_frame = campaign.load_hdf5_data(file_path = HOME + '/samples/gray_scott_reference.hdf5')
 Q_ref = data_frame['Q_HF']
 
 # lower the number of gridpoints in 1D compared to ref data
@@ -342,7 +342,7 @@ L = 1.25
 plot = True
 store = True
 state_store = True
-restart = True
+restart = False
 
 sim_ID = 'test_gray_scott_reduced'
 
@@ -511,6 +511,6 @@ if state_store:
 # store the samples
 if store:
     store_samples_hdf5()
-    campaign.store_accumulated_data()
+    campaign.store_accumulated_data(file_path = HOME + '/samples/gray_scott_tau.hdf5')
 
 plt.show()
