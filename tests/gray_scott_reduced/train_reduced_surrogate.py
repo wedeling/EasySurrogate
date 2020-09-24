@@ -179,23 +179,28 @@ def rhs_hat(u_hat, v_hat, **kwargs):
     # Easysurrogate modification #
     ##############################
 
+    #get the reference QoI data and the QoI computed by the model
     Q_ref = kwargs['Q_ref']
     Q_model = kwargs['Q_model']
+    
+    #train the two reduced sgs source terms
     reduced_dict_u = surrogate.train([V_hat_1, u_hat], Q_ref[0:N_Q], Q_model[0:N_Q])
-    reduced_sgs_u = np.fft.ifft2(reduced_dict_u['sgs_hat'])
-
     reduced_dict_v = surrogate.train([V_hat_1, v_hat], Q_ref[N_Q:], Q_model[N_Q:])
+    #get the two reduced sgs terms from the dict
+    reduced_sgs_u = np.fft.ifft2(reduced_dict_u['sgs_hat'])
     reduced_sgs_v = np.fft.ifft2(reduced_dict_v['sgs_hat'])
 
+    #compute right-hand sides of each PDE
     u = np.fft.ifft2(u_hat)
     v = np.fft.ifft2(v_hat)
-
-    #subtract the reduced SGS term to the right-hand sides of each PDE
     f = -u * v * v + feed * (1 - u) - reduced_sgs_u
     g = u * v * v - (feed + kill) * v - reduced_sgs_v
-    
+
+    #we do not want to store the full field reduced source terms    
     del reduced_dict_u['sgs_hat']
     del reduced_dict_v['sgs_hat']
+
+    #accumulate the time series in the campaign object
     campaign.accumulate_data(reduced_dict_u, names=['c_ij_u', 
                                                     'inner_prods_u', 'src_Q_u', 
                                                     'tau_u'])
@@ -302,7 +307,7 @@ HOME = os.path.abspath(os.path.dirname(__file__))
 # Easysurrogate modification #
 ##############################
 
-# load pre-trained campaign
+# create campaign
 campaign = es.Campaign()
 
 #load reference data of the statistics of interest
@@ -315,6 +320,7 @@ N = 2**I
 
 #number of stats to track per PDE  (we have 2 PDEs)
 N_Q = 2
+
 #reduced basis function for the average concentrations of u and v
 V_hat_1 = np.fft.fft2(np.ones([N, N]))
 
@@ -445,7 +451,7 @@ for n in range(n_steps):
     Q_HF[2] = compute_int(V_hat_1, v_hat, N)
     Q_HF[3] = 0.5 * compute_int(v_hat, v_hat, N)
 
-    # pass dQ to rk4
+    # pass Q_ref to rk4
     u_hat, v_hat = rk4(u_hat, v_hat, int_fac_u, int_fac_u2, int_fac_v, int_fac_v2, 
                        Q_ref=Q_ref[n], Q_model=Q_HF)
 
@@ -461,10 +467,6 @@ for n in range(n_steps):
         j = 0
         u = np.fft.ifft2(u_hat)
         v = np.fft.ifft2(v_hat)
-
-        # print('energy_HF u = %.4f' % (Q_HF[0],))
-        # print('energy_HF v = %.4f' % (Q_HF[1],))
-        # print('=========================================')
 
         for i in range(2*N_Q):
             plot_dict_HF[i].append(Q_HF[i])
