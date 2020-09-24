@@ -122,7 +122,7 @@ campaign = es.Campaign()
 analysis = es.analysis.BaseAnalysis()
 ```
 
-The pdfs for all 4 QoI, computed from the trained reduced model and the training data are given below
+The pdfs for all 4 QoI, computed from the trained reduced model and the training data are given below. The peaks which can be observed in each pdf represent the  statistically stationary state, while the 'flat' part comes from the spinup period. 
 
 ![alt text](pdfs.png)
 
