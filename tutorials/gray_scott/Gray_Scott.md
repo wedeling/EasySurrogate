@@ -32,4 +32,40 @@ In this tutorial we will focus on the training phase only. That is, we will use 
 
 + `tests/gray_scott_reduced/gray_scott_rk4.py`: the unmodified solver for the Gray Scott system, used to generate the training data. The discretization is achieved using the spectral method, and time stepping is done with the 4-th order Runge-Kutta scheme. Note the we have already pre-generated the necessary training data, which is is stored in `tests/gray_scott_reduced/samples/gray_scott_f0p02_k0p05_1024.hdf5`.
 
-+ `tests/gray_scott_reduced/train_reduced_surrogate`: the is again the same Gray-Scott solver, e
++ `tests/gray_scott_reduced/train_reduced_surrogate`: this is again the same Gray-Scott solver, except with reduced subgrid-scale terms. Execute this file to complete the tutorial.
+
+## Training a reduced surrogate
+
+The original Gray-Scott solver is modified in two main places. First, an EasySurrogate object is created as follows, and the trainingdat afrom teh high-resolution model is loaded:
+
+```python
+
+# create campaign
+campaign = es.Campaign()
+
+#load reference data of the statistics of interest
+data_frame = campaign.load_hdf5_data(file_path = HOME + '/samples/gray_scott_ref.hdf5')
+Q_ref = data_frame['Q_HF']
+
+```
+Next, we lower the spatial dimension from `256 x 256` to `128 x 128`
+
+```
+# lower the number of gridpoints in 1D compared to ref data
+I = 7
+N = 2**I
+```
+
+A reduced surrogate object is then created, and added to the Campaign
+
+```
+#number of stats to track per PDE  (we have 2 PDEs)
+N_Q = 2
+
+#create a reduced SGS surrogate object
+surrogate = es.methods.Reduced_Surrogate(N_Q, N)
+
+#add surrogate to campaign
+campaign.add_app(name="gray_scott_reduced", surrogate=surrogate)
+
+```
