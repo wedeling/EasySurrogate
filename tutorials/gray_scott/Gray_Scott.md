@@ -36,7 +36,7 @@ In this tutorial we will focus on the training phase only. That is, we will use 
 
 ## Training a reduced surrogate
 
-The original Gray-Scott solver is modified in two main places. First, an EasySurrogate object is created as follows, and the trainingdat afrom teh high-resolution model is loaded:
+The original Gray-Scott solver is modified in two main places. First, an EasySurrogate object is created as follows, and the training data from the high-resolution model is loaded:
 
 ```python
 
