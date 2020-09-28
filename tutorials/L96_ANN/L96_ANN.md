@@ -1,4 +1,4 @@
-# Tutorial: Quantized Softmax Network for the Lorenz 96 system
+# Tutorial: A vanilla Artificial Neural Network for the Lorenz 96 system
 
 The two layer Lorenz 96 (L96) system is given by:
 
@@ -10,28 +10,28 @@ The two layer Lorenz 96 (L96) system is given by:
 
 ![equation](https://latex.codecogs.com/gif.latex?k%20%3D%201%2C%5Ccdots%2C%20K%20%5Cquad%5Cquad%20j%20%3D%201%2C%5Ccdots%2CJ)
 
-It can be considered as a simplified atmospheric model on a circle of constant latitude. The `X_k` variables are the large-scale components of the system, whereas the `Y_{k,j}` are the small-scale counterparts. Each spatial location indexed by `k=1,...,K` has `J` small-scale components `Y_{k,j}`, with `j=1,...,J`. Thus the system consists of `JK` coupled ordinary differential equations (ODEs). In this tutorial we will use `K=18` and `J=20` such that we have 360 coupled ODEs. Finally, the `B_k` term is the subgrid-scale (SGS) term, through which the small-scale information enters the large-scale `X_k` ODEs. If we are able to create a surrogate for `B_k`, conditional on large-scale variables only, the dimension of the system drops from 360 down to 18. Here, we will create a surrogate model in the form of a quantized softmax network (QSN), which is stochastic in nature. 
+It can be considered as a simplified atmospheric model on a circle of constant latitude. The `X_k` variables are the large-scale components of the system, whereas the `Y_{k,j}` are the small-scale counterparts. Each spatial location indexed by `k=1,...,K` has `J` small-scale components `Y_{k,j}`, with `j=1,...,J`. Thus the system consists of `JK` coupled ordinary differential equations (ODEs). In this tutorial we will use `K=18` and `J=20` such that we have 360 coupled ODEs. Finally, the `B_k` term is the subgrid-scale (SGS) term, through which the small-scale information enters the large-scale `X_k` ODEs. If we are able to create a surrogate for `B_k`, conditional on large-scale variables only, the dimension of the system drops from 360 down to 18. Here, we will create a surrogate model in the form of a Artificial Neural Network (ANN).
 
-Our general aim is to create a surrogate such that the long-term statistics of the large-scale system match those generated from validation data. Thus we do not expect accuracy from the large-scale `X_k` system forced by the QSN surrogate at any given point in time.
+Our general aim is to create a surrogate such that the long-term statistics of the large-scale system match those generated from validation data. Thus we do not expect accuracy from the large-scale `X_k` system forced by the ANN surrogate at any given point in time.
 
-The details of the QSN approach can be found in [this](https://arxiv.org/abs/2004.01457) preprint.
+**NOTE**: This tutorial is very similar to the Lorenz 96 Quantized Softmax Network tutorial, the only difference is that the stochastic, time-lagged QSN surrogate is replaced by a deterministic, time-lagged ANN surrogate.
 
 ## Files
 
-The `tests/lorenz96_qsn` folder constains all required scripts to execute this tutorial: 
+The `tests/lorenz96_ann` folder constains all required scripts to execute this tutorial: 
 
-+ `tests/lorenz96_qsn/lorenz96.py`: the unmodified solver for the Lorenz 96 system, used to generate the training data.
-+ `tests/lorenz96_qsn/train_surrogate.py`: script to train a QSN surrogate on L96 data.
-+ `tests/lorenz96_qsn/lorenz96_qsn.py`: this is the L96 solver again, where the call to the small-scale system is replaced by a call to the QSN surrogate.
-+ `tests/lorenz96_qsn/lorenz96_analysis.py`: the post-processing of the results of `lorenz96_qsn.py`.
++ `tests/lorenz96_ann/lorenz96.py`: the unmodified solver for the Lorenz 96 system, used to generate the training data.
++ `tests/lorenz96_ann/train_surrogate.py`: script to train a QSN surrogate on L96 data.
++ `tests/lorenz96_ann/lorenz96_ann.py`: this is the L96 solver again, where the call to the small-scale system is replaced by a call to the ANN surrogate.
++ `tests/lorenz96_ann/lorenz96_analysis.py`: the post-processing of the results of `lorenz96_ann.py`.
 
 Execute these script in the specified order to run the tutorial. Details are given below.
 
 ## Generate training data
 
-The first step is to generate the training data, by executing `python3 tests/lorenz96_qsn/lorenz96.py`. This will generate training pairs that are used in `tests/lorenz96_qsn/train_surrogate.py`. You will be asked for a location to store the data (HDF5 format).
+The first step is to generate the training data, by executing `python3 tests/lorenz96_ann/lorenz96.py`. This will generate training pairs that are used in `tests/lorenz96_ann/train_surrogate.py`. You will be asked for a location to store the data (HDF5 format).
 
-## Train the Quantized Softmax Network
+## Train the Artificial Neural Network
 
 As explained in the general EasySurrogate tutorial (`tutorials/General`), we begin by creating a EasySurrogate campaign, and loading the training data:
 
@@ -50,44 +50,32 @@ target = data_frame['B_data']
 Here, our large-scale features will the the `K` time series of the `X_k` variables, and our target data are the `K` times series of the subgrid-scale term `B_k`. The next step is to create a QSN surrogate object via:
 
 ```
-# create Quantized Softmax Network surrogate
-surrogate = es.methods.QSN_Surrogate()
+# create a (time-lagged) ANN surrogate
+surrogate = es.methods.ANN_Surrogate()
 ```
 
-At this point the specifics of a QSN surrogate come into play. One of our aims is to create a surrogate with 'memory', i.e. a surrogate that is non-Markovian. At the heart of our QSN surrogate is a feed-forward neural network. To add a memory dependence here, we create time-lagged feature vectors. Another means of doing so would be to use a recurrent neural network, which is an option planned for future releases. Say we wish to train a QSN surrogate using time-lagged input features at 1 and 10 time steps into the past. This is done via:
+One of our aims is to create a surrogate with 'memory', i.e. a surrogate that is non-Markovian. To add a memory dependence here, we create time-lagged feature vectors. Another means of doing so would be to use a recurrent neural network, which is an option planned for future releases. Say we wish to train an ANN surrogate using time-lagged input features at 1 and 10 time steps into the past. This is done via:
 
 ```
 # create time-lagged features
 lags = [[1, 10]]
 
 # train the surrogate on the data
-n_iter = 2000
-surrogate.train([features], target, lags, n_iter, 
-		n_bins=10, test_frac=0.5,
-		n_layers=4, n_neurons=256, activation='leaky_relu', batch_size=512)
+n_iter = 10000
+surrogate.train([features], target, lags, n_iter, n_layers=4, n_neurons=256,
+                batch_size=512)
 ```
 
 The `train` method should be supplied with a list of (different) input features, and an array of target data points, in this case an array of `nx18` subgrid-scale data points. Here, `n` is the number of training points. If `test_frac > 0` as above, the specified fraction of the data is withheld as a test set, lowering the value of `n`. Various aspects of the feed-forward neural network are defined here as well, such as the number of layers, the number of neurons per layers, the type of activation function and the minibatch size used in stochastic gradient descent. Other activation options are `tanh`, `hard_tan` and `relu`.
 
-For each of the 18 spatial locations, the QSN surrogate will predict a discrete probability mass function (pmf) over `n_bins=10` non-overlapping `B_k` intervals or 'bins', for `k=1,...,K=18`. These 18 pmfs can then be sampled to identify 18 intervals of `B_k` data, conditional on the time-lagged, large-scale input features. To obtain a stochastic surrogate, `B_k` values are randomly resampled from the identified intervals. This process is repeated every time step. A movie of this can be found below, where the QSN surrogate is evaluated off-line on the training dataset. Left shows the QSN prediction for a single spatial location, alongside the bin of the training data. Right show the corresponding `B_k` time series, for both the stochastic QSN surrogate and the actual time evolution of the training data.
-
-![alt text](qsn.gif)
-
-To evaluate the classification error of (a subset of) the training data, an analysis object must be created:
-
-```
-# QSN analysis object
-analysis = es.analysis.QSN_analysis(surrogate)
-analysis.get_classification_error(features[0:1000], target[0:1000])
-```
-This will print the classifiction error to the screen for each of the 18 spatial locations. Once the surrogate is trained, it is saved and added to the campaign via
+Once the surrogate is trained, it is saved and added to the campaign via
 
 ```
 campaign.add_app(name='test_campaign', surrogate=surrogate)
 campaign.save_state()
 ```
 
-## Prediction with a QSN surrogate
+## Prediction with a ANN surrogate
 
 To predict with a QSN surrogate, the original L96 code must be modified in 2 places, namely in the initial condition (IC) and the call to the micro model. Changing the IC is required due to the time-lagged nature. We use the data at the maximum lag specified as IC, such that we can build a time-lagged vector (also from the data) at the first time step. In `tests/lorenz96_qsn/lorenz96_qsn.py` we find:
 
