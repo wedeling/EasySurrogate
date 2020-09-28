@@ -47,7 +47,7 @@ features = data_frame['X_data']
 target = data_frame['B_data']
 ```
 
-Here, our large-scale features will the the `K` time series of the `X_k` variables, and our target data are the `K` times series of the subgrid-scale term `B_k`. The next step is to create a QSN surrogate object via:
+Here, our large-scale features will the the `K` time series of the `X_k` variables, and our target data are the `K` times series of the subgrid-scale term `B_k`. The next step is to create an ANN surrogate object via:
 
 ```
 # create a (time-lagged) ANN surrogate
@@ -66,7 +66,7 @@ surrogate.train([features], target, lags, n_iter, n_layers=4, n_neurons=256,
                 batch_size=512)
 ```
 
-The `train` method should be supplied with a list of (different) input features, and an array of target data points, in this case an array of `nx18` subgrid-scale data points. Here, `n` is the number of training points. If `test_frac > 0` as above, the specified fraction of the data is withheld as a test set, lowering the value of `n`. Various aspects of the feed-forward neural network are defined here as well, such as the number of layers, the number of neurons per layers, the type of activation function and the minibatch size used in stochastic gradient descent. Other activation options are `tanh`, `hard_tan` and `relu`.
+The `train` method should be supplied with a list of (different) input features, and an array of target data points, in this case an array of `nx18` subgrid-scale data points. Here, `n` is the number of training points. If `test_frac > 0` as above, the specified fraction of the data is withheld as a test set, lowering the value of `n`. Various aspects of the feed-forward neural network are defined here as well, such as the number of layers, the number of neurons per layers, the type of activation function and the minibatch size used in stochastic gradient descent. Activation options are `tanh` (Default), `hard_tan`, `relu` and `leaky_relu`.
 
 Once the surrogate is trained, it is saved and added to the campaign via
 
@@ -77,7 +77,7 @@ campaign.save_state()
 
 ## Prediction with an ANN surrogate
 
-To predict with an ANN surrogate, the original L96 code must be modified in 2 places, namely in the initial condition (IC) and the call to the micro model. Changing the IC is required due to the time-lagged nature. We use the data at the maximum lag specified as IC, such that we can build a time-lagged vector (also from the data) at the first time step. In `tests/lorenz96_qsn/lorenz96_qsn.py` we find:
+To predict with an ANN surrogate, the original L96 code must be modified in 2 places, namely in the initial condition (IC) and the call to the micro model. Changing the IC is required due to the time-lagged nature. We use the data at the maximum lag specified as IC, such that we can build an initial time-lagged vector (also from the data) at the first time step. In `tests/lorenz96_ann/lorenz96_ann.py` we find:
 
 ```python
 ##############################
@@ -98,7 +98,7 @@ f_nm1 = rhs_X(X_n, B_n)
 # End Easysurrogate modification #
 ##################################
 ```
-Here, `campaign = es.Campaign(load_state=True)` loads the pre-trained ANN surrogate from `tests/lorenz96_qsn/train_surrogate.py`, and we use the HDF5 training data from `tests/lorenz96_ann/lorenz96.py` to select the `X_k` and `B_k` snapshots at the timestep corresponding to the maximum lag that was specified. Upon finishing the training step, the corresponding first time-lagged feature vector is automatically stored in the surrogate.
+Here, `campaign = es.Campaign(load_state=True)` loads the pre-trained ANN surrogate from `tests/lorenz96_ann/train_surrogate.py`, and we use the HDF5 training data from `tests/lorenz96_ann/lorenz96.py` to select the `X_k` and `B_k` snapshots at the timestep corresponding to the maximum lag that was specified. Upon finishing the training step, the corresponding first time-lagged feature vector is automatically stored in the surrogate.
 
 The second modification involves replacing the call to the surrogate with a call to `surrogate.predict`:
 
