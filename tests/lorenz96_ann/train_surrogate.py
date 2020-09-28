@@ -12,10 +12,9 @@ data_frame = campaign.load_hdf5_data()
 features = data_frame['X_data']
 target = data_frame['B_data']
 
-# create Quantized Softmax Network surrogate
+# create (time-lagged) ANN surrogate
 surrogate = es.methods.ANN_Surrogate()
 
-"""
 # create time-lagged features
 lags = [[1, 10]]
 
@@ -26,8 +25,3 @@ surrogate.train([features], target, lags, n_iter, n_layers=4, n_neurons=256,
 
 campaign.add_app(name='test_campaign', surrogate=surrogate)
 campaign.save_state()
-
-# QSN analysis object
-analysis = es.analysis.QSN_analysis(surrogate)
-analysis.get_classification_error(features[0:1000], target[0:1000])
-"""
