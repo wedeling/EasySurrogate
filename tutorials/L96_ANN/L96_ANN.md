@@ -75,9 +75,9 @@ campaign.add_app(name='test_campaign', surrogate=surrogate)
 campaign.save_state()
 ```
 
-## Prediction with a ANN surrogate
+## Prediction with an ANN surrogate
 
-To predict with a QSN surrogate, the original L96 code must be modified in 2 places, namely in the initial condition (IC) and the call to the micro model. Changing the IC is required due to the time-lagged nature. We use the data at the maximum lag specified as IC, such that we can build a time-lagged vector (also from the data) at the first time step. In `tests/lorenz96_qsn/lorenz96_qsn.py` we find:
+To predict with an ANN surrogate, the original L96 code must be modified in 2 places, namely in the initial condition (IC) and the call to the micro model. Changing the IC is required due to the time-lagged nature. We use the data at the maximum lag specified as IC, such that we can build a time-lagged vector (also from the data) at the first time step. In `tests/lorenz96_qsn/lorenz96_qsn.py` we find:
 
 ```python
 ##############################
@@ -98,8 +98,7 @@ f_nm1 = rhs_X(X_n, B_n)
 # End Easysurrogate modification #
 ##################################
 ```
-Here, `campaign = es.Campaign(load_state=True)` loads the pre-trained QSN surrogate from `tests/lorenz96_qsn/train_surrogate.py`, and we use the HDF5 training data from 
-`tests/lorenz96_qsn/lorenz96.py` to select the `X_k` and `B_k` snapshots at the timestep corresponding to the maximum lag that was specified. Upon finishing the training step, the corresponding first time-lagged feature vector is automatically stored in the surrogate.
+Here, `campaign = es.Campaign(load_state=True)` loads the pre-trained ANN surrogate from `tests/lorenz96_qsn/train_surrogate.py`, and we use the HDF5 training data from `tests/lorenz96_ann/lorenz96.py` to select the `X_k` and `B_k` snapshots at the timestep corresponding to the maximum lag that was specified. Upon finishing the training step, the corresponding first time-lagged feature vector is automatically stored in the surrogate.
 
 The second modification involves replacing the call to the surrogate with a call to `surrogate.predict`:
 
@@ -122,15 +121,11 @@ B_n = campaign.surrogate.predict(X_n)
 ##################################
 ```
 
-Here, `B_n` is the current state of the subgrid-scale term, and `X_n` is the state of the large-scale variables. The subroutine `predict(X_n)` updates the time-lagged input features and returns a stochastic prediction for `B_n` as described above. The rest of the code is unmodified.
-
-Note that due to the stochastic nature of the surrogate, as well as the chaotic nature of L96, we cannot expect that the trajectories of `X_k` and `B_k` will follow those of the full system. Below we show a movie of the time evolution of the stochastic QSN `B_k` (in the 'online' phase, when the QSN surrogate is a source term in the `X_k` ODEs) and the `B_k` of the full system. Eventually the two trajectories start to diverge. That said, we reiterate that our quantities of interest are time-averaged statistics, dicussed next.
-
-![alt text](qsn_pred.gif)
+Here, `B_n` is the current state of the subgrid-scale term, and `X_n` is the state of the large-scale variables. The subroutine `predict(X_n)` updates the time-lagged input features and returns a prediction for `B_n`. The rest of the code is unmodified. Moreover, this file is completely the same as its counterpart in the L96 QSN tutorial. We can therefore train different surrogates, and apply them to the same problem without further modification.
 
 ## Analysis
 
-One of the statistics we might be interested are the probability density functions (pdfs) of `X_k` and `B_k`, for both the full (validation) data set and the data set obtained in the 'online' phase from the preceding step. This is done via a `QSN_Analysis` object:
+One of the statistics we might be interested are the probability density functions (pdfs) of `X_k` and `B_k`, for both the full (validation) data set and the data set obtained in the 'online' phase from the preceding step. This is done via a `Base_Analysis` object:
 
 ```python
 #load the campaign
@@ -149,10 +144,10 @@ X_qsn = data_frame_qsn['X_data']
 B_qsn = data_frame_qsn['B_data']
 
 # create QSN analysis object
-analysis = es.analysis.QSN_analysis(campaign.surrogate)
+analysis = es.analysis.BaseAnalysis()
 
 #############
-# Plot PDEs #
+# Plot PDFs #
 #############
 
 start_idx = 0
@@ -178,6 +173,6 @@ plt.tight_layout()
 
 Pre-generated statistical results are shown below:
 
-![alt text](L96_pdf_QSN.png)
+![alt text](L96_pdf_ANN.png)
 
-In `tests/lorenz96_qsn/lorenz96_analysis.py` other statistical quantities are also computed.
+In `tests/lorenz96_ann/lorenz96_analysis.py` other statistical quantities are also computed.
