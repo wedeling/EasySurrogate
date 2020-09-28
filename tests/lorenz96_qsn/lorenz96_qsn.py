@@ -234,6 +234,9 @@ for t_i in t:
     if np.mod(idx, 1000) == 0:
         print('t =', np.around(t_i, 1), 'of', t_end)
 
+if store:
+    campaign.store_data_to_hdf5({'X_data':X_data, 'B_data':B_data})
+
 # plot results
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='polar')
