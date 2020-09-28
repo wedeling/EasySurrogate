@@ -102,7 +102,7 @@ class ANN_Surrogate(Campaign):
 
         # train network for N_iter mini batches
         self.surrogate.train(n_iter, store_loss=True)
-        self.set_feature_stats()
+        self.set_data_stats()
         self.init_feature_history(feats)
 
     def predict(self, X):
@@ -130,9 +130,11 @@ class ANN_Surrogate(Campaign):
         feat = self.feat_eng.get_feat_history()
         # features were standardized during training, do so here as well
         feat = (feat - self.feat_mean) / self.feat_std
-        # max_idx = the bin index with the highest probability
-        y = self.surrogate.feed_forward(feat.reshape([1, self.surrogate.n_in]))
-        # resample a value from the selected bin
+        # feed forward prediction step
+        y = self.surrogate.feed_forward(feat.reshape([1, self.surrogate.n_in])).flatten()
+        # transform y back to physical domain
+        y = y * self.output_std + self.output_std
+
         return y
 
     def save_state(self):
@@ -152,14 +154,18 @@ class ANN_Surrogate(Campaign):
     # END COMMON SUBROUTINES #
     ##########################
 
-    def set_feature_stats(self):
+    def set_data_stats(self):
         """
-        If the features were standardized, this stores the mean and
-        standard deviation of the features in the QSN_Surrogate object.
+        If the data were standardized, this stores the mean and
+        standard deviation of the features in the ANN_Surrogate object.
         """
         if hasattr(self.surrogate, 'X_mean'):
             self.feat_mean = self.surrogate.X_mean
             self.feat_std = self.surrogate.X_std
+            
+        if hasattr(self.surrogate, 'y_mean'):
+            self.output_mean = self.surrogate.y_mean
+            self.output_std = self.surrogate.y_std
 
     def init_feature_history(self, feats, start=0):
         """
