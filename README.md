@@ -34,6 +34,8 @@ The following tutorials can be found in the `tutorials` folder:
 
  + `/General`: a general introduction to EasySurrogate.
 
- + `/L96`: Quantized Softmax Network (QSN) surrogates for atmospheric model equations. In this tutorial, the subgrid-scale term of the Lorenz96 equations is replaced by a QSN surrogate.
- 
+ + `/L96_QSN`: Quantized Softmax Network (QSN) surrogates for atmospheric model equations. In this tutorial, the subgrid-scale term of the Lorenz96 equations is replaced by a QSN surrogate.
+
+ + `/L96_ANN`: Artificial Neural Network (QSN) surrogates for atmospheric model equations. In this tutorial, the subgrid-scale term of the Lorenz96 equations is replaced by an ANN surrogate.
+
  + `/gray_scott`: reduced surrogates for a reaction diffusion equation. This applies the data compression technique to the two-dimensional gray-scott equations.
