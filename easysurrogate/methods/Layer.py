@@ -44,7 +44,7 @@ class Layer:
 
         # if a kernel mixture network is used and this is the last layer:
         # store kernel means and standard deviations
-        if loss == 'kvm' and r == n_layers:
+        if loss == 'kernel_mixture' and r == n_layers:
             self.kernel_means = kwargs['kernel_means']
             self.kernel_stds = kwargs['kernel_stds']
 
@@ -212,13 +212,13 @@ class Layer:
                 self.o_i = np.concatenate(o_i)
 
                 self.L_i = -np.sum(y_i * np.log(self.o_i))
-            elif self.loss == 'kvm' and self.n_softmax == 0:
-                # NOTE: norm.pdf will not be on the GPU
-                self.kernels = norm.pdf(y_i, self.kernel_means, self.kernel_stds)
-                self.sum_kernels_w = np.sum(self.h * self.kernels, axis=0)
-                self.sum_w = np.sum(self.h, axis=0)
-                self.L_i = -np.log(self.sum_kernels_w) + np.log(self.sum_w)
-            elif self.loss == 'kvm' and self.n_softmax > 0:
+            # elif self.loss == 'kernel_mixture' and self.n_softmax == 0:
+            #     # NOTE: norm.pdf will not be on the GPU
+            #     self.kernels = norm.pdf(y_i, self.kernel_means, self.kernel_stds)
+            #     self.sum_kernels_w = np.sum(self.h * self.kernels, axis=0)
+            #     self.sum_w = np.sum(self.h, axis=0)
+            #     self.L_i = -np.log(self.sum_kernels_w) + np.log(self.sum_w)
+            elif self.loss == 'kernel_mixture' and self.n_softmax > 0:
 
                 if y_i.ndim == 1:
                     y_i = y_i.reshape([1, y_i.size])
@@ -229,7 +229,7 @@ class Layer:
                 self.p_i = []
                 for h_i in np.split(h, self.n_softmax):
                     o_i = np.exp(h_i) / np.sum(np.exp(h_i), axis=0)
-                    K_i = norm.pdf(y_i[idx], self.kernel_means, self.kernel_stds)
+                    K_i = norm.pdf(y_i[idx], self.kernel_means[idx], self.kernel_stds[idx])
                     p_i = K_i * np.exp(h_i) / np.sum(K_i * np.exp(h_i), axis=0)
 #                    p_i = K_i*o_i/np.sum(K_i*o_i, axis=0)
                     self.L_i = self.L_i - np.log(np.sum(o_i * K_i, axis=0))
@@ -242,9 +242,6 @@ class Layer:
                 self.o_i = np.concatenate(self.o_i)
                 self.p_i = np.concatenate(self.p_i)
 
-            elif self.loss == 'custom':
-                alpha = 0.95
-                self.L_i = (1.0 - alpha) * (y_i - h)**2 + alpha * (h + self.udv)**2
             else:
                 print('Cannot compute loss: unknown loss and/or activation function')
                 import sys
@@ -299,11 +296,11 @@ class Layer:
                 # (see eq. 3.22 of Aggarwal book)
                 self.delta_ho = self.o_i - y_i
 
-            elif self.loss == 'kvm' and self.n_softmax == 0:
+            elif self.loss == 'kernel_mixture' and self.n_softmax == 0:
 
                 self.delta_ho = -self.kernels / self.sum_kernels_w + 1.0 / self.sum_w
 
-            elif self.loss == 'kvm' and self.n_softmax > 0:
+            elif self.loss == 'kernel_mixture' and self.n_softmax > 0:
 
                 #                self.delta_ho = self.o_i*(1.0 - self.kernels/self.sum_kernels_Pr)
                 self.delta_ho = self.o_i - self.p_i
