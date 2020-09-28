@@ -235,7 +235,7 @@ ax.legend(loc=1)
 
 burn = 500
 
-post_proc = es.methods.Post_Processing()
+post_proc = es.analysis.BaseAnalysis()
 
 # store results
 if store:
@@ -247,7 +247,8 @@ if store:
         print('Saving', q)
         samples[q] = eval(q)[burn:, :]
 
-    post_proc.store_samples_hdf5(samples)
+    campaign = es.Campaign()
+    campaign.store_data_to_hdf5(samples)
 
 # if True make a movie of the solution, if not just plot final solution
 if make_movie:
@@ -270,11 +271,6 @@ if make_movie:
 else:
     ax.plot(theta, np.append(X_data[-1, :], X_data[-1, 0]), label='X')
     ax.plot(theta_Y, np.append(Y_data[-1, :].flatten(), Y_data[-1, 0, 0]), label='Y')
-
-# plot X_k vs B_k
-fig = plt.figure()
-burn = 500
-plt.plot(X_data[burn:, 0], B_data[burn:, 0], '.')
 
 #############
 # Plot PDEs #
