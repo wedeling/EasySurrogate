@@ -7,3 +7,4 @@ from .Feature_Engineering import Feature_Engineering
 from .ccm_surrogate import CCM_Surrogate
 from .qsn_surrogate import QSN_Surrogate
 from .reduced_surrogate import Reduced_Surrogate
+from .ann_surrogate import ANN_Surrogate
