@@ -133,7 +133,7 @@ class ANN_Surrogate(Campaign):
         # feed forward prediction step
         y = self.surrogate.feed_forward(feat.reshape([1, self.surrogate.n_in])).flatten()
         # transform y back to physical domain
-        y = y * self.output_std + self.output_std
+        y = y * self.output_std + self.output_mean
 
         return y
 
