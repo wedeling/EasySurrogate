@@ -3,8 +3,6 @@
 CLASS FOR A ARTIFICIAL NEURAL NETWORK
 ------------------------------------------------------------------------------
 Author: W. Edeling
-Source: Resampling with neural networks for stochastic parameterization in multiscale systems
-arXiv preprint arXiv:2004.01457
 ==============================================================================
 """
 from itertools import chain
