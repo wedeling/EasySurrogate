@@ -24,6 +24,8 @@ python3 setup.py install --user
 
 + Reduced surrogates: a data compression technique used to reduce the size of the training data down by several order of magnitude, while retaining accuracy for spatially integrated quantities of interest. The corresponding article can be found [here](https://www.sciencedirect.com/science/article/pii/S0045793020300438?casa_token=opUTwCki7QIAAAAA:GwBFszrT7xF-yV5LDSUzcVZK45pA3cDSCj-tDoHgKGNS8YtpREVNXRFpsJapA84-sSIlob61ZZue). This has only been tested on problems with 2 spatial dimensions. Will be generalized in a subsequent release. 
 
++ Standard artificial neural networks, used for regression with (time-lagged) features.
+
 More surrogate methods will be added shortly, amongst others [Kernel Mixture Networks](https://arxiv.org/abs/1705.07111).
 
 ## Tutorials

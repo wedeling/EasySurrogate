@@ -1,5 +1,5 @@
-tests/saved_neural_nets
 tests/samples
+tests/gray_scott_reduced/samples
 easysurrogate.egg-info
 build/
 dist/
