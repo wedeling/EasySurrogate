@@ -6,5 +6,6 @@ from .Feature_Engineering import Feature_Engineering
 #from .Input_Layer import Input_Layer
 from .ccm_surrogate import CCM_Surrogate
 from .qsn_surrogate import QSN_Surrogate
+from .kmn_surrogate import KMN_Surrogate
 from .reduced_surrogate import Reduced_Surrogate
 from .ann_surrogate import ANN_Surrogate
