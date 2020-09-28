@@ -19,7 +19,7 @@ surrogate = es.methods.ANN_Surrogate()
 lags = [[1, 10]]
 
 # train the surrogate on the data
-n_iter = 5000
+n_iter = 10000
 surrogate.train([features], target, lags, n_iter, n_layers=4, n_neurons=256,
                 batch_size=512)
 
