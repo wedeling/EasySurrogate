@@ -12,7 +12,7 @@ data_frame = campaign.load_hdf5_data()
 features = data_frame['X_data']
 target = data_frame['B_data']
 
-# create (time-lagged) ANN surrogate
+# create a (time-lagged) ANN surrogate
 surrogate = es.methods.ANN_Surrogate()
 
 # create time-lagged features
