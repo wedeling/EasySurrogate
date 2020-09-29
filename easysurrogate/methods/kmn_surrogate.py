@@ -11,6 +11,7 @@ Source: Luca Ambrogioni et al, The Kernel Mixture Network:
 
 from itertools import chain, product
 import numpy as np
+from scipy.stats import norm
 # import h5py
 from ..campaign import Campaign
 import easysurrogate as es
@@ -69,11 +70,11 @@ class KMN_Surrogate(Campaign):
             kernel_stds = kernel_means.reshape([1, kernel_stds.size])
 
         # number of softmax layers (one per output)
-        n_softmax = kernel_means.shape[0]
+        self.n_softmax = kernel_means.shape[0]
 
         #create all possible combinations of the specified kernel means and std devs
         self.kernel_means = []; self.kernel_stds = []
-        for i in range(n_softmax):
+        for i in range(self.n_softmax):
             combi = np.array(list(chain(product(kernel_means[i], kernel_stds[i]))))
             self.kernel_means.append(combi[:, 0].reshape([-1, 1]))
             self.kernel_stds.append(combi[:, 1].reshape([-1, 1]))
@@ -107,12 +108,12 @@ class KMN_Surrogate(Campaign):
         print('done')
 
         # number of output neurons
-        n_out = self.n_bins * n_softmax
+        n_out = self.n_bins * self.n_softmax
 
         # create the feed-forward QSN
         self.surrogate = es.methods.ANN(X=X_train, y=y_train,
                                         n_layers=n_layers, n_neurons=n_neurons,
-                                        n_softmax=n_softmax, n_out=n_out,
+                                        n_softmax=self.n_softmax, n_out=n_out,
                                         loss='kernel_mixture',
                                         activation=activation, batch_size=batch_size,
                                         lamb=lamb, decay_step=10**4, decay_rate=0.9,
@@ -128,6 +129,10 @@ class KMN_Surrogate(Campaign):
         self.surrogate.train(n_iter, store_loss=True)
         self.set_feature_stats()
         self.init_feature_history(feats)
+        #flatten the kernel properties into a single vector (size=#output neurons), 
+        #used in predict subroutine
+        self.kernel_means_flat = np.concatenate(self.kernel_means)
+        self.kernel_stds_flat = np.concatenate(self.kernel_stds)
 
     def predict(self, X):
         """
@@ -136,7 +141,7 @@ class KMN_Surrogate(Campaign):
 
         Parameters
         ----------
-        X: the state at the current (time) step. If the QSN is conditioned on
+        X: the state at the current (time) step. If the KMN is conditioned on
         more than 1 (time-lagged) variable, X must be a list containing all
         variables at the current time step.
 
@@ -157,8 +162,9 @@ class KMN_Surrogate(Campaign):
         # o_i = the probability mass function at the output layer
         # max_idx = the bin index with the highest probability
         o_i, max_idx, _ = self.surrogate.get_softmax(feat.reshape([1, self.surrogate.n_in]))
-        # resample a value from the selected bin
-        return self.sampler.resample(max_idx)
+        #return random sample from the conditional kernel density estimate
+        #TODO: implement rvs from softmax layer
+        return norm.rvs(self.kernel_means_flat[max_idx], self.kernel_stds_flat[max_idx]).flatten()
 
     def save_state(self):
         """
