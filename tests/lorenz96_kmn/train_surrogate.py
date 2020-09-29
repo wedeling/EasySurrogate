@@ -3,7 +3,7 @@ import numpy as np
 import easysurrogate as es
 
 # create EasySurrogate campaign
-campaign = es.Campaign()
+campaign = es.Campaign(load_state=False)
 
 # load HDF5 data frame
 data_frame = campaign.load_hdf5_data()
@@ -12,7 +12,7 @@ data_frame = campaign.load_hdf5_data()
 features = data_frame['X_data']
 target = data_frame['B_data']
 
-# create Quantized Softmax Network surrogate
+# create Kernel Mixture Network surrogate
 surrogate = es.methods.KMN_Surrogate()
 
 # create time-lagged features
@@ -21,7 +21,7 @@ lags = [[1, 10]]
 #create the KDE anchor points and standard deviations
 #NOTE: could proba move this inside the surrogate class? although stds are hard to estmate
 #would have t use a standard bandwidth estimator
-n_means = 10; n_stds = 3
+n_means = 15; n_stds = 3
 n_out = target.shape[1]
 kernel_means = np.zeros([n_out, n_means])
 kernel_stds = np.zeros([n_out, n_stds])
@@ -39,6 +39,6 @@ surrogate.train([features], target, lags, n_iter,
 campaign.add_app(name='test_campaign', surrogate=surrogate)
 campaign.save_state()
 
-# # QSN analysis object
-# analysis = es.analysis.QSN_analysis(surrogate)
-# analysis.get_classification_error(features[0:1000], target[0:1000])
+# KMN analysis object
+analysis = es.analysis.KMN_analysis(campaign.surrogate)
+analysis.make_movie()
