@@ -5,11 +5,11 @@ import easysurrogate as es
 
 home = os.path.abspath(os.path.dirname(__file__))
 
-#load the campaign
+# load the campaign
 campaign = es.Campaign(load_state=True)
-#load the training data (from lorenz96.py)
+# load the training data (from lorenz96.py)
 data_frame_ref = campaign.load_hdf5_data()
-#load the data from lorenz96_qsn.py here
+# load the data from lorenz96_qsn.py here
 data_frame_qsn = campaign.load_hdf5_data()
 
 # load reference data

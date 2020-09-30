@@ -3,8 +3,8 @@
 CLASS FOR A KERNEL MIXTURE NETWORK
 ------------------------------------------------------------------------------
 Author: W. Edeling
-Source: Luca Ambrogioni et al, The Kernel Mixture Network: 
-        A Nonparametric Method for Conditional Density Estimation of 
+Source: Luca Ambrogioni et al, The Kernel Mixture Network:
+        A Nonparametric Method for Conditional Density Estimation of
         Continuous Random Variables, 2017.
 ==============================================================================
 """
@@ -64,7 +64,7 @@ class KMN_Surrogate(Campaign):
 
         self.lags = lags
         self.max_lag = np.max(list(chain(*self.lags)))
-        
+
         if kernel_means.ndim == 1:
             kernel_means = kernel_means.reshape([1, kernel_means.size])
             kernel_stds = kernel_means.reshape([1, kernel_stds.size])
@@ -72,14 +72,15 @@ class KMN_Surrogate(Campaign):
         # number of softmax layers (one per output)
         self.n_softmax = kernel_means.shape[0]
 
-        #create all possible combinations of the specified kernel means and std devs
-        self.kernel_means = []; self.kernel_stds = []
+        # create all possible combinations of the specified kernel means and std devs
+        self.kernel_means = []
+        self.kernel_stds = []
         for i in range(self.n_softmax):
             combi = np.array(list(chain(product(kernel_means[i], kernel_stds[i]))))
             self.kernel_means.append(combi[:, 0].reshape([-1, 1]))
             self.kernel_stds.append(combi[:, 1].reshape([-1, 1]))
 
-        #size of a single softmax layer
+        # size of a single softmax layer
         self.n_bins = self.kernel_means[0].size
 
         # Feature engineering object
@@ -119,8 +120,8 @@ class KMN_Surrogate(Campaign):
                                         lamb=lamb, decay_step=10**4, decay_rate=0.9,
                                         standardize_X=True, standardize_y=False,
                                         save=False,
-                                        kernel_means = self.kernel_means, 
-                                        kernel_stds = self.kernel_stds)
+                                        kernel_means=self.kernel_means,
+                                        kernel_stds=self.kernel_stds)
 
         print('===============================')
         print('Training Kernel Mixture Network...')
@@ -129,8 +130,8 @@ class KMN_Surrogate(Campaign):
         self.surrogate.train(n_iter, store_loss=True)
         self.set_feature_stats()
         self.init_feature_history(feats)
-        #flatten the kernel properties into a single vector (size=#output neurons), 
-        #used in predict subroutine
+        # flatten the kernel properties into a single vector (size=#output neurons),
+        # used in predict subroutine
         self.kernel_means_flat = np.concatenate(self.kernel_means)
         self.kernel_stds_flat = np.concatenate(self.kernel_stds)
 
@@ -162,8 +163,8 @@ class KMN_Surrogate(Campaign):
         # o_i = the probability mass function at the output layer
         # max_idx = the bin index with the highest probability
         o_i, max_idx, _ = self.surrogate.get_softmax(feat.reshape([1, self.surrogate.n_in]))
-        #return random sample from the conditional kernel density estimate
-        #TODO: implement rvs from softmax layer
+        # return random sample from the conditional kernel density estimate
+        # TODO: implement rvs from softmax layer
         return norm.rvs(self.kernel_means_flat[max_idx], self.kernel_stds_flat[max_idx]).flatten()
 
     def save_state(self):
