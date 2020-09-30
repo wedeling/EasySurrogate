@@ -4,7 +4,7 @@ A 2D Gray-Scott reaction diffusion model.
 Numerical method:
 Craster & Sassi, spectral algorithmns for reaction-diffusion equations, 2006.
 
-This script is used to generate the training data for the reduced 
+This script is used to generate the training data for the reduced
 subgrid-scale model
 """
 
@@ -395,7 +395,7 @@ for n in range(n_steps):
         # print('energy_HF v = %.4f' % (Q_HF[1],))
         # print('=========================================')
 
-        for i in range(2*N_Q):
+        for i in range(2 * N_Q):
             plot_dict_HF[i].append(Q_HF[i])
 
         T.append(t)

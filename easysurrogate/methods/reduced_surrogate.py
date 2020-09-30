@@ -128,9 +128,9 @@ class Reduced_Surrogate(Campaign):
             # compute reduced soure term
             sgs_hat -= tau_i * P_hat_i
 
-        reduced_dict = {'sgs_hat':sgs_hat, 'c_ij':c_ij, 
-                        'inner_prods':np.triu(inner_prods),
-                        'src_Q':src_Q, 'tau':tau}
+        reduced_dict = {'sgs_hat': sgs_hat, 'c_ij': c_ij,
+                        'inner_prods': np.triu(inner_prods),
+                        'src_Q': src_Q, 'tau': tau}
 
         return reduced_dict
 

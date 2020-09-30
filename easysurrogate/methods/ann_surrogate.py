@@ -160,7 +160,7 @@ class ANN_Surrogate(Campaign):
         if hasattr(self.surrogate, 'X_mean'):
             self.feat_mean = self.surrogate.X_mean
             self.feat_std = self.surrogate.X_std
-            
+
         if hasattr(self.surrogate, 'y_mean'):
             self.output_mean = self.surrogate.y_mean
             self.output_std = self.surrogate.y_std

@@ -122,7 +122,7 @@ class Campaign:
         ----------
         data : dict
             The key-worded data that is accumulated over a number of (time) steps.
-        kwargs : keyword arguments 
+        kwargs : keyword arguments
             If kwargs contains 'names', which is a list of keyword names, then
             the data is stored under the specified names rather than the names
             given by data.keys().
@@ -136,7 +136,7 @@ class Campaign:
         if not isinstance(data, dict):
             print('Data must be stored in a dict.')
             return
-        
+
         if 'names' in kwargs:
             names = kwargs['names']
         else:
