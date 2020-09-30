@@ -1,5 +1,6 @@
 tests/samples
 tests/gray_scott_reduced/samples
+tests/lorenz96_kmn/kvm.gif
 easysurrogate.egg-info
 build/
 dist/
