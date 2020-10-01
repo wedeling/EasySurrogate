@@ -18,37 +18,37 @@ import tkinter as tk
 from tkinter import filedialog
 import os
 import matplotlib.pyplot as plt
+import logging
+
+# def draw():
+#     """
+#     simple plotting routine
+#     """
+#     plt.clf()
+
+#     ax1 = fig.add_subplot(221)
+#     ax2 = fig.add_subplot(222)
+#     ax3 = fig.add_subplot(223)
+#     ax4 = fig.add_subplot(224)
+
+#     # ct = ax1.contourf(xx, yy, u, 100)
+#     # ct = ax2.contourf(xx, yy, v, 100)
+
+#     ax1.plot(T, plot_dict_HF[0], label='HF')
+#     ax1.legend(loc=0)
+#     ax2.plot(T, plot_dict_HF[1], label='HF')
+#     ax2.legend(loc=0)
+#     ax3.plot(T, plot_dict_HF[2], label='HF')
+#     ax3.legend(loc=0)
+#     ax4.plot(T, plot_dict_HF[3], label='HF')
+#     ax4.legend(loc=0)
+
+#     plt.tight_layout()
+
+#     plt.pause(0.1)
 
 
-def draw():
-    """
-    simple plotting routine
-    """
-    plt.clf()
-
-    ax1 = fig.add_subplot(221)
-    ax2 = fig.add_subplot(222)
-    ax3 = fig.add_subplot(223)
-    ax4 = fig.add_subplot(224)
-
-    # ct = ax1.contourf(xx, yy, u, 100)
-    # ct = ax2.contourf(xx, yy, v, 100)
-
-    ax1.plot(T, plot_dict_HF[0], label='HF')
-    ax1.legend(loc=0)
-    ax2.plot(T, plot_dict_HF[1], label='HF')
-    ax2.legend(loc=0)
-    ax3.plot(T, plot_dict_HF[2], label='HF')
-    ax3.legend(loc=0)
-    ax4.plot(T, plot_dict_HF[3], label='HF')
-    ax4.legend(loc=0)
-
-    plt.tight_layout()
-
-    plt.pause(0.1)
-
-
-def get_grid(N):
+def get_grid(N, L):
     """
     Generate an equidistant N x N square grid
 
@@ -67,7 +67,7 @@ def get_grid(N):
     return xx, yy
 
 
-def get_derivative_operator(N):
+def get_derivative_operator(N, L):
     """
     Get the spectral operators used to compute the spatial dervatives in
     x and y direction
@@ -132,7 +132,7 @@ def initial_cond(xx, yy):
     return u_hat, v_hat
 
 
-def integrating_factors(k_squared):
+def integrating_factors(k_squared, dt):
     """
     Compute the integrating factors used in the RK4 time stepping
 
@@ -145,6 +145,10 @@ def integrating_factors(k_squared):
     The integrating factors for u and v
 
     """
+
+    # diffusion coefficients
+    epsilon_u = 2e-5
+    epsilon_v = 1e-5
 
     int_fac_u = np.exp(epsilon_u * k_squared * dt / 2)
     int_fac_u2 = np.exp(epsilon_u * k_squared * dt)
@@ -169,6 +173,10 @@ def rhs_hat(u_hat, v_hat, **kwargs):
 
     """
 
+    # alpha pattern
+    feed = 0.02
+    kill = 0.05
+
     u = np.fft.ifft2(u_hat)
     v = np.fft.ifft2(v_hat)
 
@@ -181,7 +189,7 @@ def rhs_hat(u_hat, v_hat, **kwargs):
     return f_hat, g_hat
 
 
-def rk4(u_hat, v_hat, int_fac_u, int_fac_u2, int_fac_v, int_fac_v2, **kwargs):
+def rk4(u_hat, v_hat, int_fac_u, int_fac_u2, int_fac_v, int_fac_v2, dt, **kwargs):
     """
     Runge-Kutta 4 time-stepping subroutine
 
@@ -227,29 +235,29 @@ def rk4(u_hat, v_hat, int_fac_u, int_fac_u2, int_fac_v, int_fac_v2, **kwargs):
                                           l_hat_4)
     return u_hat, v_hat
 
-# store samples in hierarchical data format, when sample size become very large
-def store_samples_hdf5():
+# # store samples in hierarchical data format, when sample size become very large
+# def store_samples_hdf5():
 
-    root = tk.Tk()
-    root.withdraw()
-    fname = filedialog.asksaveasfilename(initialdir=HOME,
-                                         title="Save HFD5 file",
-                                         filetypes=(('HDF5 files', '*.hdf5'),
-                                                    ('All files', '*.*')))
+#     root = tk.Tk()
+#     root.withdraw()
+#     fname = filedialog.asksaveasfilename(initialdir=HOME,
+#                                          title="Save HFD5 file",
+#                                          filetypes=(('HDF5 files', '*.hdf5'),
+#                                                     ('All files', '*.*')))
 
-    print('Storing samples in ', fname)
+#     print('Storing samples in ', fname)
 
-    if os.path.exists(HOME + '/samples') == False:
-        os.makedirs(HOME + '/samples')
+#     if os.path.exists(HOME + '/samples') == False:
+#         os.makedirs(HOME + '/samples')
 
-    # create HDF5 file
-    h5f_store = h5py.File(fname, 'w')
+#     # create HDF5 file
+#     h5f_store = h5py.File(fname, 'w')
 
-    # store numpy sample arrays as individual datasets in the hdf5 file
-    for q in QoI:
-        h5f_store.create_dataset(q, data=samples[q])
+#     # store numpy sample arrays as individual datasets in the hdf5 file
+#     for q in QoI:
+#         h5f_store.create_dataset(q, data=samples[q])
 
-    h5f_store.close()
+#     h5f_store.close()
 
 
 def compute_int(X1_hat, X2_hat, N):
@@ -259,211 +267,211 @@ def compute_int(X1_hat, X2_hat, N):
     integral = np.dot(X1_hat.flatten(), np.conjugate(X2_hat.flatten())) / N**4
     return integral.real
 
-
-plt.close('all')
-plt.rcParams['image.cmap'] = 'seismic'
-HOME = os.path.abspath(os.path.dirname(__file__))
-
-# number of gridpoints in 1D
-I = 7
-N = 2**I
-
-# number of time series to track
-N_Q = 2
-
-# domain size [-L, L]
-L = 1.25
-
-# user flags
-plot = True
-store = True
-state_store = True
-restart = False
-
-sim_ID = 'test_gray_scott'
-
-if plot:
-    fig = plt.figure(figsize=[8, 8])
-    plot_dict_HF = {}
-    T = []
-    for i in range(2 * N_Q):
-        plot_dict_HF[i] = []
-
-# TRAINING DATA SET
-QoI = ['Q_HF']
-Q = len(QoI)
-
-# allocate memory
-samples = {}
-
-if store:
-    samples['N'] = N
-
-    for q in range(Q):
-        samples[QoI[q]] = []
-
-# 2D grid, scaled by L
-xx, yy = get_grid(N)
-
-# spatial derivative operators
-kx, ky = get_derivative_operator(N)
-
-# Laplace operator
-k_squared = kx**2 + ky**2
-
-# diffusion coefficients
-epsilon_u = 2e-5
-epsilon_v = 1e-5
-
-# alpha pattern
-feed = 0.02
-kill = 0.05
-
-# beta pattern
-# feed = 0.02
-# kill = 0.045
-
-# epsilon pattern
-# feed = 0.02
-# kill = 0.055
-
-# time step parameters
-dt = 0.1
-n_steps = 100000
-plot_frame_rate = 100
-store_frame_rate = 1
-t = 0.0
-
-# Initial condition
-if restart:
-
-    fname = HOME + '/restart/' + sim_ID + '_t_' + str(np.around(t, 1)) + '.hdf5'
-
-    # if fname does not exist, select restart file via GUI
-    if os.path.exists(fname) == False:
-        root = tk.Tk()
-        root.withdraw()
-        fname = filedialog.askopenfilename(initialdir=HOME + '/restart',
-                                           title="Open restart file",
-                                           filetypes=(('HDF5 files', '*.hdf5'),
-                                                      ('All files', '*.*')))
-
-    # create HDF5 file
+def lse():
+    
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+    # plt.close('all')
+    # plt.rcParams['image.cmap'] = 'seismic'
+    HOME = os.path.abspath(os.path.dirname(__file__))
+    
+    # number of gridpoints in 1D
+    I = 7
+    N = 2**I
+    
+    # number of time series to track
+    N_Q = 2
+    
+    # domain size [-L, L]
+    L = 1.25
+    
+    # user flags
+    plot = True
+    store = False
+    state_store = True
+    restart = False
+    
+    sim_ID = 'test_gray_scott'
+    
+    # if plot:
+    #     fig = plt.figure(figsize=[8, 8])
+    #     plot_dict_HF = {}
+    #     T = []
+    #     for i in range(2 * N_Q):
+    #         plot_dict_HF[i] = []
+    
+    # TRAINING DATA SET
+    QoI = ['Q_HF']
+    Q = len(QoI)
+    
+    # allocate memory
+    samples = {}
+    
+    if store:
+        samples['N'] = N
+    
+        for q in range(Q):
+            samples[QoI[q]] = []
+    
+    # 2D grid, scaled by L
+    xx, yy = get_grid(N, L)
+    
+    # spatial derivative operators
+    kx, ky = get_derivative_operator(N, L)
+    
+    # Laplace operator
+    k_squared = kx**2 + ky**2
+    
+    # beta pattern
+    # feed = 0.02
+    # kill = 0.045
+    
+    # epsilon pattern
+    # feed = 0.02
+    # kill = 0.055
+    
+    # time step parameters
+    dt = 0.1
+    n_steps = 10
+    plot_frame_rate = 100
+    store_frame_rate = 1
+    t = 0.0
+    
+    # Initial condition
+    if restart:
+    
+        fname = HOME + '/restart/' + sim_ID + '_t_' + str(np.around(t, 1)) + '.hdf5'
+    
+        # if fname does not exist, select restart file via GUI
+        if os.path.exists(fname) == False:
+            root = tk.Tk()
+            root.withdraw()
+            fname = filedialog.askopenfilename(initialdir=HOME + '/restart',
+                                               title="Open restart file",
+                                               filetypes=(('HDF5 files', '*.hdf5'),
+                                                          ('All files', '*.*')))
+    
+        # create HDF5 file
+        h5f = h5py.File(fname, 'r')
+    
+        for key in h5f.keys():
+            print(key)
+            vars()[key] = h5f[key][:]
+    
+        h5f.close()
+    else:
+        u_hat, v_hat = initial_cond(xx, yy)
+    
+    # Integrating factors
+    int_fac_u, int_fac_u2, int_fac_v, int_fac_v2 = integrating_factors(k_squared, dt)
+    
+    # counters
+    j = 0
+    j2 = 0
+    
+    V_hat_1 = np.fft.fft2(np.ones([N, N]))
+    
+    t0 = time.time()
+    
+    # root = tk.Tk()
+    # root.withdraw()
+    # fname = tk.filedialog.askopenfilename(title="Open reference data file")
+    fname = os.path.join(HOME, 'samples/gray_scott_reference.hdf5')
     h5f = h5py.File(fname, 'r')
+    ref_data = h5f['Q_HF'][()]
 
-    for key in h5f.keys():
-        print(key)
-        vars()[key] = h5f[key][:]
 
-    h5f.close()
-else:
-    u_hat, v_hat = initial_cond(xx, yy)
-
-# Integrating factors
-int_fac_u, int_fac_u2, int_fac_v, int_fac_v2 = integrating_factors(k_squared)
-
-# counters
-j = 0
-j2 = 0
-
-V_hat_1 = np.fft.fft2(np.ones([N, N]))
-
-t0 = time.time()
-
-root = tk.Tk()
-root.withdraw()
-fname = tk.filedialog.askopenfilename(title="Open reference data file")
-h5f = h5py.File(fname, 'r')
-ref_data = h5f['Q_HF'][()]
-
-instance = Instance({
-    Operator.O_I: ['state_out'],
-    Operator.S: ['state_in']})
-
-while instance.reuse_instance():
-    # time stepping
-    for n in range(n_steps):
-
-        # compute reference stats
-        Q_HF = np.zeros(2 * N_Q)
-        Q_HF[0] = compute_int(V_hat_1, u_hat, N)
-        Q_HF[1] = 0.5 * compute_int(u_hat, u_hat, N)
-        Q_HF[2] = compute_int(V_hat_1, v_hat, N)
-        Q_HF[3] = 0.5 * compute_int(v_hat, v_hat, N)
+    instance = Instance({
+        Operator.O_I: ['state_out'],
+        Operator.S: ['state_in']})
+    
+    while instance.reuse_instance():
+        # time stepping
+        for n in range(n_steps):
+    
+            # compute reference stats
+            Q_HF = np.zeros(2 * N_Q)
+            Q_HF[0] = compute_int(V_hat_1, u_hat, N)
+            Q_HF[1] = 0.5 * compute_int(u_hat, u_hat, N)
+            Q_HF[2] = compute_int(V_hat_1, v_hat, N)
+            Q_HF[3] = 0.5 * compute_int(v_hat, v_hat, N)
+            
+            #O_I
+            t_cur = n*dt
+            t_next = t_cur + dt
+            if n == n_steps - 1:
+                t_next = None
+            cur_state = Message(t_cur, t_next, {'V_hat_1':V_hat_1, 'u_hat':u_hat, 'v_hat':v_hat,
+                                                'Q_ref': ref_data[n], 'Q_model': Q_HF})
+            instance.send('state_out', cur_state)
+    
+            msg = instance.receive('state_in')
+            reduced_sgs_u = msg['reduced_sgs_u']
+            reduced_sgs_v = msg['reduced_sgs_v']
+            
+            logging.debug(reduced_sgs_u)
+    
+            if np.mod(n, 1000) == 0:
+                print('time step %d of %d' % (n, n_steps))
         
-        #O_I
-        t_cur = n*dt
-        t_next = t_cur + dt
-        if n == n_steps - 1:
-            t_next = None
-        cur_state = Message(t_cur, t_next, {'V_hat_1':V_hat_1, 'u_hat':u_hat, 'v_hat':v_hat,
-                                            'Q_ref': ref_data[n], 'Q_model': Q_HF})
-        instance.send('state_out', cur_state)
-
-        msg = instance.receive('state_in')
-        reduced_sgs_u = msg['reduced_sgs_u']
-        reduced_sgs_v = msg['reduced_sgs_v']
+            u_hat, v_hat = rk4(u_hat, v_hat, int_fac_u, int_fac_u2, int_fac_v, int_fac_v2, dt)
         
-        print(reduced_sgs_u)
-
-        if np.mod(n, 1000) == 0:
-            print('time step %d of %d' % (n, n_steps))
+            j += 1
+            j2 += 1
+            t += dt
+            # # plot while running simulation
+            # if j == plot_frame_rate and plot:
+            #     j = 0
+            #     u = np.fft.ifft2(u_hat)
+            #     v = np.fft.ifft2(v_hat)
+        
+            #     # print('energy_HF u = %.4f' % (Q_HF[0],))
+            #     # print('energy_HF v = %.4f' % (Q_HF[1],))
+            #     # print('=========================================')
+        
+            #     for i in range(2 * N_Q):
+            #         plot_dict_HF[i].append(Q_HF[i])
+        
+            #     T.append(t)
+        
+            #     draw()
+        
+            if j2 == store_frame_rate and store:
+                j2 = 0
+        
+                for qoi in QoI:
+                    samples[qoi].append(eval(qoi))
     
-        u_hat, v_hat = rk4(u_hat, v_hat, int_fac_u, int_fac_u2, int_fac_v, int_fac_v2)
+    t1 = time.time()
+    print('*************************************')
+    print('Simulation time = %f [s]' % (t1 - t0))
+    print('*************************************')
     
-        j += 1
-        j2 += 1
-        t += dt
-        # plot while running simulation
-        if j == plot_frame_rate and plot:
-            j = 0
-            u = np.fft.ifft2(u_hat)
-            v = np.fft.ifft2(v_hat)
+    # # store the state of the system to allow for a simulation restart at t > 0
+    # if state_store:
     
-            # print('energy_HF u = %.4f' % (Q_HF[0],))
-            # print('energy_HF v = %.4f' % (Q_HF[1],))
-            # print('=========================================')
+    #     keys = ['u_hat', 'v_hat']
     
-            for i in range(2 * N_Q):
-                plot_dict_HF[i].append(Q_HF[i])
+    #     if os.path.exists(HOME + '/restart') == False:
+    #         os.makedirs(HOME + '/restart')
     
-            T.append(t)
+    #     fname = HOME + '/restart/' + sim_ID + '_t_' + str(np.around(t, 1)) + '.hdf5'
     
-            draw()
+    #     # create HDF5 file
+    #     h5f = h5py.File(fname, 'w')
     
-        if j2 == store_frame_rate and store:
-            j2 = 0
+    #     # store numpy sample arrays as individual datasets in the hdf5 file
+    #     for key in keys:
+    #         qoi = eval(key)
+    #         h5f.create_dataset(key, data=qoi)
     
-            for qoi in QoI:
-                samples[qoi].append(eval(qoi))
+    #     h5f.close()
+        
+    #     # store the samples
+    #     if store:
+    #         store_samples_hdf5()
+        
+    #     plt.show()
 
-t1 = time.time()
-print('*************************************')
-print('Simulation time = %f [s]' % (t1 - t0))
-print('*************************************')
-
-# store the state of the system to allow for a simulation restart at t > 0
-if state_store:
-
-    keys = ['u_hat', 'v_hat']
-
-    if os.path.exists(HOME + '/restart') == False:
-        os.makedirs(HOME + '/restart')
-
-    fname = HOME + '/restart/' + sim_ID + '_t_' + str(np.around(t, 1)) + '.hdf5'
-
-    # create HDF5 file
-    h5f = h5py.File(fname, 'w')
-
-    # store numpy sample arrays as individual datasets in the hdf5 file
-    for key in keys:
-        qoi = eval(key)
-        h5f.create_dataset(key, data=qoi)
-
-    h5f.close()
-
-# store the samples
-if store:
-    store_samples_hdf5()
-
-plt.show()
+if __name__ =='__main__':
+    lse()
