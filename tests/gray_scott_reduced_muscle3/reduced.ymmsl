@@ -3,8 +3,8 @@ ymmsl_version:  v0.1
 model:
     name: gray_scott_reduced
     compute_elements:
-        macro: lse
-        micro: sse
+        macro: macro
+        micro: micro
     conduits:
         macro.state_out: micro.state
         micro.sgs: macro.state_in
@@ -12,4 +12,7 @@ model:
 settings:
     micro.t_max: 0.1
     micro.dt: 0.1
+    N_Q: 2
+    feed: 0.02
+    kill: 0.05
     muscle_remote_log_level: 'DEBUG'
