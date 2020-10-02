@@ -13,6 +13,7 @@ settings:
     micro.t_max: 0.1
     micro.dt: 0.1
     N_Q: 2
+    N_LF: 128
     feed: 0.02
     kill: 0.05
     muscle_remote_log_level: 'DEBUG'
