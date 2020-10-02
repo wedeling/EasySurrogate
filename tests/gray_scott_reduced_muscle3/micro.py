@@ -1,4 +1,3 @@
-#I had to manually install ruamel.yaml to get these import to work
 from libmuscle import Instance, Message
 from ymmsl import Operator
 

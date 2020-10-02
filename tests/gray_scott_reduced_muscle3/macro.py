@@ -191,7 +191,7 @@ def rhs_hat(u_hat, v_hat, **kwargs):
 
     ###########################
     # End MUSCLE modification #
-    ###########################
+    #######################
 
     f_hat = np.fft.fft2(f)
     g_hat = np.fft.fft2(g)
@@ -280,130 +280,128 @@ def compute_int(X1_hat, X2_hat, N):
     return integral.real
 
 
-plt.close('all')
-plt.rcParams['image.cmap'] = 'seismic'
-HOME = os.path.abspath(os.path.dirname(__file__))
-
-# number of gridpoints in 1D
-I = 7
-N = 2**I
-
-# number of time series to track
-N_Q = 2
-
-# domain size [-L, L]
-L = 1.25
-
-# user flags
-plot = True
-store = True
-state_store = True
-restart = False
-
-sim_ID = 'test_gray_scott'
-
-if plot:
-    fig = plt.figure(figsize=[8, 8])
-    plot_dict_model = {}
-    plot_dict_ref = {}
-    T = []
-    for i in range(2 * N_Q):
-        plot_dict_model[i] = []
-        plot_dict_ref[i] = []
-
-# TRAINING DATA SET
-QoI = ['Q_HF']
-Q = len(QoI)
-
-# allocate memory
-samples = {}
-
-if store:
-    samples['N'] = N
-
-    for q in range(Q):
-        samples[QoI[q]] = []
-
-# 2D grid, scaled by L
-xx, yy = get_grid(N)
-
-# spatial derivative operators
-kx, ky = get_derivative_operator(N)
-
-# Laplace operator
-k_squared = kx**2 + ky**2
-
-# diffusion coefficients
-epsilon_u = 2e-5
-epsilon_v = 1e-5
-
-# time step parameters
-dt = 0.1
-n_steps = 1000
-plot_frame_rate = 100
-store_frame_rate = 1
-t = 0.0
-
-# Initial condition
-if restart:
-
-    fname = HOME + '/restart/' + sim_ID + '_t_' + str(np.around(t, 1)) + '.hdf5'
-
-    # if fname does not exist, select restart file via GUI
-    if os.path.exists(fname) == False:
-        root = tk.Tk()
-        root.withdraw()
-        fname = filedialog.askopenfilename(initialdir=HOME + '/restart',
-                                           title="Open restart file",
-                                           filetypes=(('HDF5 files', '*.hdf5'),
-                                                      ('All files', '*.*')))
-
-    # create HDF5 file
-    h5f = h5py.File(fname, 'r')
-
-    for key in h5f.keys():
-        print(key)
-        vars()[key] = h5f[key][:]
-
-    h5f.close()
-else:
-    u_hat, v_hat = initial_cond(xx, yy)
-
-# Integrating factors
-int_fac_u, int_fac_u2, int_fac_v, int_fac_v2 = integrating_factors(k_squared)
-
-# counters
-j = 0
-j2 = 0
-
-V_hat_1 = np.fft.fft2(np.ones([N, N]))
-
-t0 = time.time()
-
 #######################
 # MUSCLE modification #
 #######################
-
-#load the reference data for EasySurrogate
-fname = os.path.join(HOME, 'samples/gray_scott_reference.hdf5')
-h5f = h5py.File(fname, 'r')
-ref_data = h5f['Q_HF'][()]
 
 #define the MUSCLE in and out ports
 instance = Instance({
     Operator.O_I: ['state_out'],
     Operator.S: ['state_in']})
 
-###########################
-# End MUSCLE modification #
-###########################
-
-# alpha pattern
-feed = instance.get_setting('feed')
-kill = instance.get_setting('kill')
-
-#wrap the main time loop around a MUSCLE 
 while instance.reuse_instance():
+    plt.close('all')
+    plt.rcParams['image.cmap'] = 'seismic'
+    HOME = os.path.abspath(os.path.dirname(__file__))
+    
+    #load the reference data for EasySurrogate
+    fname = os.path.join(HOME, 'samples/gray_scott_reference.hdf5')
+    h5f = h5py.File(fname, 'r')
+    ref_data = h5f['Q_HF'][()]
+   
+    # alpha pattern
+    feed = instance.get_setting('feed')
+    kill = instance.get_setting('kill')
+ 
+    ###########################
+    # End MUSCLE modification #
+    ###########################
+ 
+    # number of gridpoints in 1D
+    I = 7
+    N = 2**I
+    
+    # number of time series to track
+    N_Q = 2
+    
+    # domain size [-L, L]
+    L = 1.25
+    
+    # user flags
+    plot = True
+    store = True
+    state_store = True
+    restart = False
+    
+    sim_ID = 'test_gray_scott'
+    
+    if plot:
+        fig = plt.figure(figsize=[8, 8])
+        plot_dict_model = {}
+        plot_dict_ref = {}
+        T = []
+        for i in range(2 * N_Q):
+            plot_dict_model[i] = []
+            plot_dict_ref[i] = []
+    
+    # TRAINING DATA SET
+    QoI = ['Q_HF']
+    Q = len(QoI)
+    
+    # allocate memory
+    samples = {}
+    
+    if store:
+        samples['N'] = N
+    
+        for q in range(Q):
+            samples[QoI[q]] = []
+    
+    # 2D grid, scaled by L
+    xx, yy = get_grid(N)
+    
+    # spatial derivative operators
+    kx, ky = get_derivative_operator(N)
+    
+    # Laplace operator
+    k_squared = kx**2 + ky**2
+    
+    # diffusion coefficients
+    epsilon_u = 2e-5
+    epsilon_v = 1e-5
+    
+    # time step parameters
+    dt = 0.1
+    n_steps = 1000
+    plot_frame_rate = 100
+    store_frame_rate = 1
+    t = 0.0
+    
+    # Initial condition
+    if restart:
+    
+        fname = HOME + '/restart/' + sim_ID + '_t_' + str(np.around(t, 1)) + '.hdf5'
+    
+        # if fname does not exist, select restart file via GUI
+        if os.path.exists(fname) == False:
+            root = tk.Tk()
+            root.withdraw()
+            fname = filedialog.askopenfilename(initialdir=HOME + '/restart',
+                                               title="Open restart file",
+                                               filetypes=(('HDF5 files', '*.hdf5'),
+                                                          ('All files', '*.*')))
+    
+        # create HDF5 file
+        h5f = h5py.File(fname, 'r')
+    
+        for key in h5f.keys():
+            print(key)
+            vars()[key] = h5f[key][:]
+    
+        h5f.close()
+    else:
+        u_hat, v_hat = initial_cond(xx, yy)
+    
+    # Integrating factors
+    int_fac_u, int_fac_u2, int_fac_v, int_fac_v2 = integrating_factors(k_squared)
+    
+    # counters
+    j = 0
+    j2 = 0
+    
+    V_hat_1 = np.fft.fft2(np.ones([N, N]))
+    
+    t0 = time.time()
 
     # time stepping
     for n in range(n_steps):
