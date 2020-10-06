@@ -22,7 +22,7 @@ The `tests/lorenz96_kmn` folder constains all required scripts to execute this t
 
 + `tests/lorenz96_kmn/lorenz96.py`: the unmodified solver for the Lorenz 96 system, used to generate the training data.
 + `tests/lorenz96_kmn/train_surrogate.py`: script to train a QSN surrogate on L96 data.
-+ `tests/lorenz96_kmn/lorenz96_qsn.py`: this is the L96 solver again, where the call to the small-scale system is replaced by a call to the KMN surrogate.
++ `tests/lorenz96_kmn/lorenz96_kmn.py`: this is the L96 solver again, where the call to the small-scale system is replaced by a call to the KMN surrogate.
 + `tests/lorenz96_kmn/lorenz96_analysis.py`: the post-processing of the results of `lorenz96_kmn.py`.
 
 Execute these script in the specified order to run the tutorial. Details are given below.
@@ -98,7 +98,7 @@ campaign.save_state()
 
 The `train` method should be supplied with a list of (different) input features, and an array of target data points, in this case an array of `nx18` subgrid-scale data points. Here, `n` is the number of training points. If `test_frac > 0` as above, the specified fraction of the data is withheld as a test set, lowering the value of `n`. Various aspects of the feed-forward neural network are defined here as well, such as the number of layers, the number of neurons per layers, the type of activation function and the minibatch size used in stochastic gradient descent. Other activation options are `tanh`, `hard_tan` and `relu`. After training, the surrogate is added to the campaign and saved to disk.
 
-To get a qualitative idea of the trained KMN surrogate, a movie can be generated where the KMN surrogate is evaluated off-line on the training dataset. 
+To get a qualitative idea of the off-line performance of a KMN surrogate, a movie can be generated where the KMN surrogate is evaluated off-line on the training dataset:
 
 ```python
 # KMN analysis object
@@ -106,13 +106,15 @@ analysis = es.analysis.KMN_analysis(campaign.surrogate)
 analysis.make_movie()
 ```
 
-![alt text](kmn.gif)
+![alt text](kvm.gif)
 
-Left shows the KMN prediction for a single spatial location, alongside the training data point. Right show the corresponding `B_k` time series, for both the stochastic KMN surrogate and the actual time evolution of the training data.
+Left shows the KMN prediction for a single spatial location, alongside the training data point. Right show the corresponding `B_k` time series, for both the stochastic KMN surrogate and the actual time evolution of the training data. It is recommended to have `ffmpeg` installed if `make_movie` is used.
 
 ## Prediction with a KMN surrogate
 
-To predict with a QSN surrogate, the original L96 code must be modified in 2 places, namely in the initial condition (IC) and the call to the micro model. Changing the IC is required due to the time-lagged nature. We use the data at the maximum lag specified as IC, such that we can build a time-lagged vector (also from the data) at the first time step. In `tests/lorenz96_qsn/lorenz96_qsn.py` we find:
+Prediction occurs in exactly the same fashion as with the quantized softmax surrogate (QSN) and the vanilla artificial neural network (ANN). In fact, `tests/lorenz96_kmn/lorenz96_kmn.py` is unmodified compared to `tests/lorenz96_qsn/lorenz96_qsn.py` and `tests/lorenz96_ann/lorenz96_ann.py`.
+
+Hence, to predict with a KMN surrogate, the original L96 code must be modified in 2 places, namely in the initial condition (IC) and the call to the micro model. Changing the IC is required due to the time-lagged nature. We use the data at the maximum lag specified as IC, such that we can build a time-lagged vector (also from the data) at the first time step. In `tests/lorenz96_kmn/lorenz96_qsn.py` we find:
 
 ```python
 ##############################
@@ -134,7 +136,7 @@ f_nm1 = rhs_X(X_n, B_n)
 ##################################
 ```
 Here, `campaign = es.Campaign(load_state=True)` loads the pre-trained QSN surrogate from `tests/lorenz96_qsn/train_surrogate.py`, and we use the HDF5 training data from 
-`tests/lorenz96_qsn/lorenz96.py` to select the `X_k` and `B_k` snapshots at the timestep corresponding to the maximum lag that was specified. Upon finishing the training step, the corresponding first time-lagged feature vector is automatically stored in the surrogate.
+`tests/lorenz96_kmn/lorenz96.py` to select the `X_k` and `B_k` snapshots at the timestep corresponding to the maximum lag that was specified. Upon finishing the training step, the corresponding first time-lagged feature vector is automatically stored in the surrogate.
 
 The second modification involves replacing the call to the surrogate with a call to `surrogate.predict`:
 
@@ -159,52 +161,48 @@ B_n = campaign.surrogate.predict(X_n)
 
 Here, `B_n` is the current state of the subgrid-scale term, and `X_n` is the state of the large-scale variables. The subroutine `predict(X_n)` updates the time-lagged input features and returns a stochastic prediction for `B_n` as described above. The rest of the code is unmodified.
 
-Note that due to the stochastic nature of the surrogate, as well as the chaotic nature of L96, we cannot expect that the trajectories of `X_k` and `B_k` will follow those of the full system. Below we show a movie of the time evolution of the stochastic QSN `B_k` (in the 'online' phase, when the QSN surrogate is a source term in the `X_k` ODEs) and the `B_k` of the full system. Eventually the two trajectories start to diverge. That said, we reiterate that our quantities of interest are time-averaged statistics, dicussed next.
-
-![alt text](qsn_pred.gif)
-
 ## Analysis
 
-One of the statistics we might be interested are the probability density functions (pdfs) of `X_k` and `B_k`, for both the full (validation) data set and the data set obtained in the 'online' phase from the preceding step. This is done via a `QSN_Analysis` object:
+One of the statistics we might be interested are the probability density functions (pdfs) of `X_k` and `B_k`, for both the full (validation) data set and the data set obtained in the 'online' phase from the preceding step. This is done via a `KMN_Analysis` object:
 
 ```python
-#load the campaign
+# load the campaign
 campaign = es.Campaign(load_state=True)
-#load the training data (from lorenz96.py)
+# load the training data (from lorenz96.py)
 data_frame_ref = campaign.load_hdf5_data()
-#load the data from lorenz96_qsn.py here
-data_frame_qsn = campaign.load_hdf5_data()
+# load the data from lorenz96_kmn.py here
+data_frame_kmn = campaign.load_hdf5_data()
 
 # load reference data
 X_ref = data_frame_ref['X_data']
 B_ref = data_frame_ref['B_data']
 
-# load data of QSN surrogate
-X_qsn = data_frame_qsn['X_data']
-B_qsn = data_frame_qsn['B_data']
+# load data of kmn surrogate
+X_kmn = data_frame_kmn['X_data']
+B_kmn = data_frame_kmn['B_data']
 
-# create QSN analysis object
-analysis = es.analysis.QSN_analysis(campaign.surrogate)
+# create kmn analysis object
+analysis = es.analysis.KMN_analysis(campaign.surrogate)
 
 #############
-# Plot PDEs #
+# Plot PDFs #
 #############
 
 start_idx = 0
 fig = plt.figure(figsize=[8, 4])
 ax = fig.add_subplot(121, xlabel=r'$X_k$')
-X_dom_surr, X_pde_surr = analysis.get_pdf(X_qsn[start_idx:-1:10].flatten())
+X_dom_surr, X_pde_surr = analysis.get_pdf(X_kmn[start_idx:-1:10].flatten())
 X_dom, X_pde = analysis.get_pdf(X_ref[start_idx:-1:10].flatten())
 ax.plot(X_dom, X_pde, 'k+', label='L96')
-ax.plot(X_dom_surr, X_pde_surr, label='QSN')
+ax.plot(X_dom_surr, X_pde_surr, label='kmn')
 plt.yticks([])
 plt.legend(loc=0)
 
 ax = fig.add_subplot(122, xlabel=r'$B_k$')
-B_dom_surr, B_pde_surr = analysis.get_pdf(B_qsn[start_idx:-1:10].flatten())
+B_dom_surr, B_pde_surr = analysis.get_pdf(B_kmn[start_idx:-1:10].flatten())
 B_dom, B_pde = analysis.get_pdf(B_ref[start_idx:-1:10].flatten())
 ax.plot(B_dom, B_pde, 'k+', label='L96')
-ax.plot(B_dom_surr, B_pde_surr, label='QSN')
+ax.plot(B_dom_surr, B_pde_surr, label='kmn')
 plt.yticks([])
 plt.legend(loc=0)
 
@@ -213,6 +211,6 @@ plt.tight_layout()
 
 Pre-generated statistical results are shown below:
 
-![alt text](L96_pdf_QSN.png)
+![alt text](L96_pdf_KMN.png)
 
-In `tests/lorenz96_qsn/lorenz96_analysis.py` other statistical quantities are also computed.
+In `tests/lorenz96_kmn/lorenz96_analysis.py` other statistical quantities are also computed.
