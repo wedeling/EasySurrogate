@@ -14,14 +14,14 @@ It can be considered as a simplified atmospheric model on a circle of constant l
 
 Our general aim is to create a surrogate such that the long-term statistics of the large-scale system match those generated from validation data. Thus we do not expect accuracy from the large-scale `X_k` system forced by the KMN surrogate at any given point in time.
 
-The details of the QSN approach can be found in [this](https://arxiv.org/abs/2004.01457) preprint.
+The details of the KMN approach can be found in [this](https://www.researchgate.net/publication/317040575_The_Kernel_Mixture_Network_A_Nonparametric_Method_for_Conditional_Density_Estimation_of_Continuous_Random_Variables) article.
 
 ## Files
 
 The `tests/lorenz96_kmn` folder constains all required scripts to execute this tutorial: 
 
 + `tests/lorenz96_kmn/lorenz96.py`: the unmodified solver for the Lorenz 96 system, used to generate the training data.
-+ `tests/lorenz96_kmn/train_surrogate.py`: script to train a QSN surrogate on L96 data.
++ `tests/lorenz96_kmn/train_surrogate.py`: script to train a KMN surrogate on L96 data.
 + `tests/lorenz96_kmn/lorenz96_kmn.py`: this is the L96 solver again, where the call to the small-scale system is replaced by a call to the KMN surrogate.
 + `tests/lorenz96_kmn/lorenz96_analysis.py`: the post-processing of the results of `lorenz96_kmn.py`.
 
@@ -135,7 +135,7 @@ f_nm1 = rhs_X(X_n, B_n)
 # End Easysurrogate modification #
 ##################################
 ```
-Here, `campaign = es.Campaign(load_state=True)` loads the pre-trained QSN surrogate from `tests/lorenz96_qsn/train_surrogate.py`, and we use the HDF5 training data from 
+Here, `campaign = es.Campaign(load_state=True)` loads the pre-trained KMN surrogate from `tests/lorenz96_kmn/train_surrogate.py`, and we use the HDF5 training data from 
 `tests/lorenz96_kmn/lorenz96.py` to select the `X_k` and `B_k` snapshots at the timestep corresponding to the maximum lag that was specified. Upon finishing the training step, the corresponding first time-lagged feature vector is automatically stored in the surrogate.
 
 The second modification involves replacing the call to the surrogate with a call to `surrogate.predict`:
