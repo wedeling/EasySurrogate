@@ -96,27 +96,21 @@ campaign.add_app(name='test_campaign', surrogate=surrogate)
 campaign.save_state()
 ```
 
-The `train` method should be supplied with a list of (different) input features, and an array of target data points, in this case an array of `nx18` subgrid-scale data points. Here, `n` is the number of training points. If `test_frac > 0` as above, the specified fraction of the data is withheld as a test set, lowering the value of `n`. Various aspects of the feed-forward neural network are defined here as well, such as the number of layers, the number of neurons per layers, the type of activation function and the minibatch size used in stochastic gradient descent. Other activation options are `tanh`, `hard_tan` and `relu`.
+The `train` method should be supplied with a list of (different) input features, and an array of target data points, in this case an array of `nx18` subgrid-scale data points. Here, `n` is the number of training points. If `test_frac > 0` as above, the specified fraction of the data is withheld as a test set, lowering the value of `n`. Various aspects of the feed-forward neural network are defined here as well, such as the number of layers, the number of neurons per layers, the type of activation function and the minibatch size used in stochastic gradient descent. Other activation options are `tanh`, `hard_tan` and `relu`. After training, the surrogate is added to the campaign and saved to disk.
 
-For each of the 18 spatial locations, the QSN surrogate will predict a discrete probability mass function (pmf) over `n_bins=10` non-overlapping `B_k` intervals or 'bins', for `k=1,...,K=18`. These 18 pmfs can then be sampled to identify 18 intervals of `B_k` data, conditional on the time-lagged, large-scale input features. To obtain a stochastic surrogate, `B_k` values are randomly resampled from the identified intervals. This process is repeated every time step. A movie of this can be found below, where the QSN surrogate is evaluated off-line on the training dataset. Left shows the QSN prediction for a single spatial location, alongside the bin of the training data. Right show the corresponding `B_k` time series, for both the stochastic QSN surrogate and the actual time evolution of the training data.
+To get a qualitative idea of the trained KMN surrogate, a movie can be generated where the KMN surrogate is evaluated off-line on the training dataset. 
 
-![alt text](qsn.gif)
-
-To evaluate the classification error of (a subset of) the training data, an analysis object must be created:
-
-```
-# QSN analysis object
-analysis = es.analysis.QSN_analysis(surrogate)
-analysis.get_classification_error(features[0:1000], target[0:1000])
-```
-This will print the classifiction error to the screen for each of the 18 spatial locations. Once the surrogate is trained, it is saved and added to the campaign via
-
-```
-campaign.add_app(name='test_campaign', surrogate=surrogate)
-campaign.save_state()
+```python
+# KMN analysis object
+analysis = es.analysis.KMN_analysis(campaign.surrogate)
+analysis.make_movie()
 ```
 
-## Prediction with a QSN surrogate
+![alt text](kmn.gif)
+
+Left shows the KMN prediction for a single spatial location, alongside the training data point. Right show the corresponding `B_k` time series, for both the stochastic KMN surrogate and the actual time evolution of the training data.
+
+## Prediction with a KMN surrogate
 
 To predict with a QSN surrogate, the original L96 code must be modified in 2 places, namely in the initial condition (IC) and the call to the micro model. Changing the IC is required due to the time-lagged nature. We use the data at the maximum lag specified as IC, such that we can build a time-lagged vector (also from the data) at the first time step. In `tests/lorenz96_qsn/lorenz96_qsn.py` we find:
 
