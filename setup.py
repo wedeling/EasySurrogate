@@ -12,7 +12,7 @@ setup(
 
     author='CWI',
 
-    install_requires=['numpy', 'scipy', 'matplotlib', 'h5py'],
+    install_requires=['numpy', 'scipy', 'matplotlib', 'h5py', 'sklearn'],
 
     packages=find_packages(),
 
