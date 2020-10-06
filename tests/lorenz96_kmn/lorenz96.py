@@ -148,7 +148,6 @@ def animate(s):
 # Main program
 ###############
 
-
 plt.close('all')
 
 #####################

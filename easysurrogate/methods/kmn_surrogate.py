@@ -65,12 +65,12 @@ class KMN_Surrogate(Campaign):
         self.lags = lags
         self.max_lag = np.max(list(chain(*self.lags)))
 
-        if kernel_means.ndim == 1:
-            kernel_means = kernel_means.reshape([1, kernel_means.size])
-            kernel_stds = kernel_means.reshape([1, kernel_stds.size])
+        # if kernel_means.ndim == 1:
+        #     kernel_means = kernel_means.reshape([1, kernel_means.size])
+        #     kernel_stds = kernel_means.reshape([1, kernel_stds.size])
 
         # number of softmax layers (one per output)
-        self.n_softmax = kernel_means.shape[0]
+        self.n_softmax = target.shape[1]
 
         # create all possible combinations of the specified kernel means and std devs
         self.kernel_means = []
