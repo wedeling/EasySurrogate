@@ -16,8 +16,10 @@ target = data_frame['B_data']
 surrogate = es.methods.KMN_Surrogate()
 
 # create the KDE anchor points and standard deviations
-n_means = 15; n_stds = 3
-kernel_means = []; kernel_stds = []
+n_means = 15
+n_stds = 3
+kernel_means = []
+kernel_stds = []
 
 n_out = target.shape[1]
 for i in range(n_out):
@@ -32,7 +34,7 @@ n_iter = 10000
 surrogate.train([features], target, lags, n_iter,
                 kernel_means, kernel_stds,
                 n_layers=4, n_neurons=256,
-                batch_size=512, test_frac = 0.5)
+                batch_size=512, test_frac=0.5)
 
 campaign.add_app(name='test_campaign', surrogate=surrogate)
 campaign.save_state()
