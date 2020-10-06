@@ -1,4 +1,4 @@
-# Tutorial: Quantized Softmax Network for the Lorenz 96 system
+# Tutorial: Kernel Mixture Network for the Lorenz 96 system
 
 The two layer Lorenz 96 (L96) system is given by:
 
@@ -10,26 +10,26 @@ The two layer Lorenz 96 (L96) system is given by:
 
 ![equation](https://latex.codecogs.com/gif.latex?k%20%3D%201%2C%5Ccdots%2C%20K%20%5Cquad%5Cquad%20j%20%3D%201%2C%5Ccdots%2CJ)
 
-It can be considered as a simplified atmospheric model on a circle of constant latitude. The `X_k` variables are the large-scale components of the system, whereas the `Y_{k,j}` are the small-scale counterparts. Each spatial location indexed by `k=1,...,K` has `J` small-scale components `Y_{k,j}`, with `j=1,...,J`. Thus the system consists of `JK` coupled ordinary differential equations (ODEs). In this tutorial we will use `K=18` and `J=20` such that we have 360 coupled ODEs. Finally, the `B_k` term is the subgrid-scale (SGS) term, through which the small-scale information enters the large-scale `X_k` ODEs. If we are able to create a surrogate for `B_k`, conditional on large-scale variables only, the dimension of the system drops from 360 down to 18. Here, we will create a surrogate model in the form of a quantized softmax network (QSN), which is stochastic in nature. 
+It can be considered as a simplified atmospheric model on a circle of constant latitude. The `X_k` variables are the large-scale components of the system, whereas the `Y_{k,j}` are the small-scale counterparts. Each spatial location indexed by `k=1,...,K` has `J` small-scale components `Y_{k,j}`, with `j=1,...,J`. Thus the system consists of `JK` coupled ordinary differential equations (ODEs). In this tutorial we will use `K=18` and `J=20` such that we have 360 coupled ODEs. Finally, the `B_k` term is the subgrid-scale (SGS) term, through which the small-scale information enters the large-scale `X_k` ODEs. If we are able to create a surrogate for `B_k`, conditional on large-scale variables only, the dimension of the system drops from 360 down to 18. Here, we will create a surrogate model in the form of a kernel mixture network (KMN), which is stochastic in nature. 
 
-Our general aim is to create a surrogate such that the long-term statistics of the large-scale system match those generated from validation data. Thus we do not expect accuracy from the large-scale `X_k` system forced by the QSN surrogate at any given point in time.
+Our general aim is to create a surrogate such that the long-term statistics of the large-scale system match those generated from validation data. Thus we do not expect accuracy from the large-scale `X_k` system forced by the KMN surrogate at any given point in time.
 
 The details of the QSN approach can be found in [this](https://arxiv.org/abs/2004.01457) preprint.
 
 ## Files
 
-The `tests/lorenz96_qsn` folder constains all required scripts to execute this tutorial: 
+The `tests/lorenz96_kmn` folder constains all required scripts to execute this tutorial: 
 
-+ `tests/lorenz96_qsn/lorenz96.py`: the unmodified solver for the Lorenz 96 system, used to generate the training data.
-+ `tests/lorenz96_qsn/train_surrogate.py`: script to train a QSN surrogate on L96 data.
-+ `tests/lorenz96_qsn/lorenz96_qsn.py`: this is the L96 solver again, where the call to the small-scale system is replaced by a call to the QSN surrogate.
-+ `tests/lorenz96_qsn/lorenz96_analysis.py`: the post-processing of the results of `lorenz96_qsn.py`.
++ `tests/lorenz96_kmn/lorenz96.py`: the unmodified solver for the Lorenz 96 system, used to generate the training data.
++ `tests/lorenz96_kmn/train_surrogate.py`: script to train a QSN surrogate on L96 data.
++ `tests/lorenz96_kmn/lorenz96_qsn.py`: this is the L96 solver again, where the call to the small-scale system is replaced by a call to the KMN surrogate.
++ `tests/lorenz96_kmn/lorenz96_analysis.py`: the post-processing of the results of `lorenz96_kmn.py`.
 
 Execute these script in the specified order to run the tutorial. Details are given below.
 
 ## Generate training data
 
-The first step is to generate the training data, by executing `python3 tests/lorenz96_qsn/lorenz96.py`. This will generate training pairs that are used in `tests/lorenz96_qsn/train_surrogate.py`. You will be asked for a location to store the data (HDF5 format).
+The first step is to generate the training data, by executing `python3 tests/lorenz96_kmn/lorenz96.py`. This will generate training pairs that are used in `tests/lorenz96_kmn/train_surrogate.py`. You will be asked for a location to store the data (HDF5 format).
 
 ## Train the Quantized Softmax Network
 
@@ -47,24 +47,37 @@ features = data_frame['X_data']
 target = data_frame['B_data']
 ```
 
-Here, our large-scale features will the the `K` time series of the `X_k` variables, and our target data are the `K` times series of the subgrid-scale term `B_k`. The next step is to create a QSN surrogate object via:
+Here, our large-scale features will the the `K` time series of the `X_k` variables, and our target data are the `K` times series of the subgrid-scale term `B_k`. The next step is to create a KMN surrogate object via:
 
 ```
-# create Quantized Softmax Network surrogate
-surrogate = es.methods.QSN_Surrogate()
+# create Kernel Mixture Network surrogate
+surrogate = es.methods.KMN_Surrogate()
 ```
 
-At this point the specifics of a QSN surrogate come into play. One of our aims is to create a surrogate with 'memory', i.e. a surrogate that is non-Markovian. At the heart of our QSN surrogate is a feed-forward neural network. To add a memory dependence here, we create time-lagged feature vectors. Another means of doing so would be to use a recurrent neural network, which is an option planned for future releases. Say we wish to train a QSN surrogate using time-lagged input features at 1 and 10 time steps into the past. This is done via:
+At this point the specifics of a KMN surrogate come into play. One of our aims is to create a surrogate with 'memory', i.e. a surrogate that is non-Markovian. At the heart of our KMN surrogate is a feed-forward neural network. To add a memory dependence here, we create time-lagged feature vectors. Another means of doing so would be to use a recurrent neural network, which is an option planned for future releases. Say we wish to train a KMN surrogate using time-lagged input features at 1 and 10 time steps into the past. This is done via:
 
 ```
 # create time-lagged features
 lags = [[1, 10]]
 
+# create the KDE anchor points and standard deviations
+n_means = 15; n_stds = 3
+kernel_means = []; kernel_stds = []
+
+n_out = target.shape[1]
+for i in range(n_out):
+    kernel_means.append(np.linspace(np.min(target[:, i]), np.max(target[:, i]), n_means))
+    kernel_stds.append(np.linspace(0.2, 0.3, n_stds))
+
 # train the surrogate on the data
-n_iter = 2000
-surrogate.train([features], target, lags, n_iter, 
-		n_bins=10, test_frac=0.5,
-		n_layers=4, n_neurons=256, activation='leaky_relu', batch_size=512)
+n_iter = 10000
+surrogate.train([features], target, lags, n_iter,
+                kernel_means, kernel_stds,
+                n_layers=4, n_neurons=256,
+                batch_size=512)
+
+campaign.add_app(name='test_campaign', surrogate=surrogate)
+campaign.save_state()
 ```
 
 The `train` method should be supplied with a list of (different) input features, and an array of target data points, in this case an array of `nx18` subgrid-scale data points. Here, `n` is the number of training points. If `test_frac > 0` as above, the specified fraction of the data is withheld as a test set, lowering the value of `n`. Various aspects of the feed-forward neural network are defined here as well, such as the number of layers, the number of neurons per layers, the type of activation function and the minibatch size used in stochastic gradient descent. Other activation options are `tanh`, `hard_tan` and `relu`.
