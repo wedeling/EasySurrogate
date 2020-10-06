@@ -31,7 +31,7 @@ Execute these script in the specified order to run the tutorial. Details are giv
 
 The first step is to generate the training data, by executing `python3 tests/lorenz96_kmn/lorenz96.py`. This will generate training pairs that are used in `tests/lorenz96_kmn/train_surrogate.py`. You will be asked for a location to store the data (HDF5 format).
 
-## Train the Quantized Softmax Network
+## Train the Kernel Mixture Network
 
 As explained in the general EasySurrogate tutorial (`tutorials/General`), we begin by creating a EasySurrogate campaign, and loading the training data:
 
@@ -54,12 +54,16 @@ Here, our large-scale features will the the `K` time series of the `X_k` variabl
 surrogate = es.methods.KMN_Surrogate()
 ```
 
-At this point the specifics of a KMN surrogate come into play. One of our aims is to create a surrogate with 'memory', i.e. a surrogate that is non-Markovian. At the heart of our KMN surrogate is a feed-forward neural network. To add a memory dependence here, we create time-lagged feature vectors. Another means of doing so would be to use a recurrent neural network, which is an option planned for future releases. Say we wish to train a KMN surrogate using time-lagged input features at 1 and 10 time steps into the past. This is done via:
+At this point the specifics of a KMN surrogate come into play. At the heart of our KMN surrogate is a feed-forward neural network, which predicts the weights of a kernel-density estimate (KDE). We can write KDE for a probability density function `p(B_k | X_k)` as follows:
 
+![alt text](https://latex.codecogs.com/gif.latex?p%28B_k%20%7C%20X_k%29%20%3D%20%5Csum_%7Bi%2C%20j%7Dw_%7Bi%2Cj%7D%5Cleft%28X_k%5Cright%29%5Ccdot%20K%28B_k%3B%20%5Cmu_i%2C%20%5Csigma_j%29)
+
+Here, `K` are the Kernels (we use Gaussian kernels), each of which has its own mean (indexed by `i`) and standard deviation (indexed by `j`). The weights `w_{i,j}` are predicted by the neural network, and must sum to one. To ensure the latter, we use a softmax layer at the output. 
+
+Note that each `w_{i,j}` is associated with one mean `mu_i` and one standard deviation `sigma_j`. Also note from the equation above that they are functions of `X_k`. The general idea is that, conditional on the macroscopic `X_k` variables at the input, most weights will be (close to) zero. Only a small subset of `w_{i,j}` should activate, leading to an informed pdf over a small `B_k` region. We then randomly sample this pdf to obtain a stochastic `B_k` prediction.
+
+For each of the 18 spatial points, we specify 15 means (or "anchor points") that span the range of `B_k` data at that location, in addition to 3 values for the standard deviation:
 ```
-# create time-lagged features
-lags = [[1, 10]]
-
 # create the KDE anchor points and standard deviations
 n_means = 15; n_stds = 3
 kernel_means = []; kernel_stds = []
@@ -68,13 +72,25 @@ n_out = target.shape[1]
 for i in range(n_out):
     kernel_means.append(np.linspace(np.min(target[:, i]), np.max(target[:, i]), n_means))
     kernel_stds.append(np.linspace(0.2, 0.3, n_stds))
+```
+The list of these kernel properties will be passed to the `train` subroutine, see below. Note that the KMN surrogate will make all possible combinations of the specified means and standard deviations. Thus, each of the 18 spatial points will have its own softmax layer, consisting of `15*3=45` inputs. The total number of output neurons is therefore `18*45=810`.
+
+Besides stochasticity, another one of our aims is to create a surrogate with 'memory', i.e. a surrogate that is non-Markovian. For instance,
+
+![alt text](https://latex.codecogs.com/gif.latex?p%28B_k%5E%7B%28t&plus;%5CDelta%20t%29%7D%20%7C%20X%5E%7B%28t%29%7D_k%2C%20X%5E%7B%28t-%5Ctau%29%7D_k%29%20%3D%20%5Csum_%7Bi%2C%20j%7Dw_%7Bi%2Cj%7D%5Cleft%28X%5E%7B%28t%29%7D_k%2C%20X%5E%7B%28t-%5Ctau%29%7D%5Cright%29%5Ccdot%20K%28B_k%3B%20%5Cmu_i%2C%20%5Csigma_j%29)
+
+is a pdf for the value of `B_k` at the next time step, conditioned on two time-lagged values of `X_k`. To add a memory dependence here, we therefore create time-lagged feature vectors. Another means of doing so would be to use a recurrent neural network, which is an option planned for future releases. Say we wish to train a KMN surrogate using time-lagged input features at 1 and 10 time steps into the past. This is done via:
+
+```python
+# create time-lagged features
+lags = [[1, 10]]
 
 # train the surrogate on the data
 n_iter = 10000
 surrogate.train([features], target, lags, n_iter,
                 kernel_means, kernel_stds,
                 n_layers=4, n_neurons=256,
-                batch_size=512)
+                test_frac = 0.5, batch_size=512)
 
 campaign.add_app(name='test_campaign', surrogate=surrogate)
 campaign.save_state()
