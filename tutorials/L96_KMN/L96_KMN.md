@@ -114,7 +114,7 @@ Left shows the KMN prediction for a single spatial location, alongside the train
 
 Prediction occurs in exactly the same fashion as with the quantized softmax surrogate (QSN) and the vanilla artificial neural network (ANN). In fact, `tests/lorenz96_kmn/lorenz96_kmn.py` is unmodified compared to `tests/lorenz96_qsn/lorenz96_qsn.py` and `tests/lorenz96_ann/lorenz96_ann.py`.
 
-Hence, to predict with a KMN surrogate, the original L96 code must be modified in 2 places, namely in the initial condition (IC) and the call to the micro model. Changing the IC is required due to the time-lagged nature. We use the data at the maximum lag specified as IC, such that we can build a time-lagged vector (also from the data) at the first time step. In `tests/lorenz96_kmn/lorenz96_qsn.py` we find:
+Hence, to predict with a KMN surrogate, the original L96 code must be modified in 2 places, namely in the initial condition (IC) and the call to the micro model. Changing the IC is required due to the time-lagged nature. We use the data at the maximum lag specified as IC, such that we can build a time-lagged vector (also from the data) at the first time step. In `tests/lorenz96_kmn/lorenz96_kmn.py` we find:
 
 ```python
 ##############################
