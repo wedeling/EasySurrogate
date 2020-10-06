@@ -6,7 +6,7 @@ manager_pid=$!
 
 echo 'Running reduced gray-scott in Python'
 
-python3 ./micro.py --muscle-instance=micro >'micro.log' 2>&1 &
-python3 ./macro.py --muscle-instance=macro >'macro.log' 2>&1 &
+python3 ./micro.py --muscle-instance=micro &
+python3 ./macro.py --muscle-instance=macro &
 
 wait
