@@ -15,7 +15,7 @@ with open(json_input, "r") as f:
     inputs = json.load(f)
 
 #number of samples to run concurrently on a node
-n_samples = 2
+n_samples = 1
 
 #get in n_samples input values from EasyVVUQ
 feed = []; kill = []
