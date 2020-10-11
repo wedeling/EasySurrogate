@@ -12,7 +12,7 @@ conduits = [Conduit('macro.state_out', 'micro.state'),
 
 model = Model('gray_scott_reduced', elements, conduits)
 
-settings = Settings({'micro.t_max': 0.1, 'micro.dt': 0.1, 'N_Q': 2, 
+settings = Settings({'micro.t_max': 0.5, 'micro.dt': 0.5, 'N_Q': 2, 
                      'N_LF': 128, 
                      'macro[0].feed': 0.02, 
                      'macro[0].kill': 0.05,

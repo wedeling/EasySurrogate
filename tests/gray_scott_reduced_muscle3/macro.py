@@ -4,8 +4,7 @@ A 2D Gray-Scott reaction diffusion model.
 Numerical method:
 Craster & Sassi, spectral algorithmns for reaction-diffusion equations, 2006.
 
-This script is used to generate the training data for the reduced
-subgrid-scale model
+This is the macro model, coupled via MUSCLE3 to the micro model
 """
 
 from libmuscle import Instance, Message, Grid
@@ -124,7 +123,7 @@ def integrating_factors(k_squared, dt, epsilon_u, epsilon_v):
     return int_fac_u, int_fac_u2, int_fac_v, int_fac_v2
 
 
-def rhs_hat(u_hat, v_hat, feed, kill, **kwargs):
+def rhs_hat(u_hat, v_hat, dt, feed, kill, **kwargs):
     """
     Right hand side of the 2D Gray-Scott equations
 
@@ -180,25 +179,25 @@ def rk4(u_hat, v_hat, int_fac_u, int_fac_u2, int_fac_v, int_fac_v2, dt, feed, ki
 
     """
     # RK4 step 1
-    k_hat_1, l_hat_1 = rhs_hat(u_hat, v_hat, feed, kill, **kwargs)
+    k_hat_1, l_hat_1 = rhs_hat(u_hat, v_hat, dt, feed, kill, **kwargs)
     k_hat_1 *= dt
     l_hat_1 *= dt
     u_hat_2 = (u_hat + k_hat_1 / 2) * int_fac_u
     v_hat_2 = (v_hat + l_hat_1 / 2) * int_fac_v
     # RK4 step 2
-    k_hat_2, l_hat_2 = rhs_hat(u_hat_2, v_hat_2, feed, kill, **kwargs)
+    k_hat_2, l_hat_2 = rhs_hat(u_hat_2, v_hat_2, dt, feed, kill, **kwargs)
     k_hat_2 *= dt
     l_hat_2 *= dt
     u_hat_3 = u_hat * int_fac_u + k_hat_2 / 2
     v_hat_3 = v_hat * int_fac_v + l_hat_2 / 2
     # RK4 step 3
-    k_hat_3, l_hat_3 = rhs_hat(u_hat_3, v_hat_3, feed, kill, **kwargs)
+    k_hat_3, l_hat_3 = rhs_hat(u_hat_3, v_hat_3, dt, feed, kill, **kwargs)
     k_hat_3 *= dt
     l_hat_3 *= dt
     u_hat_4 = u_hat * int_fac_u2 + k_hat_3 * int_fac_u
     v_hat_4 = v_hat * int_fac_v2 + l_hat_3 * int_fac_v
     # RK4 step 4
-    k_hat_4, l_hat_4 = rhs_hat(u_hat_4, v_hat_4, feed, kill, **kwargs)
+    k_hat_4, l_hat_4 = rhs_hat(u_hat_4, v_hat_4, dt, feed, kill, **kwargs)
     k_hat_4 *= dt
     l_hat_4 *= dt
     u_hat = u_hat * int_fac_u2 + 1 / 6 * (k_hat_1 * int_fac_u2 +
@@ -210,6 +209,7 @@ def rk4(u_hat, v_hat, int_fac_u, int_fac_u2, int_fac_v, int_fac_v2, dt, feed, ki
                                           2 * l_hat_3 * int_fac_v +
                                           l_hat_4)
     return u_hat, v_hat
+
 
 def compute_int(X1_hat, X2_hat, N):
     """
@@ -230,23 +230,16 @@ def gray_scott_macro():
         Operator.S: ['state_in']})
     
     while instance.reuse_instance():
-        # plt.close('all')
-        # plt.rcParams['image.cmap'] = 'seismic'
         HOME = os.path.abspath(os.path.dirname(__file__))
         
-        #load the reference data for EasySurrogate
-        # fname = os.path.join(HOME, 'samples/gray_scott_reference.hdf5')
-        # h5f = h5py.File(fname, 'r')
-        # ref_data = h5f['Q_HF'][()]
-       
-        # alpha pattern
+        # gray scott parameters
         feed = instance.get_setting('feed')
         kill = instance.get_setting('kill')
-     
+
         ###########################
         # End MUSCLE modification #
         ###########################
-     
+
         # number of gridpoints in 1D
         I = 7
         N = 2**I
@@ -294,9 +287,9 @@ def gray_scott_macro():
         epsilon_u = 2e-5
         epsilon_v = 1e-5
         
-        # time step parameters
-        dt = 0.1
-        n_steps = 100
+        #time step parameters
+        dt = 0.5
+        n_steps = int(5000/dt)
         store_frame_rate = 1
         t = 0.0
         
@@ -346,6 +339,9 @@ def gray_scott_macro():
 
         # time stepping
         for n in range(n_steps):
+
+            u_hat_ref, v_hat_ref = rk4(u_hat_ref, v_hat_ref, int_fac_u_ref, int_fac_u2_ref, 
+                                        int_fac_v_ref, int_fac_v2_ref, dt, feed, kill)
 
             # compute reference stats
             Q_HF = np.zeros(2 * N_Q)
@@ -407,7 +403,7 @@ def gray_scott_macro():
             #recreate the reduced subgrid-scale terms for the u and v pde
             reduced_sgs_u = reduced_sgs_u_re + 1.0j*reduced_sgs_u_im
             reduced_sgs_v = reduced_sgs_v_re + 1.0j*reduced_sgs_v_im
-
+            
             ###########################
             # End MUSCLE modification #
             ###########################
@@ -417,10 +413,7 @@ def gray_scott_macro():
 
             #evolve the state in time, with the new reduced sgs terms
             u_hat, v_hat = rk4(u_hat, v_hat, int_fac_u, int_fac_u2, int_fac_v, int_fac_v2, dt, feed, kill,
-                               reduced_sgs_u=reduced_sgs_u, reduced_sgs_v=reduced_sgs_v)
-
-            u_hat_ref, v_hat_ref = rk4(u_hat_ref, v_hat_ref, int_fac_u_ref, int_fac_u2_ref, 
-                                       int_fac_v_ref, int_fac_v2_ref, dt, feed, kill)
+                                reduced_sgs_u=reduced_sgs_u, reduced_sgs_v=reduced_sgs_v)
 
             j += 1
             j2 += 1
@@ -431,6 +424,7 @@ def gray_scott_macro():
 
                 for qoi in QoI:
                     samples[qoi].append(eval(qoi))
+        # foo = False
 
     t1 = time.time()
     print('*************************************')
@@ -439,7 +433,7 @@ def gray_scott_macro():
 
     # output csv file
     header = 'Q1,Q2,Q3,Q4,Q1_HF,Q2_HF,Q3_HF,Q4_HF'
-    fname = 'output_f%.3f_k%.3f.csv' % (feed, kill)
+    fname = 'output_f%.5f_k%.5f.csv' % (feed, kill)
     np.savetxt(fname, samples_uq,
                delimiter=",", comments='',
                header=header)
