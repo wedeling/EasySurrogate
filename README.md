@@ -28,6 +28,8 @@ python3 setup.py install --user
 
 + Standard artificial neural networks, used for regression with (time-lagged) features.
 
++ It is possible to couple surrogates to the macroscopic model via [MUSCLE3](https://muscle3.readthedocs.io/en/latest/index.html), the third incarnation of the Multiscale Coupling Library and Environment. A tutorial is given below.
+
 ## Tutorials
 
 The following tutorials can be found in the `tutorials` folder:
@@ -41,3 +43,5 @@ The following tutorials can be found in the `tutorials` folder:
  + `/L96_ANN`: Artificial Neural Network (QSN) surrogates for atmospheric model equations. In this tutorial, the subgrid-scale term of the Lorenz96 equations is replaced by an ANN surrogate.
 
  + `/gray_scott`: reduced surrogates for a reaction diffusion equation. This applies the data compression technique to the two-dimensional gray-scott equations.
+ 
+ + `/gray_scott_muscle`: this is basicaly the same tutorial as above, only the coupling with the reduced surrogates and the reaction diffusion equations is performed using MUSCLE3.
