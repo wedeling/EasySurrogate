@@ -47,7 +47,7 @@ settings = Settings(settings_dict)
 
 configuration = Configuration(model, settings)
 
-#actual subroutines to run, imported from macro.p and micro.py
+#actual subroutines to run, imported from macro.py and micro.py
 implementations = {'macro': gray_scott_macro, 'micro': reduced_sgs}
 
 #execute ensemble on a single node

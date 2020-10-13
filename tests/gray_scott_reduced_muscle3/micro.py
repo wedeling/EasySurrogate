@@ -12,14 +12,14 @@ def reduced_sgs():
     """
    
     instance = Instance({
-        Operator.F_INIT: ['state'],     #a dict with state values  
-        Operator.O_F: ['sgs']})         #a dict with subgrid-scale terms
+        Operator.F_INIT: ['state_in'],     #a dict with state values  
+        Operator.O_F: ['sgs_out']})         #a dict with subgrid-scale terms
 
     #get some parameters
     N_Q = instance.get_setting('N_Q')       #the number of QoI to track, per PDE
     N_LF = instance.get_setting('N_LF')     #the number of gridpoints in 1 dimension
-    t_max = instance.get_setting('t_max')   #the simulation time, per time-step of macro   
-    dt = instance.get_setting('dt')         #the micro time step
+    # t_max = instance.get_setting('t_max')   #the simulation time, per time-step of macro   
+    # dt = instance.get_setting('dt')         #the micro time step
 
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
@@ -30,7 +30,7 @@ def reduced_sgs():
     while instance.reuse_instance():
 
         #receive the state from the macro model
-        msg = instance.receive('state')
+        msg = instance.receive('state_in')
         V_hat_1_re = msg.data['V_hat_1_re'].array.T
         V_hat_1_im = msg.data['V_hat_1_im'].array.T
         u_hat_re = msg.data['u_hat_re'].array.T
@@ -62,7 +62,7 @@ def reduced_sgs():
         reduced_sgs_v_re = np.copy(reduced_sgs_v.real)
         reduced_sgs_v_im = np.copy(reduced_sgs_v.imag)
 
-        instance.send('sgs', Message(t_cur, None, 
+        instance.send('sgs_out', Message(t_cur, None, 
                                      {'reduced_sgs_u_re': reduced_sgs_u_re, 
                                       'reduced_sgs_u_im': reduced_sgs_u_im,
                                       'reduced_sgs_v_re': reduced_sgs_v_re,
