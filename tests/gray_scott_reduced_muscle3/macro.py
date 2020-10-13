@@ -227,14 +227,17 @@ def gray_scott_macro():
     #define the MUSCLE in and out ports
     instance = Instance({
         Operator.O_I: ['state_out'],
-        Operator.S: ['state_in']})
+        Operator.S: ['sgs_in']})
     
     while instance.reuse_instance():
-        HOME = os.path.abspath(os.path.dirname(__file__))
+        
+        #Main script
         
         # gray scott parameters
         feed = instance.get_setting('feed')
         kill = instance.get_setting('kill')
+
+        HOME = os.path.abspath(os.path.dirname(__file__))
 
         ###########################
         # End MUSCLE modification #
@@ -394,7 +397,7 @@ def gray_scott_macro():
             instance.send('state_out', cur_state)
     
             #reveive a message from the micro model, i.e. the two reduced subgrid-scale terms
-            msg = instance.receive('state_in')
+            msg = instance.receive('sgs_in')
             reduced_sgs_u_re = msg.data['reduced_sgs_u_re'].array
             reduced_sgs_u_im = msg.data['reduced_sgs_u_im'].array
             reduced_sgs_v_re = msg.data['reduced_sgs_v_re'].array
