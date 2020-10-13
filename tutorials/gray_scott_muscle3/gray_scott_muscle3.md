@@ -20,3 +20,4 @@ We will assume that MUSCLE3 has been properly installed.
 
 ## Modifications to the macroscopic model
 
+![alt text](gray-scott_coupling.png)
