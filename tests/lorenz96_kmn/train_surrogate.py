@@ -25,6 +25,8 @@ n_out = target.shape[1]
 for i in range(n_out):
     kernel_means.append(np.linspace(np.min(target[:, i]), np.max(target[:, i]), n_means))
     kernel_stds.append(np.linspace(0.2, 0.3, n_stds))
+kernel_means = np.array(kernel_means)
+kernel_stds = np.array(kernel_stds)
 
 # create time-lagged features
 lags = [[1, 10]]
