@@ -15,12 +15,11 @@ target = data_frame['B_data']
 # create Kernel Mixture Network surrogate
 surrogate = es.methods.KMN_Surrogate()
 
-# create time-lagged features
-lags = [range(1, 75)]
-
 # create the KDE anchor points and standard deviations
-n_means = 15; n_stds = 3
-kernel_means = []; kernel_stds = []
+n_means = 15
+n_stds = 3
+kernel_means = []
+kernel_stds = []
 
 n_out = target.shape[1]
 for i in range(n_out):
@@ -29,12 +28,15 @@ for i in range(n_out):
 kernel_means = np.array(kernel_means)
 kernel_stds = np.array(kernel_stds)
 
+# create time-lagged features
+lags = [[1, 10]]
+
 # train the surrogate on the data
 n_iter = 10000
 surrogate.train([features], target, lags, n_iter,
                 kernel_means, kernel_stds,
                 n_layers=4, n_neurons=256,
-                batch_size=512)
+                batch_size=512, test_frac=0.5)
 
 campaign.add_app(name='test_campaign', surrogate=surrogate)
 campaign.save_state()
