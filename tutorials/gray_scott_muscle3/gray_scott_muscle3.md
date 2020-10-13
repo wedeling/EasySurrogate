@@ -84,8 +84,8 @@ def reduced_sgs():
     """
    
     instance = Instance({
-        Operator.F_INIT: ['state'],     #a dict with state values  
-        Operator.O_F: ['sgs']})         #a dict with subgrid-scale terms
+        Operator.F_INIT: ['state_in'],     #a dict with state values  
+        Operator.O_F: ['sgs_out']})         #a dict with subgrid-scale terms
 
     #get some parameters
     N_Q = instance.get_setting('N_Q')       #the number of QoI to track, per PDE
@@ -102,7 +102,7 @@ def reduced_sgs():
     while instance.reuse_instance():
 
         #receive the state from the macro model
-        msg = instance.receive('state')
+        msg = instance.receive('state_in')
         V_hat_1_re = msg.data['V_hat_1_re'].array.T
         V_hat_1_im = msg.data['V_hat_1_im'].array.T
         u_hat_re = msg.data['u_hat_re'].array.T
@@ -134,9 +134,27 @@ def reduced_sgs():
         reduced_sgs_v_re = np.copy(reduced_sgs_v.real)
         reduced_sgs_v_im = np.copy(reduced_sgs_v.imag)
 
-        instance.send('sgs', Message(t_cur, None, 
+        instance.send('sgs_out', Message(t_cur, None, 
                                      {'reduced_sgs_u_re': reduced_sgs_u_re, 
                                       'reduced_sgs_u_im': reduced_sgs_u_im,
                                       'reduced_sgs_v_re': reduced_sgs_v_re,
                                       'reduced_sgs_v_im': reduced_sgs_v_im}))
 ```
+
+We can see that the micro model indeed receives the message of the macro model on the `state_in` port via `msg = instance.receive('state_in')`. This is done at every time step of the macro model, so this call is placed inside the reuse loop. Outside the reuse loop we i) define the ports of the micro model, ii) get some settings via `instance.get_setting` and iii) create the EasySurrogate ReducedSurrogate object.
+
+As was the case in the [tutorial](https://github.com/wedeling/EasySurrogate/edit/master/tutorials/gray_scott/Gray_Scott.md) without MUSCLE3 coupling, the `surrogate.train` subroutine computes the reduced subgrid scale terms `G_u` and `G_v`. These are then sent back to the macro model on the `sgs_out` port. Back at the macro model, this Message is received via
+
+```python
+            #reveive a message from the micro model, i.e. the two reduced subgrid-scale terms
+            msg = instance.receive('sgs_in')
+            reduced_sgs_u_re = msg.data['reduced_sgs_u_re'].array
+            reduced_sgs_u_im = msg.data['reduced_sgs_u_im'].array
+            reduced_sgs_v_re = msg.data['reduced_sgs_v_re'].array
+            reduced_sgs_v_im = msg.data['reduced_sgs_v_im'].array
+```
+
+Now the right-hand sides of both macroscopic PDEs can be computed.
+
+## Putting it all together
+
