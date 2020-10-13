@@ -16,8 +16,6 @@ In [this](https://github.com/wedeling/EasySurrogate/edit/master/tutorials/gray_s
 + `tests/gray_scott_reduced_muscle3/micro.py`: the reduced surrogate.
 + `tests/gray_scott_reduced_muscle3/run.py`: the MUSCLE3 configuration file, which runs the simulation.
 
-We will assume that MUSCLE3 has been properly installed.
-
 ## Modifications to the macroscopic model
 
 The first modification to the macro model consists of placing the main script in its own subroutine, named `gray_scott_macro` here:
@@ -38,7 +36,7 @@ def gray_scott_macro():
         #Main script
 ```
 
-Furthermore, the main script is also incapsulated in the `reuse_instance` loop. This reuse loop allows to run the model multiple times, for instance in an ensemble setting. The micro model is also executed multipled times (every time step), and will also be encapsulated in a reuse loop. See this [MUSCLE3 tutorial] for more information. 
+Furthermore, the main script is also incapsulated in the `reuse_instance` loop. This reuse loop allows to run the model multiple times, for instance in an ensemble setting. The micro model is also executed multipled times (every time step), and will also be encapsulated in a reuse loop. See this [MUSCLE3 tutorial](https://muscle3.readthedocs.io/en/latest/tutorial.html) for more information. 
 
 In a MUSCLE3 setting, the macro model communicates with the micro model via so-called "ports". As can be seen above, we have defined two of them for the macro model. On the `O_I` port, the macro model sends its state to the micro model, and on the `S` port, it receices the reduced subgrid-scale (sgs) terms from the micro model, see also the figure below:
 
