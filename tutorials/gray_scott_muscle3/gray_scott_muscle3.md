@@ -90,9 +90,7 @@ def reduced_sgs():
     #get some parameters
     N_Q = instance.get_setting('N_Q')       #the number of QoI to track, per PDE
     N_LF = instance.get_setting('N_LF')     #the number of gridpoints in 1 dimension
-    t_max = instance.get_setting('t_max')   #the simulation time, per time-step of macro   
-    dt = instance.get_setting('dt')         #the micro time step
-
+    
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
 
@@ -158,3 +156,49 @@ Now the right-hand sides of both macroscopic PDEs can be computed.
 
 ## Putting it all together
 
+The file `tests/gray_scott_reduced_muscle3/run.py` contains the MUSCLE3 configuration in which the two models are coupled. It is given by
+
+```python
+from libmuscle.runner import run_simulation
+from ymmsl import ComputeElement, Conduit, Configuration, Model, Settings
+
+#load the macro and micro model
+from micro import reduced_sgs
+from macro import gray_scott_macro
+
+#Compute elements for the macro and micro model: specify the name of the python file here
+elements = [ComputeElement('macro', 'macro', [1]),
+            ComputeElement('micro', 'micro', [1])]
+
+#connect the submodels
+conduits = [Conduit('macro.state_out', 'micro.state_in'),
+            Conduit('micro.sgs_out', 'macro.sgs_in')]
+
+#create model instance
+model = Model('gray_scott_reduced', elements, conduits)
+
+#settings 
+settings = Settings({'micro.t_max': 0.5, 'micro.dt': 0.5, 'N_Q': 2, 
+                     'N_LF': 128, 
+                     'macro[0].feed': 0.02, 
+                     'macro[0].kill': 0.05,
+                     })
+#configure the model
+configuration = Configuration(model, settings)
+
+#actual subroutines to run, imported from macro.py and micro.py
+implementations = {'macro': gray_scott_macro, 'micro': reduced_sgs}
+
+#run the coupled model
+run_simulation(configuration, implementations)
+```
+The different submodels are defined via `ComputeElement` objects, in which the name of the file containing the submodels must be specified. In the compute elements we can also specify the number of copies of the coupled system we'd like to have (`[1]` in this case). If run this on an HPC node of for instance 28 cores, changing `[1]` to `[28]` allows us to use the entire node. This is useful in an ensemble setting, where we might want to run the same coupled simulation with different paramater values. 
+
+Models are connected using `Conduit` objects, and `Settings` objects are used to pass paramaters to the submodels. For instance the `f` and `k` values are retrieved in the macro model via 
+
+```python
+# gray scott parameters
+feed = instance.get_setting('feed')
+kill = instance.get_setting('kill')
+```
+In the case of an ensemble simulation, we can specify different parameter values to the different copies in the `Settings` object, e.g. by `macro[1].feed`, `macro[2].feed` etc.
