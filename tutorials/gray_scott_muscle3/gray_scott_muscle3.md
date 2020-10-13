@@ -192,9 +192,7 @@ implementations = {'macro': gray_scott_macro, 'micro': reduced_sgs}
 #run the coupled model
 run_simulation(configuration, implementations)
 ```
-The different submodels are defined via `ComputeElement` objects, in which the name of the file containing the submodels must be specified. In the compute elements we can also specify the number of copies of the coupled system we'd like to have (`[1]` in this case). If run this on an HPC node of for instance 28 cores, changing `[1]` to `[28]` allows us to use the entire node. This is useful in an ensemble setting, where we might want to run the same coupled simulation with different paramater values. 
-
-Models are connected using `Conduit` objects, and `Settings` objects are used to pass paramaters to the submodels. For instance the `f` and `k` values are retrieved in the macro model via 
+The different submodels are defined via `ComputeElement` objects, in which the name of the file containing the submodels must be specified. In the compute elements we can also specify the number of copies of the coupled system we'd like to have (`[1]` in this case). If we run this on an HPC node of for instance 28 cores, changing `[1]` to `[28]` allows us to use the entire node. This is useful in an ensemble setting, where we might want to run the same coupled simulation with different paramater values. Models are connected using `Conduit` objects, and `Settings` objects are used to pass parameters to the submodels. For instance the `f` and `k` values are retrieved in the macro model via 
 
 ```python
 # gray scott parameters
