@@ -128,22 +128,22 @@ Here, `B_n` is the current state of the subgrid-scale term, and `X_n` is the sta
 One of the statistics we might be interested are the probability density functions (pdfs) of `X_k` and `B_k`, for both the full (validation) data set and the data set obtained in the 'online' phase from the preceding step. This is done via a `Base_Analysis` object:
 
 ```python
-#load the campaign
+# load the campaign
 campaign = es.Campaign(load_state=True)
-#load the training data (from lorenz96.py)
+# load the training data (from lorenz96.py)
 data_frame_ref = campaign.load_hdf5_data()
-#load the data from lorenz96_qsn.py here
-data_frame_qsn = campaign.load_hdf5_data()
+# load the data from lorenz96_ann.py here
+data_frame_ann = campaign.load_hdf5_data()
 
 # load reference data
 X_ref = data_frame_ref['X_data']
 B_ref = data_frame_ref['B_data']
 
-# load data of QSN surrogate
-X_qsn = data_frame_qsn['X_data']
-B_qsn = data_frame_qsn['B_data']
+# load data of ann surrogate
+X_ann = data_frame_ann['X_data']
+B_ann = data_frame_ann['B_data']
 
-# create QSN analysis object
+# create ann analysis object
 analysis = es.analysis.BaseAnalysis()
 
 #############
@@ -153,18 +153,18 @@ analysis = es.analysis.BaseAnalysis()
 start_idx = 0
 fig = plt.figure(figsize=[8, 4])
 ax = fig.add_subplot(121, xlabel=r'$X_k$')
-X_dom_surr, X_pde_surr = analysis.get_pdf(X_qsn[start_idx:-1:10].flatten())
+X_dom_surr, X_pde_surr = analysis.get_pdf(X_ann[start_idx:-1:10].flatten())
 X_dom, X_pde = analysis.get_pdf(X_ref[start_idx:-1:10].flatten())
 ax.plot(X_dom, X_pde, 'k+', label='L96')
-ax.plot(X_dom_surr, X_pde_surr, label='QSN')
+ax.plot(X_dom_surr, X_pde_surr, label='ann')
 plt.yticks([])
 plt.legend(loc=0)
 
 ax = fig.add_subplot(122, xlabel=r'$B_k$')
-B_dom_surr, B_pde_surr = analysis.get_pdf(B_qsn[start_idx:-1:10].flatten())
+B_dom_surr, B_pde_surr = analysis.get_pdf(B_ann[start_idx:-1:10].flatten())
 B_dom, B_pde = analysis.get_pdf(B_ref[start_idx:-1:10].flatten())
 ax.plot(B_dom, B_pde, 'k+', label='L96')
-ax.plot(B_dom_surr, B_pde_surr, label='QSN')
+ax.plot(B_dom_surr, B_pde_surr, label='ann')
 plt.yticks([])
 plt.legend(loc=0)
 
