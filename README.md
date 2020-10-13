@@ -28,7 +28,7 @@ python3 setup.py install --user
 
 + Standard artificial neural networks, used for regression with (time-lagged) features.
 
-+ It is possible to couple surrogates to the macroscopic model via [MUSCLE3](https://muscle3.readthedocs.io/en/latest/index.html), the third incarnation of the Multiscale Coupling Library and Environment. A tutorial is given below.
++ It is possible to couple surrogates to the macroscopic model via [MUSCLE3](https://muscle3.readthedocs.io/en/latest/index.html), the third incarnation of the Multiscale Coupling Library and Environment, see the corresponding tutorial.
 
 ## Tutorials
 
