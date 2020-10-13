@@ -44,4 +44,4 @@ The following tutorials can be found in the `tutorials` folder:
 
  + `/gray_scott`: reduced surrogates for a reaction diffusion equation. This applies the data compression technique to the two-dimensional gray-scott equations.
  
- + `/gray_scott_muscle`: this is basicaly the same tutorial as above, only the coupling with the reduced surrogates and the reaction diffusion equations is performed using MUSCLE3.
+ + `/gray_scott_muscle`: this is basically the same tutorial as above, only the coupling with the reduced surrogates and the reaction diffusion equations is performed using MUSCLE3.
