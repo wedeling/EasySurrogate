@@ -158,6 +158,7 @@ plt.rcParams['figure.figsize'] = 6,6
 import os, h5py
 import easysurrogate as es
 from scipy import stats 
+import pandas as pd 
 
 plt.close('all')
 plt.rcParams['image.cmap'] = 'seismic'
@@ -240,7 +241,7 @@ mu = 1.0/(day*decay_time_mu)
 #start, end time (in days) + time step
 t_burn = 365*day
 t = 0*day
-t_end = t + 365*day
+t_end = t + 2*365*day
 dt = 0.01
 
 n_steps = np.ceil((t_end-t)/dt).astype('int')
@@ -276,11 +277,14 @@ plot = False
 # SPECIFY WHICH DATA TO STORE #
 ###############################
 
-vorticity = np.zeros([N**2,S])
-jacobian = np.zeros([N**2,S])
+streamfn = [] 
+vorticity = [] 
+jacobian = [] 
+res = [] 
 
 #TRAINING DATA SET
-QoI = ['w_hat_nm1_LF', 'VgradW_hat_nm1_LF', 'r_hat_nm1']
+# QoI = ['w_hat_nm1_LF', 'VgradW_hat_nm1_LF', 'r_hat_nm1']
+QoI = ['streamfn', 'vorticity', 'jacobian', 'res']
 Q = len(QoI)
 
 #allocate memory
@@ -376,14 +380,22 @@ for n in range(n_steps):
         j2 = 0
 
         if t > t_burn:
-            for qoi in QoI:
-                #store non-zero Fourier coefs
-                samples[qoi][idx] = eval(qoi)[K,L].reshape(2*np.int(Ncutoff_LF)+1,np.int(Ncutoff_LF)+1)
-                #store full fields
-                # samples[qoi][idx] = np.fft.irfft2(eval(qoi))
+            # for qoi in QoI:
+            #     #store non-zero Fourier coefs
+            #     samples[qoi][idx] = eval(qoi)[K,L].reshape(2*np.int(Ncutoff_LF)+1,np.int(Ncutoff_LF)+1)
+            #     #store full fields
+            #     # samples[qoi][idx] = np.fft.irfft2(eval(qoi))
 
-            vorticity[:,idx] = np.fft.irfft2(w_hat_n_HF).flatten()
-            jacobian[:,idx] = np.fft.irfft2(VgradW_hat_nm1_HF).flatten()
+            psi_hat_n_LF = w_hat_n_LF/k_squared_no_zero
+            psi_hat_n_LF[0,0] = 0.0
+            #streamfn[:,idx] = np.fft.irfft2(psi_hat_n_LF).flatten()
+            streamfn.append(np.fft.irfft2(psi_hat_n_LF).flatten())
+            #vorticity[:,idx] = np.fft.irfft2(w_hat_n_LF).flatten()
+            vorticity.append(np.fft.irfft2(w_hat_n_LF).flatten())
+            #jacobian[:,idx] = np.fft.irfft2(VgradW_hat_nm1_LF).flatten()
+            jacobian.append(np.fft.irfft2(VgradW_hat_nm1_LF).flatten())
+            #res[:,idx] = np.fft.irfft2(r_hat_nm1).flatten()
+            res.append(np.fft.irfft2(r_hat_nm1).flatten())
 
             idx += 1
         
@@ -433,9 +445,32 @@ if state_store:
     
 #store the samples
 if store:
-    store_samples_hdf5() 
+    # store_samples_hdf5() 
     
-post_proc = es.methods.Post_Processing()
+    # Store each variable in a different csv file such that the columns are the gridpoints and the rows are instances in time
+#    print(len(np.asarray(streamfn)))
+#    print(len(np.asarray(streamfn)[0]))
+#    df_streamfn = pd.DataFrame(np.asarray(streamfn))
+#    df_streamfn.to_csv('streamfunction.csv',index=False)
+#    #
+#    df_vorticity = pd.DataFrame(np.asarray(vorticity))
+#    df_vorticity.to_csv('vorticity.csv',index=False)
+#    #
+#    df_jacobian = pd.DataFrame(np.asarray(jacobian))
+#    df_jacobian.to_csv('jacobian.csv',index=False)
+#    #
+#    df_res = pd.DataFrame(np.asarray(res))
+#    df_res.to_csv('residual.csv',index=False)
+    
+    samples = {}
+    for q in QoI:
+        print('Saving', q)
+        samples[q] = eval(q)
+        
+    campaign = es.Campaign()
+    campaign.store_data_to_hdf5(samples)
+    
+post_proc = es.analysis.BaseAnalysis()
 # plot PDFs
 w_dom, w_pdf = post_proc.get_pdf(vorticity.flatten())
 J_dom, J_pdf = post_proc.get_pdf(jacobian.flatten())
@@ -466,11 +501,11 @@ if not plot:
     #plot vorticity field
     fig = plt.figure('vorticity',figsize=[12,6])
     ax = fig.add_subplot(121, xlabel=r'x', ylabel=r'y', title='t = ' + str(np.around(t/day, 2)) + ' days')
-    ct = ax.contourf(x, y, np.fft.irfft2(w_hat_np1_HF), 100)
+    ct = ax.contourf(x, y, np.fft.irfft2(w_hat_np1_HF), vmin=np.min(np.fft.irfft2(w_hat_np1_HF)), vmax=np.max(np.fft.irfft2(w_hat_np1_HF)))
     plt.colorbar(ct)
     
     ax = fig.add_subplot(122, xlabel=r'x', ylabel=r'y', title='t = ' + str(np.around(t/day, 2)) + ' days')
-    ct = ax.contourf(x, y, np.fft.irfft2(P_LF*w_hat_np1_LF), 100)
+    ct = ax.contourf(x, y, np.fft.irfft2(P_LF*w_hat_np1_LF), vmin=np.min(np.fft.irfft2(w_hat_np1_HF)), vmax=np.max(np.fft.irfft2(w_hat_np1_HF)))
     plt.colorbar(ct)
     
     plt.tight_layout()
