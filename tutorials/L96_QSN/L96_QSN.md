@@ -78,7 +78,7 @@ To evaluate the classification error of (a subset of) the training data, an anal
 ```
 # QSN analysis object
 analysis = es.analysis.QSN_analysis(surrogate)
-analysis.get_classification_error(features[0:1000], target[0:1000])
+analysis.get_classification_error(index=np.arange(0, 1000))
 ```
 This will print the classifiction error to the screen for each of the 18 spatial locations. Once the surrogate is trained, it is saved and added to the campaign via
 
