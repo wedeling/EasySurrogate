@@ -28,4 +28,4 @@ campaign.save_state()
 
 # QSN analysis object
 analysis = es.analysis.QSN_analysis(surrogate)
-analysis.get_classification_error(features[0:1000], target[0:1000])
+analysis.get_classification_error(index=np.arange(0, 10000))
