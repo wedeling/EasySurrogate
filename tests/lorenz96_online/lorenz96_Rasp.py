@@ -1,8 +1,24 @@
 """
 ===============================================================================
-Generate Lorenz 96 data for machine learning
+This file recreates the Lorenz96 results from:
+
+    "Rasp, Coupled online learning as a way to tackle instabilities
+     and biases in neural network parameterizations:
+     general algorithms and Lorenz 96 case study", 2020.
+
+    The neural net is a standard ANN that is trained and applied locally,
+    with Markovian features
+
 ===============================================================================
 """
+
+# Note that we are technically not using this in Coupled learning
+class NNParam():
+    """Parameterization class that can be used inside a L96 object"""
+    def __init__(self, keras_net):
+        self.net = keras_net
+    def __call__(self, x):
+        return self.net.predict_on_batch(x).squeeze(-1)
 
 ####################################
 # Lorenz 96 subroutines (2 Layers) #
@@ -142,12 +158,17 @@ plt.close('all')
 # Lorenz96 parameters
 #####################
 
+# predict under 'difficult' parameter settings, with neural trained under
+# 'easy' settings
+
 # K = 36
 # J = 10
 # F = 10.0
 # h_x = -1.0
 # h_y = 1.0
 # epsilon = 0.1
+
+# #The other way around
 
 K = 36
 J = 10
@@ -163,7 +184,7 @@ epsilon = 0.2
 dt_HR = 0.001
 N = 10
 dt_LR = N*dt_HR
-tau_nudge = dt_LR
+tau_nudge = 0.1
 t_end = 50.0
 t = np.arange(0.0, t_end, dt_LR)
 M = 10
@@ -201,14 +222,22 @@ store = False  # store the prediction results
 # load pre-trained campaign
 campaign = es.Campaign(load_state=True)
 
-# set the batch size equal to M
-campaign.surrogate.surrogate.set_batch_size(1)
+# from tensorflow import keras
+# from tensorflow.keras.layers import *
+# # Load the "wrongly" pretrained model
+# nn = keras.models.load_model('./nn.h5')
+# ml_param = NNParam(nn)
 
 # change IC
 data_frame = campaign.load_hdf5_data()
 X_n = data_frame['X_data'][campaign.surrogate.max_lag]
 Y_n = data_frame['Y_data'][campaign.surrogate.max_lag]
 B_n = data_frame['B_data'][campaign.surrogate.max_lag]
+
+# load reference data
+data_frame = campaign.load_hdf5_data(name="load reference data")
+X_ref = data_frame['X_data'].flatten()
+B_ref = data_frame['B_data'].flatten()
 
 # initial right-hand side
 f_nm1 = rhs_X(X_n, B_n)
@@ -244,8 +273,8 @@ for t_i in t:
     Delta_X = X_n_LR - X_n
     
     #Store LR and HR state at beginning of time step
-    X_n_LR_hat = X_n_LR
-    X_n_hat = X_n
+    X_n_LR_hat = np.copy(X_n_LR)
+    X_n_hat = np.copy(X_n)
     
     features.append(X_n_LR_hat)
 
@@ -263,15 +292,19 @@ for t_i in t:
         Y_n = np.copy(Y_np1)
         f_nm1 = np.copy(f_n)
         g_nm1 = np.copy(g_n)
-
-    #Compute "assumed" HR increment
-    Delta_X_internal_HR = X_n - X_n_hat - Delta_X / tau_nudge * dt_LR
-   
+        
     # solve LR equation
     X_np1_LR, f_n_LR = step_X(X_n_LR, f_nm1_LR, B_n_LR, dt_LR)
+    
+    ##############
+    # MOVE ALL THIS WITHIN EASYSURROGATE
+    delta_X_LR = X_np1_LR - X_n_LR_hat
+
+    #Compute "assumed" HR increment
+    delta_X_internal_HR = X_n - X_n_hat - Delta_X / tau_nudge * dt_LR
 
     # compute the target for the neural network
-    targets.append((Delta_X_internal_HR - (X_np1 - X_n_hat)) / dt_LR)
+    targets.append((delta_X_internal_HR - delta_X_LR) / dt_LR)
 
     # evaluate the neural network
     B = []
@@ -279,15 +312,19 @@ for t_i in t:
         B.append(campaign.surrogate.predict(X_n_LR_hat[k]))
     B = np.array(B).flatten()
     
+    # B = ml_param(X_n_LR_hat)
+
     # update the LR state
     X_np1_LR += B * dt_LR
-    
+
+    ################
+
     # update the neural network every M time steps
     if np.mod(idx, M) == 0 and idx != 0:
         features = np.array(features).flatten()
-        targets = np.array(targets).reshape([-1, 1])
-        campaign.surrogate.train([features], targets, [[1]], 500, n_layers=3, n_neurons=32,
-                                 batch_size=1)
+        targets = np.array(targets).flatten().reshape([-1, 1])
+        campaign.surrogate.train_online([features], targets, 1, batch_size=K*M)
+        # loss = ml_param.net.fit(features, targets, epochs=1, batch_size=K*M, verbose=0)
         features = []; targets = []        
 
     #update low-res vars
@@ -307,19 +344,6 @@ for t_i in t:
 if store:
     campaign.store_data_to_hdf5({'X_data': X_data, 'B_data': B_data})
 
-# plot results
-fig = plt.figure()
-ax = fig.add_subplot(111, projection='polar')
-theta = np.linspace(0.0, 2.0 * np.pi, K + 1)
-# create a while in the middle to the plot, scales plot better
-ax.set_rorigin(-22)
-# remove set radial tickmarks, no labels
-ax.set_rgrids([-10, 0, 10], labels=['', '', ''])[0][1]
-ax.legend(loc=1)
-ax.plot(theta, np.append(X_data[-1, :], X_data[-1, 0]), label='X')
-ax.plot(theta, np.append(B_data[-1, :], B_data[-1, 0]), label='B')
-plt.show()
-
 #############
 # Plot PDEs #
 #############
@@ -328,12 +352,32 @@ post_proc = es.analysis.BaseAnalysis()
 
 fig = plt.figure()
 ax = fig.add_subplot(111, xlabel=r'$X_k$')
-X_dom, X_pde = post_proc.get_pdf(X_data.flatten()[0:-1:10])
-X_dom_LR, X_pde_LR = post_proc.get_pdf(X_data_LR.flatten()[0:-1:10])
-ax.plot(X_dom, X_pde, 'ko', label='HR')
-ax.plot(X_dom_LR, X_pde_LR, 'b', label='LR')
+X_dom_ref, X_pdf_ref = post_proc.get_pdf(X_ref[0:-1:10])
+X_dom, X_pdf = post_proc.get_pdf(X_data.flatten()[0:-1:10])
+X_dom_LR, X_pdf_LR = post_proc.get_pdf(X_data_LR.flatten()[0:-1:10])
+ax.plot(X_dom_ref, X_pdf_ref, 'ko', label='ref')
+ax.plot(X_dom, X_pdf, '--g', label='HR')
+ax.plot(X_dom_LR, X_pdf_LR, 'b', label='LR')
 plt.yticks([])
 plt.legend(loc=0)
+plt.tight_layout()
+
+
+#############
+
+plt.figure()
+plt.scatter(X_ref[::200], B_ref[::200], s=5, alpha=0.2, color='cornflowerblue');
+# plt.scatter(X_data[::200], B_data[::200], s=5, alpha=0.2, color='red');
+
+N = 100
+a = np.linspace(-5, 10, N)
+fit = []
+for i in range(N):
+    fit.append(campaign.surrogate.predict(a[i]))
+    
+# fit = ml_param(a)
+
+plt.plot(a, fit, 'y')
 plt.tight_layout()
 
 plt.show()

@@ -153,19 +153,23 @@ plt.close('all')
 # Lorenz96 parameters
 #####################
 
+#Generate data under 'easy' unimodal parameter settings
+
 # K = 36
 # J = 10
-# F = 7.0
-# h_x = -2.0
-# h_y = 2.0
-# epsilon = 0.2
+# F = 10.0
+# h_x = -1.0
+# h_y = 1.0
+# epsilon = 0.1
+
+# Generate data under 'hard' bimodal parameter settings
 
 K = 36
 J = 10
-F = 10.0
-h_x = -1.0
-h_y = 1.0
-epsilon = 0.1
+F = 7.0
+h_x = -2.0
+h_y = 2.0
+epsilon = 0.2
 
 ##################
 # Time parameters
