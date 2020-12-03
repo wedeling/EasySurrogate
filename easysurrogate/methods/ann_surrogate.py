@@ -15,14 +15,14 @@ import easysurrogate as es
 class ANN_Surrogate(Campaign):
 
     def __init__(self, **kwargs):
-        print('Creating ANN Object')
+        print('Creating ANN_Surrogate Object')
         self.name = 'ANN Surrogate'
 
     ############################
     # START COMMON SUBROUTINES #
     ############################
 
-    def train(self, feats, target, lags, n_iter,
+    def train(self, feats, target, n_iter, lags=None,
               test_frac=0.0,
               n_layers=2, n_neurons=100,
               activation='tanh',
@@ -55,7 +55,6 @@ class ANN_Surrogate(Campaign):
             feats = [feats]
 
         self.lags = lags
-        self.max_lag = np.max(list(chain(*self.lags)))
 
         # Feature engineering object
         self.feat_eng = es.methods.Feature_Engineering()
@@ -77,16 +76,22 @@ class ANN_Surrogate(Campaign):
         else:
             self.X_symmetry = np.zeros(len(X), dtype=bool)
 
-        print('Creating time-lagged training data...')
-        X_train, y_train = self.feat_eng.lag_training_data(X, y, lags=lags,
-                                                           X_symmetry=self.X_symmetry)
-        print('done')
+        if lags is not None:
+            self.max_lag = np.max(list(chain(*self.lags)))
+            print('Creating time-lagged training data...')
+            X_train, y_train = self.feat_eng.lag_training_data(X, y, lags=lags,
+                                                               X_symmetry=self.X_symmetry)
+            print('done')
+        else:
+            self.max_lag = 0
+            X_train = np.array(X).reshape([self.n_train, -1])
+            y_train = y
 
         # number of output neurons
         n_out = y_train.shape[1]
 
-        # create the feed-forward QSN
-        self.surrogate = es.methods.ANN(X=X_train, y=y,
+        # create the feed-forward ANN
+        self.neural_net = es.methods.ANN(X=X_train, y=y,
                                         n_layers=n_layers, n_neurons=n_neurons,
                                         n_out=n_out,
                                         loss='squared',
@@ -99,9 +104,64 @@ class ANN_Surrogate(Campaign):
         print('Training Artificial Neural Network...')
 
         # train network for N_iter mini batches
-        self.surrogate.train(n_iter, store_loss=True)
+        self.neural_net.train(n_iter, store_loss=True)
         self.set_data_stats()
-        self.init_feature_history(feats)
+        if lags is not None:
+            self.init_feature_history(feats)
+
+    def train_online(self, feats, target, n_iter,
+                     batch_size=1, verbose=False, sequential=True, **kwargs):
+        """
+        Perform online training, i.e. backpropagation while the surrogate is coupled
+        to the macroscopic governing equations.
+
+        Parameters
+        ----------
+        feats : feature array, or list of different feature arrays
+        target : the target data
+        n_iter : number of back propagation iterations
+        batch_size : Mini batch size. Default is 1. 
+        verbose: print loss to screen during back propagation. Default is False.
+        sequential: do not randomly sample the training data, Default is True.
+
+        Returns
+        -------
+        None.
+
+        """
+
+        if not isinstance(feats, list):
+            feats = [feats]
+
+        # list of features
+        X = [X_i for X_i in feats]
+
+        # True/False on wether the X features are symmetric arrays or not
+        if 'X_symmetry' in kwargs:
+            self.X_symmetry = kwargs['X_symmetry']
+        else:
+            self.X_symmetry = np.zeros(len(X), dtype=bool)
+
+        if self.lags is not None:
+            #create (time-lagged) training data
+            X_train, y_train = self.feat_eng.lag_training_data(X, target, lags=self.lags,
+                                                               X_symmetry=self.X_symmetry)
+        else:
+            #do not time lag data
+            n_samples = X[0].shape[0]
+            X_train = np.array(X).reshape([n_samples, -1])
+            y_train = target
+
+        #set the training data, training size and bathc size for the online backprop step
+        if not self.neural_net.batch_size == batch_size:
+            self.neural_net.set_batch_size(batch_size)
+        self.neural_net.n_train = X_train.shape[0]
+        #standardize training data
+        self.neural_net.X = (X_train - self.feat_mean) / self.feat_std
+        self.neural_net.y = (y_train - self.output_mean) / self.output_std
+
+        # train network for n_iter mini batches
+        self.neural_net.train(n_iter, store_loss=True, sequential=sequential, verbose=verbose)
 
     def predict(self, X):
         """
@@ -119,17 +179,21 @@ class ANN_Surrogate(Campaign):
         Prediction of the output y
 
         """
-        if not isinstance(X, list):
-            X = [X]
-        # append the current state X to the feature history
-        self.feat_eng.append_feat(X)
-        # get the feature history defined by the specified number of time lags.
-        # Here, feat is an array with the same size as the neural network input layer
-        feat = self.feat_eng.get_feat_history()
+        if self.lags is not None:
+            if not isinstance(X, list):
+                X = [X]
+            # append the current state X to the feature history
+            self.feat_eng.append_feat(X)
+            # get the feature history defined by the specified number of time lags.
+            # Here, feat is an array with the same size as the neural network input layer
+            feat = self.feat_eng.get_feat_history()
+        else:
+            feat = X
+
         # features were standardized during training, do so here as well
         feat = (feat - self.feat_mean) / self.feat_std
         # feed forward prediction step
-        y = self.surrogate.feed_forward(feat.reshape([1, self.surrogate.n_in])).flatten()
+        y = self.neural_net.feed_forward(feat.reshape([1, self.neural_net.n_in])).flatten()
         # transform y back to physical domain
         y = y * self.output_std + self.output_mean
 
@@ -157,13 +221,19 @@ class ANN_Surrogate(Campaign):
         If the data were standardized, this stores the mean and
         standard deviation of the features in the ANN_Surrogate object.
         """
-        if hasattr(self.surrogate, 'X_mean'):
-            self.feat_mean = self.surrogate.X_mean
-            self.feat_std = self.surrogate.X_std
+        if hasattr(self.neural_net, 'X_mean'):
+            self.feat_mean = self.neural_net.X_mean
+            self.feat_std = self.neural_net.X_std
+        else:
+            self.feat_mean = 0.0
+            self.feat_std = 1.0
 
-        if hasattr(self.surrogate, 'y_mean'):
-            self.output_mean = self.surrogate.y_mean
-            self.output_std = self.surrogate.y_std
+        if hasattr(self.neural_net, 'y_mean'):
+            self.output_mean = self.neural_net.y_mean
+            self.output_std = self.neural_net.y_std
+        else:
+            self.output_mean = 0.0
+            self.output_std = 1.0
 
     def init_feature_history(self, feats, start=0):
         """

@@ -358,7 +358,7 @@ class ANN:
                 # layer_r.W += -alpha*beta1*layer_r.V
 
     # train the neural network
-    def train(self, n_epoch, store_loss=False, check_derivative=False, sequential=False):
+    def train(self, n_epoch, store_loss=False, check_derivative=False, sequential=False, verbose=True):
 
         for i in range(n_epoch):
 
@@ -367,7 +367,10 @@ class ANN:
                 rand_idx = np.random.randint(0, self.n_train, self.batch_size)
             # select a random starting point, and use sequential data from there
             else:
-                start = np.random.randint(0, self.n_train - self.batch_size, 1)
+                if self.n_train > self.batch_size:
+                    start = np.random.randint(0, self.n_train - self.batch_size, 1)
+                else:
+                    start = 0
                 rand_idx = np.arange(start, start + self.batch_size)
 
             # compute learning rate
@@ -396,7 +399,8 @@ class ANN:
 
                 if np.mod(i, 1000) == 0:
                     loss_i = np.mean(l)
-                    print('Batch', i, 'learning rate', alpha, 'loss:', loss_i)
+                    if verbose:
+                        print('Batch', i, 'learning rate', alpha, 'loss:', loss_i)
                     # note: appending a cupy value to a list is inefficient - if done every iteration
                     # it will slow down executing significantly
                     self.loss_vals.append(loss_i)
