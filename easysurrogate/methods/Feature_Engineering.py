@@ -37,7 +37,7 @@ class Feature_Engineering:
 
         return (self.X - X_mean) / X_std, (self.y - y_mean) / y_std
 
-    def lag_training_data(self, X, y, lags, **kwargs):
+    def lag_training_data(self, X, y, lags, init_feats = True):
         """
         Create time-lagged supervised training data X, y
 
@@ -71,11 +71,11 @@ class Feature_Engineering:
             tmp.append(X)
             X = tmp
 
-        # True/False on wether the X features are symmetric arrays or not
-        if 'X_symmetry' in kwargs:
-            self.X_symmetry = kwargs['X_symmetry']
-        else:
-            self.X_symmetry = np.zeros(len(X), dtype=bool)
+        # # True/False on wether the X features are symmetric arrays or not
+        # if 'X_symmetry' in kwargs:
+        #     self.X_symmetry = kwargs['X_symmetry']
+        # else:
+        #     self.X_symmetry = np.zeros(len(X), dtype=bool)
 
         # compute target data at next (time) step
         if y.ndim == 2:
@@ -96,10 +96,10 @@ class Feature_Engineering:
         idx = 0
         for X_i in X:
 
-            # if X_i features are symmetric arrays, only select upper triangular part
-            if self.X_symmetry[idx]:
-                idx0, idx1 = np.triu_indices(X_i.shape[1])
-                X_i = X_i[:, idx0, idx1]
+            # # if X_i features are symmetric arrays, only select upper triangular part
+            # if self.X_symmetry[idx]:
+            #     idx0, idx1 = np.triu_indices(X_i.shape[1])
+            #     X_i = X_i[:, idx0, idx1]
 
             for lag in np.sort(lags[idx])[::-1]:
                 begin = max_lag - lag
@@ -128,11 +128,12 @@ class Feature_Engineering:
             X_train = np.append(X_train, X_i, axis=1)
 
         # initialize the storage of features
-        self.init_feature_history(lags)
+        if init_feats:
+            self.init_feature_history(lags)
 
         return X_train, y_train
 
-    def get_feat_history(self):
+    def get_feat_history(self, **kwargs):
         """
         Return the features from the feat_history dict based on the lags
         specified in self.lags
@@ -146,8 +147,13 @@ class Feature_Engineering:
         for i in range(self.n_feat_arrays):
             for lag in self.lags[idx]:
                 begin = self.max_lag - lag
-
-                X_i.append(self.feat_history[i][begin])
+                current_feat = self.feat_history[i][begin]
+                if current_feat.ndim == 1:
+                    X_i.append(current_feat)
+                elif current_feat.shape[1] == 1:
+                    X_i.append(current_feat.flatten())
+                else:
+                    X_i.append(np.array([current_feat[0][kwargs['index']]]))
             idx += 1
 
         return np.array(list(chain(*X_i)))
@@ -245,27 +251,26 @@ class Feature_Engineering:
         # if X is one array, add it to a list anyway
         if isinstance(X, np.ndarray):
             X = [X]
-            # tmp = []
-           # tmp.append(X)
-           # X = tmp
 
         for i in range(self.n_feat_arrays):
 
             if not isinstance(X[i], np.ndarray):
-                X[i] = np.array([X[i]])
+                # X[i] = np.array([X[i]])
+                print('ERROR: Only numpy arrays are allowed as input features.')
+                import sys; sys.exit()
 
-            # if X_i features are symmetric arrays, only select upper trian. part
-            if self.X_symmetry[i]:
-                idx0, idx1 = np.triu_indices(X[i].shape[1])
-                X[i] = X[i][idx0, idx1]
+            # # if X_i features are symmetric arrays, only select upper trian. part
+            # if self.X_symmetry[i]:
+            #     idx0, idx1 = np.triu_indices(X[i].shape[1])
+            #     X[i] = X[i][idx0, idx1]
 
-            if X[i].ndim != 1:
-                X[i] = X[i].flatten()
+            # if X[i].ndim != 1:
+            #     X[i] = X[i].flatten()
 
             self.feat_history[i].append(X[i])
 
             # if max number of features is reached, remove first item
-            if len(self.feat_history[i]) > self.max_lag:
+            if len(self.feat_history[i]) > self.max_lag + 1:
                 self.feat_history[i].pop(0)
 
     def recursive_moments(self, X_np1, mu_n, sigma2_n, N):

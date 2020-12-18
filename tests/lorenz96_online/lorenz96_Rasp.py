@@ -2,7 +2,7 @@
 ===============================================================================
 This file recreates the Lorenz96 results from:
 
-    "Rasp, Coupled online learning as a way to tackle instabilities
+     Rasp, "Coupled online learning as a way to tackle instabilities
      and biases in neural network parameterizations:
      general algorithms and Lorenz 96 case study", 2020.
 
@@ -11,14 +11,6 @@ This file recreates the Lorenz96 results from:
 
 ===============================================================================
 """
-
-# Note that we are technically not using this in Coupled learning
-class NNParam():
-    """Parameterization class that can be used inside a L96 object"""
-    def __init__(self, keras_net):
-        self.net = keras_net
-    def __call__(self, x):
-        return self.net.predict_on_batch(x).squeeze(-1)
 
 ####################################
 # Lorenz 96 subroutines (2 Layers) #
@@ -170,12 +162,19 @@ plt.close('all')
 
 # #The other way around
 
-K = 36
-J = 10
-F = 7.0
+# K = 36
+# J = 10
+# F = 7.0
+# h_x = -2.0
+# h_y = 2.0
+# epsilon = 0.2
+
+K = 18
+J = 20
+F = 10.0
 h_x = -2.0
-h_y = 2.0
-epsilon = 0.2
+h_y = 1.0
+epsilon = 0.5
 
 ##################
 # Time parameters
@@ -187,7 +186,8 @@ dt_LR = N*dt_HR
 tau_nudge = 0.1
 t_end = 50.0
 t = np.arange(0.0, t_end, dt_LR)
-M = 10
+M = 1
+window_length = 100
 
 ###################
 # Simulation flags
@@ -222,17 +222,25 @@ store = False  # store the prediction results
 # load pre-trained campaign
 campaign = es.Campaign(load_state=True)
 
-# from tensorflow import keras
-# from tensorflow.keras.layers import *
-# # Load the "wrongly" pretrained model
-# nn = keras.models.load_model('./nn.h5')
-# ml_param = NNParam(nn)
+batch_size = window_length - campaign.surrogate.max_lag
+batch_size = window_length*K
+
+# set some constants used in online learning
+campaign.surrogate.set_online_training_parameters(tau_nudge, dt_LR, window_length)
+
+# a = np.linspace(-5, 10, 100)
+# fit_before = campaign.surrogate.predict(a.reshape([1, 100]))
+
+#load training data
+data_frame = campaign.load_hdf5_data()
+X_train = data_frame['X_data']
+Y_train = data_frame['Y_data']
+B_train = data_frame['B_data']
 
 # change IC
-data_frame = campaign.load_hdf5_data()
-X_n = data_frame['X_data'][campaign.surrogate.max_lag]
-Y_n = data_frame['Y_data'][campaign.surrogate.max_lag]
-B_n = data_frame['B_data'][campaign.surrogate.max_lag]
+X_n = X_train[campaign.surrogate.max_lag]
+Y_n = Y_train[campaign.surrogate.max_lag]
+B_n = B_train[campaign.surrogate.max_lag]
 
 # load reference data
 data_frame = campaign.load_hdf5_data(name="load reference data")
@@ -262,9 +270,6 @@ B_data = np.zeros([t.size, K])
 
 X_data_LR = np.zeros([t.size, K])
 
-#allocate feature and target memory
-features = []; targets = []
-
 # start time integration
 idx = 0
 for t_i in t:
@@ -275,8 +280,6 @@ for t_i in t:
     #Store LR and HR state at beginning of time step
     X_n_LR_hat = np.copy(X_n_LR)
     X_n_hat = np.copy(X_n)
-    
-    features.append(X_n_LR_hat)
 
     for n in range(N):
         # solve small-scale equation
@@ -292,40 +295,29 @@ for t_i in t:
         Y_n = np.copy(Y_np1)
         f_nm1 = np.copy(f_n)
         g_nm1 = np.copy(g_n)
-        
+
     # solve LR equation
     X_np1_LR, f_n_LR = step_X(X_n_LR, f_nm1_LR, B_n_LR, dt_LR)
-    
-    ##############
-    # MOVE ALL THIS WITHIN EASYSURROGATE
-    delta_X_LR = X_np1_LR - X_n_LR_hat
 
-    #Compute "assumed" HR increment
-    delta_X_internal_HR = X_n - X_n_hat - Delta_X / tau_nudge * dt_LR
+    campaign.surrogate.generate_online_training_data(X_n_LR_hat, 
+                                                     X_n_LR_hat, X_np1_LR, X_n_hat, X_n)
 
-    # compute the target for the neural network
-    targets.append((delta_X_internal_HR - delta_X_LR) / dt_LR)
+    # # evaluate the neural network locally
+    # B = []
+    # for k in range(K): 
+    #     B.append(campaign.surrogate.predict(X_n_LR_hat[k]))
+    # B = np.array(B).flatten()
+ 
+    # print(len(campaign.surrogate.feat_eng.feat_history[0]))
 
-    # evaluate the neural network
-    B = []
-    for k in range(K):
-        B.append(campaign.surrogate.predict(X_n_LR_hat[k]))
-    B = np.array(B).flatten()
-    
-    # B = ml_param(X_n_LR_hat)
+    B = campaign.surrogate.predict(X_n_LR_hat.reshape([1, K]))
 
     # update the LR state
     X_np1_LR += B * dt_LR
 
-    ################
-
     # update the neural network every M time steps
-    if np.mod(idx, M) == 0 and idx != 0:
-        features = np.array(features).flatten()
-        targets = np.array(targets).flatten().reshape([-1, 1])
-        campaign.surrogate.train_online([features], targets, 1, batch_size=K*M)
-        # loss = ml_param.net.fit(features, targets, epochs=1, batch_size=K*M, verbose=0)
-        features = []; targets = []        
+    if np.mod(idx, M) == 0 and idx != 0 and idx > campaign.surrogate.window_length:
+        campaign.surrogate.train_online(batch_size=batch_size)
 
     #update low-res vars
     X_n_LR = np.copy(X_np1_LR)
@@ -365,20 +357,23 @@ plt.tight_layout()
 
 #############
 
-plt.figure()
-plt.scatter(X_ref[::200], B_ref[::200], s=5, alpha=0.2, color='cornflowerblue');
-# plt.scatter(X_data[::200], B_data[::200], s=5, alpha=0.2, color='red');
+colors = ['#636363', '#bdbdbd', '#f0f0f0']
+fig = plt.figure(figsize=[5,5])
+plt.style.use('seaborn')
+ax = fig.add_subplot(111, xlabel='X', ylabel='B')
 
-N = 100
-a = np.linspace(-5, 10, N)
-fit = []
-for i in range(N):
-    fit.append(campaign.surrogate.predict(a[i]))
-    
-# fit = ml_param(a)
+ax.scatter(X_ref[::200], B_ref[::200], s=8, alpha=1.0, color=colors[0], 
+            label=r'correct training data')
 
-plt.plot(a, fit, 'y')
+ax.scatter(X_train[::200], B_train[::200], s=8, alpha=1.0, color=colors[1],
+            label=r'wrong training data')
+
+ax.scatter(X_data[::20], B_data[::20], marker='o', s=8, alpha=0.5, color=colors[2],
+            label=r'predicted data')
+
+leg = plt.legend(loc=0)
+leg.set_draggable(True)
+
 plt.tight_layout()
 
 plt.show()
-

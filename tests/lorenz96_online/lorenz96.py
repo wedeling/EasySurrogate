@@ -164,12 +164,19 @@ plt.close('all')
 
 # Generate data under 'hard' bimodal parameter settings
 
-K = 36
-J = 10
-F = 7.0
-h_x = -2.0
-h_y = 2.0
-epsilon = 0.2
+# K = 36
+# J = 10
+# F = 7.0
+# h_x = -2.0
+# h_y = 2.0
+# epsilon = 0.2
+
+K = 18
+J = 20
+F = 10.0
+h_x = -1.0
+h_y = 1.0
+epsilon = 0.5
 
 ##################
 # Time parameters
