@@ -253,5 +253,6 @@ class Campaign:
                                             mode='wb',
                                             defaultextension=".pickle")
 
+        print('Saving state to %s.' % file.name)
         pickle.dump(state, file)
         file.close()
