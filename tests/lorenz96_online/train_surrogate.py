@@ -29,7 +29,7 @@ target = data_frame['B_data'][0:-1:N, :]
 surrogate = es.methods.ANN_Surrogate()
 
 # create time-lagged features
-lags = [np.arange(1, 75)]
+lags = [[0]]
 # lags = None
 
 # train the surrogate on the data

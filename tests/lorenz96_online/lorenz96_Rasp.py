@@ -276,7 +276,7 @@ for t_i in t:
     
     #store Delta X
     Delta_X = X_n_LR - X_n
-    
+
     #Store LR and HR state at beginning of time step
     X_n_LR_hat = np.copy(X_n_LR)
     X_n_hat = np.copy(X_n)
@@ -302,15 +302,8 @@ for t_i in t:
     campaign.surrogate.generate_online_training_data(X_n_LR_hat, 
                                                      X_n_LR_hat, X_np1_LR, X_n_hat, X_n)
 
-    # # evaluate the neural network locally
-    # B = []
-    # for k in range(K): 
-    #     B.append(campaign.surrogate.predict(X_n_LR_hat[k]))
-    # B = np.array(B).flatten()
- 
-    # print(len(campaign.surrogate.feat_eng.feat_history[0]))
-
     B = campaign.surrogate.predict(X_n_LR_hat.reshape([1, K]))
+    # B = campaign.surrogate.predict(X_n_LR_hat)
 
     # update the LR state
     X_np1_LR += B * dt_LR

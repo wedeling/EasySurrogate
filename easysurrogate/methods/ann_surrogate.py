@@ -17,8 +17,6 @@ class ANN_Surrogate(Campaign):
     def __init__(self, **kwargs):
         print('Creating ANN_Surrogate Object')
         self.name = 'ANN Surrogate'
-        self.online_feats = []
-        self.online_target = []
 
     ############################
     # START COMMON SUBROUTINES #
@@ -43,7 +41,7 @@ class ANN_Surrogate(Campaign):
         n_layers : The number of layers in the neural network. Includes the
                    input layer and the hidden layers. The default is 2.
         n_neurons : The number of neurons per layer. The default is 100.
-        activation : Type of activation function. The default is 'leaky_relu'.
+        activation : Type of activation function. The default is 'tanh'.
         batch_size : Mini batch size. The default is 64.
         lamb : L2 regularization parameter. The default is 0.0.
 
@@ -56,8 +54,16 @@ class ANN_Surrogate(Campaign):
         if not isinstance(feats, list):
             feats = [feats]
 
+        # the number of distinct feature arrays
+        self.n_feat_arrays = len(feats)
+        # time lags
         self.lags = lags
+        # flag if the surrogate is to be applied locally or not
         self.local = local
+        
+        # initialize storage for online training
+        self.online_feats = [[] for i in range(self.n_feat_arrays)]
+        self.online_target = []
 
         # Feature engineering object
         self.feat_eng = es.methods.Feature_Engineering()
@@ -65,7 +71,7 @@ class ANN_Surrogate(Campaign):
         # number of training samples
         self.n_samples = feats[0].shape[0]
         #number of points in the computational grid
-        n_points = feats[0].shape[1]
+        self.n_points = feats[0].shape[1]
         # compute the size of the training set based on value of test_frac
         self.n_train = np.int(self.n_samples * (1.0 - test_frac))
         print('Using first %d/%d samples to train ANN' % (self.n_train, self.n_samples))
@@ -80,14 +86,15 @@ class ANN_Surrogate(Campaign):
         # do not use entire row as feature, apply surrogate locally along second dimension
         else:
             #create a separate training set for every grid point
-            for i in range(n_points):
+            for i in range(self.n_points):
                 X[i] = [X_i[0:self.n_train, i] for X_i in feats]
                 y[i] = target[0:self.n_train, i].reshape([-1, 1])
 
+        X_train = []; y_train = []
+        #No time-lagged training data
         if lags is not None:
             self.max_lag = np.max(list(chain(*self.lags)))
             print('Creating time-lagged training data...')
-            X_train = []; y_train = []
             # lag every training set in X and y
             for i in range(len(X)):
                 X_train_i, y_train_i = self.feat_eng.lag_training_data(X[i], y[i], lags=lags)
@@ -97,8 +104,12 @@ class ANN_Surrogate(Campaign):
             print('done')
         else:
             self.max_lag = 0
-            X_train = np.array(X).reshape([-1, len(X)])
-            y_train = y
+            #no time lag, just add every entry in X and y to an array
+            for i in range(len(X)):
+                X_train.append(np.array(X[i]).reshape([self.n_train, -1]))
+                y_train.append(y[i])
+            X_train = np.concatenate(X_train)
+            y_train = np.concatenate(y_train)                      
 
         # number of output neurons
         n_out = y_train.shape[1]
@@ -152,24 +163,44 @@ class ANN_Surrogate(Campaign):
 
         #if lagged feature vectors are used
         if self.lags is not None:
+            
+            feats = [np.array(feat) for feat in feats]
+            if not self.local:
+                #create (time-lagged) training data from X
+                X_train, y_train = self.feat_eng.lag_training_data(feats, target, lags=self.lags,
+                                                                    init_feats=False)
+            else:
+                X_train = []; y_train = []
+                #create a separate training set for every grid point
+                for i in range(self.n_points):
+                    X_i = [X_i[:, i] for X_i in feats]
+                    y_i = target[:, i].reshape([-1, 1])
+                    #create time-lagged data per gridpoint
+                    X_train_i, y_train_i = self.feat_eng.lag_training_data(X_i, y_i, lags=self.lags,
+                                                                           init_feats=False)
+                    X_train.append(X_train_i); y_train.append(y_train_i)
+                X_train = np.concatenate(X_train)
+                y_train = np.concatenate(y_train)                
 
-            #the number of different features arrays that are used as input features
-            n_feat_arrays = len(feats[0])
-            X = [];
-            for i in range(n_feat_arrays):
-                # make a single array containing all arrays of the i-th feature vector
-                all_feat_i = np.array([feat[i] for feat in feats])
-                # a list where each entry contains all data of a given feature vector
-                if not self.local:
-                    X.append(all_feat_i)
-                    y = target
-                else:
-                    X.append(all_feat_i.T.flatten())
-                    y = target.T.flatten().reshape([-1, 1])
-
-            #create (time-lagged) training data from X
-            X_train, y_train = self.feat_eng.lag_training_data(X, y, lags=self.lags,
-                                                               init_feats=False)
+            # #the number of different features arrays that are used as input features
+            # n_feat_arrays = len(feats[0])
+            # X = [];
+            # for i in range(n_feat_arrays):
+            #     # make a single array containing all arrays of the i-th feature vector
+            #     all_feat_i = np.array([feat[i] for feat in feats])
+            #     # a list where each entry contains all data of a given feature vector
+            #     if not self.local:
+            #         X.append(all_feat_i)
+            #         y = target
+            #         #create (time-lagged) training data from X
+            #         X_train, y_train = self.feat_eng.lag_training_data(X, y, lags=self.lags,
+            #                                                            init_feats=False)
+            #     else:
+            #         # X.append(all_feat_i.T.flatten())
+            #         # y = target.T.flatten().reshape([-1, 1])
+            #         X = {}; y = {}
+            #         for i in range(n_points):
+            #             X[i] = [feat]
 
         #do not time lag data
         else:
@@ -198,6 +229,11 @@ class ANN_Surrogate(Campaign):
         """
         Compute the features and the target data for an online training step. Results are
         stored internally, and used within the 'train_online' subroutine.
+        
+        Source:        
+        Rasp, "Coupled online learning as a way to tackle instabilities and biases 
+        in neural network parameterizations: general algorithms and Lorenz 96 
+        case study", 2020.
 
         Parameters
         ----------
@@ -227,8 +263,9 @@ class ANN_Surrogate(Campaign):
         # for i in range(len(feats)):
         #     if feats[i].ndim != 1: feats[i] = feats[i].flatten()
 
-        #use LR_before as input features
-        self.online_feats.append(feats)
+        #store input features
+        for i in range(self.n_feat_arrays):
+            self.online_feats[i].append(feats[i])
 
         # difference of the low res model between time n and time n+1
         delta_LR = LR_after - LR_before
@@ -408,8 +445,8 @@ class ANN_Surrogate(Campaign):
         """
         for i in range(self.max_lag):
             if not self.local:
-                feat = [np.array(X_i[start + i]) for X_i in feats]
+                feat = [X_i[start + i] for X_i in feats]
             else:
-                feat = [np.array(X_i[start + i]).reshape([1, -1]) for X_i in feats]
+                feat = [X_i[start + i].reshape([1, -1]) for X_i in feats]
                 
             self.feat_eng.append_feat(feat)
