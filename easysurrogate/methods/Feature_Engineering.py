@@ -1,7 +1,5 @@
 import numpy as np
 from itertools import chain
-import tkinter as tk
-import h5py
 from scipy import stats
 
 """
@@ -39,17 +37,22 @@ class Feature_Engineering:
 
     def _predict(self, X, feed_forward):
         """
+        Contains the generic processing of features that is independent of the chosen surrogate
+        method. Features are processined depending upon the presence of time lags or the local / 
+        non-local nature of the surroagte. The processed features are then passed to the 
+        surrogate-specific feed_forward method.
 
         Parameters
         ----------
         X : array or list of arrays
-            DESCRIPTION.
+            The feature array or list of feature arrays on which to evaluate the surrogate.
         feed_forward : function
-            DESCRIPTION.
+            The prediction function that is specific to a particular surrogate.
 
         Returns
         -------
-        None.
+        array
+        feed_forward(X)
 
         """
 
@@ -205,7 +208,7 @@ class Feature_Engineering:
 
     def get_online_training_data(self):
         """
-        Generate online training data
+        Return the training data for a single online-learning step.
 
         Returns
         -------
