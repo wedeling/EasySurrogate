@@ -131,6 +131,7 @@ def step_Y(Y_n, g_nm1, X_n):
 # Other subroutines #
 #####################
 
+
 def animate(s):
     """
     Generate a movie frame
@@ -147,13 +148,14 @@ def animate(s):
 # Main program
 ###############
 
+
 plt.close('all')
 
 #####################
 # Lorenz96 parameters
 #####################
 
-#Generate data under 'easy' unimodal parameter settings
+# Generate data under 'easy' unimodal parameter settings
 
 # K = 36
 # J = 10

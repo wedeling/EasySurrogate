@@ -52,12 +52,12 @@ class Campaign:
         None.
 
         """
-        
+
         if 'name' in kwargs:
             name = kwargs['name']
         else:
             name = 'Load training data'
-        
+
         if 'file_path' in kwargs:
             file_path = kwargs['file_path']
         else:
