@@ -358,7 +358,13 @@ class ANN:
                 # layer_r.W += -alpha*beta1*layer_r.V
 
     # train the neural network
-    def train(self, n_epoch, store_loss=False, check_derivative=False, sequential=False, verbose=True):
+    def train(
+            self,
+            n_epoch,
+            store_loss=False,
+            check_derivative=False,
+            sequential=False,
+            verbose=True):
 
         for i in range(n_epoch):
 

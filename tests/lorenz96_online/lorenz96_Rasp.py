@@ -33,7 +33,7 @@ def rhs_X(X, B, **kwargs):
     returns:
         - rhs_X (array, size K): right-hand side of X
     """
-    
+
     if 'nudge' in kwargs:
         nudge = kwargs['nudge']
     else:
@@ -144,6 +144,7 @@ def step_Y(Y_n, g_nm1, X_n, dt):
 # Main program
 ###############
 
+
 plt.close('all')
 
 #####################
@@ -182,7 +183,7 @@ epsilon = 0.5
 
 dt_HR = 0.001
 N = 10
-dt_LR = N*dt_HR
+dt_LR = N * dt_HR
 tau_nudge = 0.1
 t_end = 50.0
 t = np.arange(0.0, t_end, dt_LR)
@@ -223,7 +224,7 @@ store = False  # store the prediction results
 campaign = es.Campaign(load_state=True)
 
 batch_size = window_length - campaign.surrogate.max_lag
-batch_size = window_length*K
+batch_size = window_length * K
 
 # set some constants used in online learning
 campaign.surrogate.set_online_training_parameters(tau_nudge, dt_LR, window_length)
@@ -231,7 +232,7 @@ campaign.surrogate.set_online_training_parameters(tau_nudge, dt_LR, window_lengt
 # a = np.linspace(-5, 10, 100)
 # fit_before = campaign.surrogate.predict(a.reshape([1, 100]))
 
-#load training data
+# load training data
 data_frame = campaign.load_hdf5_data()
 X_train = data_frame['X_data']
 Y_train = data_frame['Y_data']
@@ -249,8 +250,8 @@ B_ref = data_frame['B_data'].flatten()
 
 # initial right-hand side
 f_nm1 = rhs_X(X_n, B_n)
-    
-#low-res variable init
+
+# low-res variable init
 X_n_LR = X_n
 B_n_LR = np.zeros(K)
 f_nm1_LR = rhs_X(X_n_LR, B_n_LR)
@@ -273,11 +274,11 @@ X_data_LR = np.zeros([t.size, K])
 # start time integration
 idx = 0
 for t_i in t:
-    
-    #store Delta X
+
+    # store Delta X
     Delta_X = X_n_LR - X_n
 
-    #Store LR and HR state at beginning of time step
+    # Store LR and HR state at beginning of time step
     X_n_LR_hat = np.copy(X_n_LR)
     X_n_hat = np.copy(X_n)
 
@@ -285,10 +286,10 @@ for t_i in t:
         # solve small-scale equation
         Y_np1, g_n = step_Y(Y_n, g_nm1, X_n, dt_HR)
         # compute SGS term
-        B_n = h_x*np.mean(Y_n, axis=0)
+        B_n = h_x * np.mean(Y_n, axis=0)
 
         # solve large-scale equation
-        X_np1, f_n = step_X(X_n, f_nm1, B_n, dt_HR, nudge = Delta_X / tau_nudge)
+        X_np1, f_n = step_X(X_n, f_nm1, B_n, dt_HR, nudge=Delta_X / tau_nudge)
 
         # update variables
         X_n = np.copy(X_np1)
@@ -299,7 +300,7 @@ for t_i in t:
     # solve LR equation
     X_np1_LR, f_n_LR = step_X(X_n_LR, f_nm1_LR, B_n_LR, dt_LR)
 
-    campaign.surrogate.generate_online_training_data(X_n_LR_hat, 
+    campaign.surrogate.generate_online_training_data(X_n_LR_hat,
                                                      X_n_LR_hat, X_np1_LR, X_n_hat, X_n)
 
     B = campaign.surrogate.predict(X_n_LR_hat.reshape([1, K]))
@@ -309,10 +310,10 @@ for t_i in t:
     X_np1_LR += B * dt_LR
 
     # update the neural network every M time steps
-    if np.mod(idx, M) == 0 and idx != 0 and idx > campaign.surrogate.window_length:
+    if np.mod(idx, M) == 0 and idx != 0 and idx > window_length:
         campaign.surrogate.train_online(batch_size=batch_size)
 
-    #update low-res vars
+    # update low-res vars
     X_n_LR = np.copy(X_np1_LR)
     f_nm1_LR = np.copy(f_n_LR)
 
@@ -351,18 +352,18 @@ plt.tight_layout()
 #############
 
 colors = ['#636363', '#bdbdbd', '#f0f0f0']
-fig = plt.figure(figsize=[5,5])
+fig = plt.figure(figsize=[5, 5])
 plt.style.use('seaborn')
 ax = fig.add_subplot(111, xlabel='X', ylabel='B')
 
-ax.scatter(X_ref[::200], B_ref[::200], s=8, alpha=1.0, color=colors[0], 
-            label=r'correct training data')
+ax.scatter(X_ref[::200], B_ref[::200], s=8, alpha=1.0, color=colors[0],
+           label=r'correct training data')
 
 ax.scatter(X_train[::200], B_train[::200], s=8, alpha=1.0, color=colors[1],
-            label=r'wrong training data')
+           label=r'wrong training data')
 
 ax.scatter(X_data[::20], B_data[::20], marker='o', s=8, alpha=0.5, color=colors[2],
-            label=r'predicted data')
+           label=r'predicted data')
 
 leg = plt.legend(loc=0)
 leg.set_draggable(True)

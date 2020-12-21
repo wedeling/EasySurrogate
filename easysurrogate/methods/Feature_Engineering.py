@@ -37,7 +37,284 @@ class Feature_Engineering:
 
         return (self.X - X_mean) / X_std, (self.y - y_mean) / y_std
 
-    def lag_training_data(self, X, y, lags, init_feats = True):
+    def _predict(self, X, feed_forward):
+        """
+
+        Parameters
+        ----------
+        X : array or list of arrays
+            DESCRIPTION.
+        feed_forward : function
+            DESCRIPTION.
+
+        Returns
+        -------
+        None.
+
+        """
+
+        if not isinstance(X, list):
+            X = [X]
+
+        # make sure all feature vectors have the same ndim.
+        # This will raise an error when for instance X1.shape = (10,) and X2.shape = (10, 1)
+        ndims = [X_i.ndim for X_i in X]
+        assert all([ndim == ndims[0] for ndim in ndims]), "All features must have the same ndim"
+
+        # make sure features are at most two dimensional arrays
+        assert ndims[0] <= 2, "Only 1 or 2 dimensional arrays are allowed as features."
+
+        # in the case of two dimensional arrays, make are the second dimension is the same
+        # for all features. This dimension must equal the grid size
+        local = False
+        if ndims[0] == 2:
+            local = True
+            shapes1 = [X_i.shape[1] for X_i in X]
+            assert all([shape1 == shapes1[0] for shape1 in shapes1]), \
+                "The size of the second dimension must be the same for all features."
+            # if a second dimension is specified, it is assumed that we must loop over this
+            # dimension in order to make a single prediction
+            n_points = shapes1[0]
+
+        # time-lagged surrogate
+        if self.lags is not None:
+
+            # append the current state X to the feature history
+            self.append_feat(X)
+
+            # if not local, get entire feature vector and feed forward
+            if not local:
+                feat = self.get_feat_history()
+                return feed_forward(feat)
+            # if local, loop over the 2nd dimension of the feature vector and feed forward
+            # every entry
+            else:
+                y = []
+                for p in range(n_points):
+                    feat = self.get_feat_history(index=p)
+                    y.append(feed_forward(feat))
+                return np.array(y).flatten()
+        # no lags
+        else:
+            # no lags and non local, create a single vector of X and feed forward
+            if not local:
+                feat = np.concatenate(X)
+                return feed_forward(feat)
+            # no lags and local, get feature vector and loop over 2nd dimension
+            else:
+                X = np.array(X).reshape([n_points, len(X)])
+                y = []
+                for p in range(n_points):
+                    y.append(feed_forward(X[p]))
+                return np.array(y).flatten()
+
+    def get_training_data(self, feats, target, lags=None, local=False, test_frac=0.0):
+        """
+        Generate trainig data. Training data can be made (time) lagged and/or local.
+
+        Parameters
+        ----------
+        feats : Array or list of arrays
+            A single feature array or a list of different feature arrays. The shape of the feature
+            arrays must be (n_samples, n_points_i). Here n_samples is the number of samples and
+            n_points_i is the size of a single sample of the i-th feature.
+        target : Array
+            The target that must be predicted by the surrogate. The shape of this array must be
+            (n_samples, n_target), where n_target is the size of a single sample.
+        lags : list of lists, optional
+            In the case of a time-lagged surrogate, this list contains the time lags of
+            each distinct feature. Each time lag is specified as a list. Example: if
+            feats = [X1, X2], and lags = [[1], [1,2]], then X_1 will get lagged by one time step
+            and X_2 will get lagged by two time steps. The default is None.
+        local : boolean, optional
+            If false, each feature sample of n_points_i will be used as input. If true, the
+            surrogate will be applied locally, meaning that n_points_i separate scalar input
+            faetures will be extracted from each feature sample. If true, the size of all
+            features and target must be the same: n_points_i (for all i) = n_target = a fixed number.
+            The default is False.
+        test_frac : float, optional
+            The final fraction of the training data that is withheld from training.
+            The default is 0.0, and it must be in [0.0, 1.0].
+
+        Returns
+        -------
+        None.
+
+        """
+
+        if not isinstance(feats, list):
+            feats = [feats]
+
+        # the number of distinct feature arrays
+        self.n_feat_arrays = len(feats)
+
+        # flag if the surrogate is to be applied locally or not
+        self.local = local
+
+        # initialize storage for online training
+        self.online_feats = [[] for i in range(self.n_feat_arrays)]
+        self.online_target = []
+
+        # number of training samples
+        self.n_samples = feats[0].shape[0]
+        # number of points in the computational grid
+        self.n_points = feats[0].shape[1]
+        # compute the size of the training set based on value of test_frac
+        self.n_train = np.int(self.n_samples * (1.0 - test_frac))
+        print('Using first %d/%d samples to train ANN' % (self.n_train, self.n_samples))
+
+        X = {}
+        y = {}
+        # use the entire row as a feature
+        if not local:
+            # list of features
+            X[0] = [X_i[0:self.n_train] for X_i in feats]
+            # the data
+            y[0] = target[0:self.n_train]
+        # do not use entire row as feature, apply surrogate locally along second dimension
+        else:
+            # create a separate training set for every grid point
+            for i in range(self.n_points):
+                X[i] = [X_i[0:self.n_train, i] for X_i in feats]
+                y[i] = target[0:self.n_train, i].reshape([-1, 1])
+
+        X_train = []
+        y_train = []
+        # No time-lagged training data
+        if lags is not None:
+            self.max_lag = np.max(list(chain(*lags)))
+            print('Creating time-lagged training data...')
+            # lag every training set in X and y
+            for i in range(len(X)):
+                X_train_i, y_train_i = self.lag_training_data(X[i], y[i], lags=lags)
+                X_train.append(X_train_i)
+                y_train.append(y_train_i)
+            X_train = np.concatenate(X_train)
+            y_train = np.concatenate(y_train)
+            print('done')
+        else:
+            self.max_lag = 0
+            # no time lag, just add every entry in X and y to an array
+            for i in range(len(X)):
+                X_train.append(np.array(X[i]).reshape([self.n_train, -1]))
+                y_train.append(y[i])
+            X_train = np.concatenate(X_train)
+            y_train = np.concatenate(y_train)
+
+        return X_train, y_train
+
+    def get_online_training_data(self):
+        """
+        Generate online training data
+
+        Returns
+        -------
+        X_train : array
+            The feature array.
+        y_train : array
+            The target array.
+
+        """
+
+        feats = self.online_feats
+        target = np.array(self.online_target)
+
+        # if lagged feature vectors are used
+        if self.lags is not None:
+
+            feats = [np.array(feat) for feat in feats]
+            if not self.local:
+                # create (time-lagged) training data from X
+                X_train, y_train = self.lag_training_data(feats, target, lags=self.lags,
+                                                          init_feats=False)
+            else:
+                X_train = []
+                y_train = []
+                # create a separate training set for every grid point
+                for i in range(self.n_points):
+                    X_i = [X_i[:, i] for X_i in feats]
+                    y_i = target[:, i].reshape([-1, 1])
+                    # create time-lagged data per gridpoint
+                    X_train_i, y_train_i = self.lag_training_data(X_i, y_i, lags=self.lags,
+                                                                  init_feats=False)
+                    X_train.append(X_train_i)
+                    y_train.append(y_train_i)
+                X_train = np.concatenate(X_train)
+                y_train = np.concatenate(y_train)
+
+        # do not time lag data
+        else:
+            # make a single array where each row contains a concateated vector of all feature
+            # vectors
+            X_train = np.array([np.concatenate(feat) for feat in feats])
+            # reshape in case the neural network is applied locally
+            X_train = X_train.reshape([-1, self.neural_net.n_in])
+            y_train = target.reshape([-1, self.neural_net.n_out])
+
+        return X_train, y_train
+
+    def generate_online_training_data(self, feats, LR_before, LR_after, HR_before, HR_after):
+        """
+        Compute the features and the target data for an online training step. Results are
+        stored internally, and used within the 'train_online' subroutine.
+
+        Source:
+        Rasp, "Coupled online learning as a way to tackle instabilities and biases
+        in neural network parameterizations: general algorithms and Lorenz 96
+        case study", 2020.
+
+        Parameters
+        ----------
+        feats : array or list of arrays
+            The input features
+        LR_before : array
+            Low resolution state at previous time step.
+        LR_after : array
+            Low resolution state at current time step.
+        HR_before : array
+            High resolution state at previous time step.
+        HR_after : array
+            High resolution state at current time step.
+
+        Returns
+        -------
+        None.
+
+        """
+
+        # multiple faetures arrays are stored in a list. For consistency put a single
+        # array also in a list.
+        if isinstance(feats, np.ndarray):
+            feats = [feats]
+
+        # store input features
+        for i in range(self.n_feat_arrays):
+            self.online_feats[i].append(feats[i])
+
+        # difference of the low res model between time n and time n+1
+        delta_LR = LR_after - LR_before
+        # the difference between the low res and high res model at time n
+        delta_nudge = LR_before - HR_before
+        # difference of the high res model between time n and time n+1
+        delta_HR = HR_after - HR_before
+
+        # assume that over a small time interval [n, n+1] we can write:
+        # delta_HR = would_be_delta_without_nuding + delta_due_to_nudging
+        delta_no_nudge_HR = delta_HR - delta_nudge / self.tau_nudge * self.dt_LR
+
+        # compute correction from: delta_LR + correction = delta_no_nudge_HR
+        correction = delta_no_nudge_HR - delta_LR
+
+        # make the correction the target for the neural network. Divide by timestep
+        # since update is LR += correction * dt
+        self.online_target.append(correction / self.dt_LR)
+
+        # remove oldest item from the online features is the window lendth is exceeded
+        if len(self.online_feats) > self.window_length:
+            self.online_feats.pop(0)
+            self.online_target.pop(0)
+
+    def lag_training_data(self, X, y, lags, init_feats=True):
         """
         Create time-lagged supervised training data X, y
 
@@ -71,12 +348,6 @@ class Feature_Engineering:
             tmp.append(X)
             X = tmp
 
-        # # True/False on wether the X features are symmetric arrays or not
-        # if 'X_symmetry' in kwargs:
-        #     self.X_symmetry = kwargs['X_symmetry']
-        # else:
-        #     self.X_symmetry = np.zeros(len(X), dtype=bool)
-
         # compute target data at next (time) step
         if y.ndim == 2:
             y_train = y[max_lag:, :]
@@ -95,11 +366,6 @@ class Feature_Engineering:
         C = []
         idx = 0
         for X_i in X:
-
-            # # if X_i features are symmetric arrays, only select upper triangular part
-            # if self.X_symmetry[idx]:
-            #     idx0, idx1 = np.triu_indices(X_i.shape[1])
-            #     X_i = X_i[:, idx0, idx1]
 
             for lag in np.sort(lags[idx])[::-1]:
                 begin = max_lag - lag
@@ -129,34 +395,9 @@ class Feature_Engineering:
 
         # initialize the storage of features
         if init_feats:
-            self.init_feature_history(lags)
+            self.empty_feature_history(lags)
 
         return X_train, y_train
-
-    def get_feat_history(self, **kwargs):
-        """
-        Return the features from the feat_history dict based on the lags
-        specified in self.lags
-
-        Returns:
-            X_i: array of lagged features of dimension (feat1.size + feat2.size + ...,)
-        """
-        X_i = []
-
-        idx = 0
-        for i in range(self.n_feat_arrays):
-            for lag in self.lags[idx]:
-                begin = self.max_lag - lag
-                current_feat = self.feat_history[i][begin]
-                if current_feat.ndim == 1:
-                    X_i.append(current_feat)
-                elif current_feat.shape[1] == 1:
-                    X_i.append(current_feat.flatten())
-                else:
-                    X_i.append(np.array([current_feat[0][kwargs['index']]]))
-            idx += 1
-
-        return np.array(list(chain(*X_i)))
 
     def bin_data(self, y, n_bins):
         """
@@ -211,10 +452,10 @@ class Feature_Engineering:
 
         return y_idx_binned
 
-    def init_feature_history(self, lags):
+    def empty_feature_history(self, lags):
         """
-        Initialize the feat_history dict. This dict keeps track of the features
-        arrays that were used up until 'max_lag' steps ago.
+        Initialize an empty feat_history dict. This dict keeps track of the features
+        arrays that were used up until 'max_lag + 1' steps ago.
 
         Parameters:
 
@@ -228,15 +469,42 @@ class Feature_Engineering:
         for l in lags:
             self.lags.append(np.sort(l)[::-1])
 
-        self.max_lag = np.max(list(chain(*lags)))
+        # self.max_lag = np.max(list(chain(*lags)))
 
         self.feat_history = {}
 
         # the number of feature arrays that make up the total input feature vector
-        self.n_feat_arrays = len(lags)
+        # self.n_feat_arrays = len(lags)
 
         for i in range(self.n_feat_arrays):
             self.feat_history[i] = []
+
+    def initial_condition_feature_history(self, feats, start=0):
+        """
+        The features can be lagged in time. Therefore, the initial condition of the
+        time-lagged feature vector must be set up. The training data is used
+        for this.
+
+        Parameters
+        ----------
+        + feats : a list of the variables used to construct the time-lagged
+        features: [var_1, var_2, ...]. Each var_i is an array such that
+        var_i[0] gives the value of var_i at t_0, var_i[1] at t_1 etc.
+
+        + start : the starting index of the training features. Default is 0.
+
+        Returns
+        -------
+        None.
+
+        """
+        for i in range(self.max_lag):
+            if not self.local:
+                feat = [X_i[start + i] for X_i in feats]
+            else:
+                feat = [X_i[start + i].reshape([1, -1]) for X_i in feats]
+
+            self.append_feat(feat)
 
     def append_feat(self, X):
         """
@@ -246,6 +514,7 @@ class Feature_Engineering:
 
             X: features. Either an array of dimension (n_samples, n_features)
                or a list of arrays of dimension (n_samples, n_features)
+
         """
 
         # if X is one array, add it to a list anyway
@@ -254,24 +523,39 @@ class Feature_Engineering:
 
         for i in range(self.n_feat_arrays):
 
-            if not isinstance(X[i], np.ndarray):
-                # X[i] = np.array([X[i]])
-                print('ERROR: Only numpy arrays are allowed as input features.')
-                import sys; sys.exit()
-
-            # # if X_i features are symmetric arrays, only select upper trian. part
-            # if self.X_symmetry[i]:
-            #     idx0, idx1 = np.triu_indices(X[i].shape[1])
-            #     X[i] = X[i][idx0, idx1]
-
-            # if X[i].ndim != 1:
-            #     X[i] = X[i].flatten()
+            assert isinstance(
+                X[i], np.ndarray), 'ERROR: Only numpy arrays are allowed as input features.'
 
             self.feat_history[i].append(X[i])
 
             # if max number of features is reached, remove first item
             if len(self.feat_history[i]) > self.max_lag + 1:
                 self.feat_history[i].pop(0)
+
+    def get_feat_history(self, **kwargs):
+        """
+        Return the features from the feat_history dict based on the lags
+        specified in self.lags
+
+        Returns:
+            X_i: array of lagged features of dimension (feat1.size + feat2.size + ...,)
+        """
+        X_i = []
+
+        idx = 0
+        for i in range(self.n_feat_arrays):
+            for lag in self.lags[idx]:
+                begin = self.max_lag - lag
+                current_feat = self.feat_history[i][begin]
+                if current_feat.ndim == 1:
+                    X_i.append(current_feat)
+                elif current_feat.shape[1] == 1:
+                    X_i.append(current_feat.flatten())
+                else:
+                    X_i.append(np.array([current_feat[0][kwargs['index']]]))
+            idx += 1
+
+        return np.array(list(chain(*X_i)))
 
     def recursive_moments(self, X_np1, mu_n, sigma2_n, N):
         """

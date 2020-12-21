@@ -17,8 +17,8 @@ campaign = es.Campaign()
 # load HDF5 data frame
 data_frame = campaign.load_hdf5_data()
 
-#number of HR time steps per LR time step. This must be used to subsample the reference data
-#if a time lagged surrogate is used
+# number of HR time steps per LR time step. This must be used to subsample the reference data
+# if a time lagged surrogate is used
 N = 10
 
 # supervised training data set
@@ -29,23 +29,23 @@ target = data_frame['B_data'][0:-1:N, :]
 surrogate = es.methods.ANN_Surrogate()
 
 # create time-lagged features
-lags = [[0]]
+lags = [range(10)]
 # lags = None
 
 # train the surrogate on the data
 n_iter = 10000
 local = True
-surrogate.train([features], target, n_iter, lags = lags, n_layers=3, n_neurons=50,
+surrogate.train([features], target, n_iter, lags=lags, n_layers=3, n_neurons=50,
                 batch_size=512, local=local)
 
 campaign.add_app(name='test_campaign', surrogate=surrogate)
 campaign.save_state(file_path='../samples/campaign.pickle')
 
-#plot fit
-fig = plt.figure(figsize=[4,4])
+# plot fit
+fig = plt.figure(figsize=[4, 4])
 ax = fig.add_subplot(111)
 
-ax.plot(features[:,0], target[:,0], 'b.', alpha=0.2)
+ax.plot(features, target, 'b.', alpha=0.2)
 
 I = 2000
 start = surrogate.max_lag
@@ -94,8 +94,7 @@ plt.show()
 # N = 100
 # a = np.linspace(-5, 10, N)
 # fit = ml_param(a)
-    
+
 # ax.plot(a, fit, 'y')
 # plt.tight_layout()
 # plt.show()
-
