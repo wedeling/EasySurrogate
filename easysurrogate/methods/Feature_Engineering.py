@@ -1,45 +1,30 @@
-import numpy as np
-from itertools import chain
-from scipy import stats
-
 """
 ===============================================================================
 CLASS FOR FEATURE ENGINEERING SUBROUTINES
 ===============================================================================
 """
 
+import numpy as np
+from itertools import chain
+from scipy import stats
+
 
 class Feature_Engineering:
+    """
+    Feature_Engineering class. containing several generic methods for the manipulation of features
+    that are shared by all surrogate methods.
+    """
 
-    def __init__(self, **kwargs):
-        print('Creating feature engineering object')
-
-    def standardize_data(self, standardize_X=True, standardize_y=True):
-        """
-        Standardize the training data
-        """
-
-        if standardize_X:
-            X_mean = np.mean(self.X, axis=0)
-            X_std = np.std(self.X, axis=0)
-        else:
-            X_mean = 0.0
-            X_std = 1.0
-
-        if standardize_y:
-            y_mean = np.mean(self.y, axis=0)
-            y_std = np.std(self.y, axis=0)
-        else:
-            y_mean = 0.0
-            y_std = 1.0
-
-        return (self.X - X_mean) / X_std, (self.y - y_mean) / y_std
+    def __init__(self):
+        print('Creating Feature Engineering object')
+        self.lags = None
+        self.local = False
 
     def _predict(self, X, feed_forward):
         """
         Contains the generic processing of features that is independent of the chosen surrogate
-        method. Features are processined depending upon the presence of time lags or the local / 
-        non-local nature of the surroagte. The processed features are then passed to the 
+        method. Features are processined depending upon the presence of time lags or the local /
+        non-local nature of the surroagte. The processed features are then passed to the
         surrogate-specific feed_forward method.
 
         Parameters
@@ -133,8 +118,8 @@ class Feature_Engineering:
             If false, each feature sample of n_points_i will be used as input. If true, the
             surrogate will be applied locally, meaning that n_points_i separate scalar input
             faetures will be extracted from each feature sample. If true, the size of all
-            features and target must be the same: n_points_i (for all i) = n_target = a fixed number.
-            The default is False.
+            features and target must be the same: n_points_i (for all i) = n_target = a fixed
+            number. The default is False.
         test_frac : float, optional
             The final fraction of the training data that is withheld from training.
             The default is 0.0, and it must be in [0.0, 1.0].
@@ -206,7 +191,7 @@ class Feature_Engineering:
 
         return X_train, y_train
 
-    def get_online_training_data(self):
+    def get_online_training_data(self, **kwargs):
         """
         Return the training data for a single online-learning step.
 
@@ -249,10 +234,9 @@ class Feature_Engineering:
         else:
             # make a single array where each row contains a concateated vector of all feature
             # vectors
-            X_train = np.array([np.concatenate(feat) for feat in feats])
-            # reshape in case the neural network is applied locally
-            X_train = X_train.reshape([-1, self.neural_net.n_in])
-            y_train = target.reshape([-1, self.neural_net.n_out])
+            X_train = np.concatenate(feats, axis=1)
+            X_train = X_train.reshape([-1, kwargs['n_in']])
+            y_train = target.reshape([-1, kwargs['n_out']])
 
         return X_train, y_train
 
@@ -317,6 +301,28 @@ class Feature_Engineering:
             self.online_feats.pop(0)
             self.online_target.pop(0)
 
+    def set_online_training_parameters(self, tau_nudge, dt_LR, window_length):
+        """
+        Stores parameters required for online training.
+
+        Parameters
+        ----------
+        tau_nudge : float
+            Nudging time scale.
+        dt_LR : float
+            Time step low resolution model.
+        window_length : int
+            The length of the moving window in which online features are stored.
+
+        Returns
+        -------
+        None.
+
+        """
+        self.tau_nudge = tau_nudge
+        self.dt_LR = dt_LR
+        self.window_length = window_length
+
     def lag_training_data(self, X, y, lags, init_feats=True):
         """
         Create time-lagged supervised training data X, y
@@ -379,7 +385,8 @@ class Feature_Engineering:
                 elif X_i.ndim == 1:
                     C.append(X_i[begin:end])
                 else:
-                    print("Error: X must contains features of dimension (n_samples, ) or (n_samples, n_features)")
+                    print("Error: X must contains features of dimension (n_samples, ) \
+                          or (n_samples, n_features)")
                     return
             idx += 1
 
@@ -408,8 +415,10 @@ class Feature_Engineering:
 
         Parameters
         ----------
-        y, array, size (number of samples, number of variables): Data
-        n_bins, int: Number of (equidistant) bins to be used.
+        y:  array
+            size (number of samples, number of variables): Data
+        n_bins: int
+             Number of (equidistant) bins to be used.
 
         Returns
         -------
@@ -440,7 +449,7 @@ class Feature_Engineering:
             bins = np.linspace(np.min(y[:, i]), np.max(y[:, i]), n_bins + 1)
             self.bins[i] = bins
 
-            count, _, self.binnumbers[:, i] = \
+            _, _, self.binnumbers[:, i] = \
                 stats.binned_statistic(y[:, i], np.zeros(n_samples), statistic='count', bins=bins)
 
             unique_binnumbers = np.unique(self.binnumbers[:, i])
@@ -560,27 +569,48 @@ class Feature_Engineering:
 
         return np.array(list(chain(*X_i)))
 
-    def recursive_moments(self, X_np1, mu_n, sigma2_n, N):
-        """
-        Recursive formulas for the mean and variance. Computes the new moments
-        when given a new sample and the old moments.
+    # def standardize_data(self, standardize_X=True, standardize_y=True):
+    #     """
+    #     Standardize the training data
+    #     """
 
-        Arguments
-        ---------
-        + X_np1: a new sample of random variable X
-        + mu_n: the sample mean of X, not including X_np1
-        + sigma2_n: the variance of X, not including X_np1
-        + N: the total number of samples thus far
+    #     if standardize_X:
+    #         X_mean = np.mean(self.X, axis=0)
+    #         X_std = np.std(self.X, axis=0)
+    #     else:
+    #         X_mean = 0.0
+    #         X_std = 1.0
 
-        Returns
-        -------
-        The mean and variance, updated based on the new sample
+    #     if standardize_y:
+    #         y_mean = np.mean(self.y, axis=0)
+    #         y_std = np.std(self.y, axis=0)
+    #     else:
+    #         y_mean = 0.0
+    #         y_std = 1.0
 
-        """
-        mu_np1 = mu_n + (X_np1 - mu_n) / (N + 1)
-        sigma2_np1 = sigma2_n + mu_n**2 - mu_np1**2 + (X_np1**2 - sigma2_n - mu_n**2) / (N + 1)
+    #     return (self.X - X_mean) / X_std, (self.y - y_mean) / y_std
 
-        return mu_np1, sigma2_np1
+    # def recursive_moments(self, X_np1, mu_n, sigma2_n, N):
+    #     """
+    #     Recursive formulas for the mean and variance. Computes the new moments
+    #     when given a new sample and the old moments.
+
+    #     Arguments
+    #     ---------
+    #     + X_np1: a new sample of random variable X
+    #     + mu_n: the sample mean of X, not including X_np1
+    #     + sigma2_n: the variance of X, not including X_np1
+    #     + N: the total number of samples thus far
+
+    #     Returns
+    #     -------
+    #     The mean and variance, updated based on the new sample
+
+    #     """
+    #     mu_np1 = mu_n + (X_np1 - mu_n) / (N + 1)
+    #     sigma2_np1 = sigma2_n + mu_n**2 - mu_np1**2 + (X_np1**2 - sigma2_n - mu_n**2) / (N + 1)
+
+    #     return mu_np1, sigma2_np1
 
     # def estimate_embedding_dimension(self, y, N):
 
