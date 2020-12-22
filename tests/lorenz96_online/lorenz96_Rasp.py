@@ -305,8 +305,13 @@ for t_i in t:
     campaign.surrogate.generate_online_training_data(X_n_LR_hat,
                                                      X_n_LR_hat, X_np1_LR, X_n_hat, X_n)
 
-    B = campaign.surrogate.predict(X_n_LR_hat.reshape([1, K]))
-    # B = campaign.surrogate.predict(X_n_LR_hat)
+    # if the surrogate is applied locally, reshape the features to [1, K]. This tells EasySurrogate
+    # that K separate local predictions must be made
+    if campaign.surrogate.local:
+        B = campaign.surrogate.predict(X_n_LR_hat.reshape([1, K]))
+    # not local: use the entire vector as input features, and perform a single feed forward solve
+    else:
+        B = campaign.surrogate.predict(X_n_LR_hat)
 
     # update the LR state
     X_np1_LR += B * dt_LR
