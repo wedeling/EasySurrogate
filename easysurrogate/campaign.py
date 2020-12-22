@@ -52,12 +52,18 @@ class Campaign:
         None.
 
         """
+
+        if 'name' in kwargs:
+            name = kwargs['name']
+        else:
+            name = 'Load training data'
+
         if 'file_path' in kwargs:
             file_path = kwargs['file_path']
         else:
             root = tk.Tk()
             root.withdraw()
-            file_path = tk.filedialog.askopenfilename(title="Load training data",
+            file_path = tk.filedialog.askopenfilename(title=name,
                                                       filetypes=(('HDF5 files', '*.hdf5'),
                                                                  ('All files', '*.*')))
         # load HDF5 data
@@ -247,5 +253,6 @@ class Campaign:
                                             mode='wb',
                                             defaultextension=".pickle")
 
+        print('Saving state to %s.' % file.name)
         pickle.dump(state, file)
         file.close()

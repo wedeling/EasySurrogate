@@ -17,6 +17,7 @@ import tkinter as tk
 from tkinter import filedialog
 import os
 
+
 def get_grid(N, L):
     """
     Generate an equidistant N x N square grid
@@ -223,16 +224,16 @@ def gray_scott_macro():
     #######################
     # MUSCLE modification #
     #######################
-    
-    #define the MUSCLE in and out ports
+
+    # define the MUSCLE in and out ports
     instance = Instance({
         Operator.O_I: ['state_out'],
         Operator.S: ['sgs_in']})
-    
+
     while instance.reuse_instance():
-        
-        #Main script
-        
+
+        # Main script
+
         # gray scott parameters
         feed = instance.get_setting('feed')
         kill = instance.get_setting('kill')
@@ -246,38 +247,38 @@ def gray_scott_macro():
         # number of gridpoints in 1D
         I = 7
         N = 2**I
-        N_ref = 2**(I+1)
-        
+        N_ref = 2**(I + 1)
+
         # number of time series to track
         N_Q = 2
-        
+
         # domain size [-L, L]
         L = 1.25
-        
+
         # user flags
         store = True
         state_store = True
         restart = False
-        
+
         sim_ID = 'test_gray_scott'
-        
+
         # TRAINING DATA SET
         QoI = ['Q_HF', 'Q_ref']
         Q = len(QoI)
-        
+
         # allocate memory
         samples = {}
-        
+
         if store:
             samples['N'] = N
-        
+
             for q in range(Q):
                 samples[QoI[q]] = []
-        
+
         # 2D grid, scaled by L
         xx, yy = get_grid(N, L)
         xx_ref, yy_ref = get_grid(N_ref, L)
-       
+
         # spatial derivative operators
         kx, ky = get_derivative_operator(N, L)
         kx_ref, ky_ref = get_derivative_operator(N_ref, L)
@@ -289,18 +290,18 @@ def gray_scott_macro():
         # diffusion coefficients
         epsilon_u = 2e-5
         epsilon_v = 1e-5
-        
-        #time step parameters
+
+        # time step parameters
         dt = 0.5
-        n_steps = int(5000/dt)
+        n_steps = int(5000 / dt)
         store_frame_rate = 1
         t = 0.0
-        
+
         # Initial condition
         if restart:
-        
+
             fname = HOME + '/restart/' + sim_ID + '_t_' + str(np.around(t, 1)) + '.hdf5'
-        
+
             # if fname does not exist, select restart file via GUI
             if os.path.exists(fname) == False:
                 root = tk.Tk()
@@ -309,14 +310,14 @@ def gray_scott_macro():
                                                    title="Open restart file",
                                                    filetypes=(('HDF5 files', '*.hdf5'),
                                                               ('All files', '*.*')))
-        
+
             # create HDF5 file
             h5f = h5py.File(fname, 'r')
-        
+
             for key in h5f.keys():
                 print(key)
                 vars()[key] = h5f[key][:]
-        
+
             h5f.close()
         else:
             u_hat, v_hat = initial_cond(xx, yy)
@@ -328,23 +329,23 @@ def gray_scott_macro():
 
         int_fac_u_ref, int_fac_u2_ref, int_fac_v_ref, int_fac_v2_ref = \
             integrating_factors(k_squared_ref, dt, epsilon_u, epsilon_v)
-       
+
         # counters
         j = 0
         j2 = 0
-        
+
         V_hat_1 = np.fft.fft2(np.ones([N, N]))
         V_hat_1_ref = np.fft.fft2(np.ones([N_ref, N_ref]))
 
         t0 = time.time()
-        
+
         samples_uq = np.zeros([n_steps, 8])
 
         # time stepping
         for n in range(n_steps):
 
-            u_hat_ref, v_hat_ref = rk4(u_hat_ref, v_hat_ref, int_fac_u_ref, int_fac_u2_ref, 
-                                        int_fac_v_ref, int_fac_v2_ref, dt, feed, kill)
+            u_hat_ref, v_hat_ref = rk4(u_hat_ref, v_hat_ref, int_fac_u_ref, int_fac_u2_ref,
+                                       int_fac_v_ref, int_fac_v2_ref, dt, feed, kill)
 
             # compute reference stats
             Q_HF = np.zeros(2 * N_Q)
@@ -371,42 +372,42 @@ def gray_scott_macro():
             # MUSCLE modification #
             #######################
 
-            #MUSCLE O_I port (state_out)
-            t_cur = n*dt
+            # MUSCLE O_I port (state_out)
+            t_cur = n * dt
             t_next = t_cur + dt
             if n == n_steps - 1:
                 t_next = None
-            
-            #split state vars in real and imag part (temporary fix)
+
+            # split state vars in real and imag part (temporary fix)
             V_hat_1_re = np.copy(V_hat_1.real)
             V_hat_1_im = np.copy(V_hat_1.imag)
             u_hat_re = np.copy(u_hat.real)
             u_hat_im = np.copy(u_hat.imag)
             v_hat_re = np.copy(v_hat.real)
             v_hat_im = np.copy(v_hat.imag)
-                        
-            #create a MUSCLE Message object, to be sent to the micro model
-            cur_state = Message(t_cur, t_next, {'V_hat_1_re': V_hat_1_re, 
-                                                'V_hat_1_im': V_hat_1_im, 
+
+            # create a MUSCLE Message object, to be sent to the micro model
+            cur_state = Message(t_cur, t_next, {'V_hat_1_re': V_hat_1_re,
+                                                'V_hat_1_im': V_hat_1_im,
                                                 'u_hat_re': u_hat_re,
-                                                'u_hat_im': u_hat_im,                                                
+                                                'u_hat_im': u_hat_im,
                                                 'v_hat_re': v_hat_re,
-                                                'v_hat_im': v_hat_im,                                               
+                                                'v_hat_im': v_hat_im,
                                                 'Q_ref': Q_ref, 'Q_model': Q_HF})
-            #send the message to the micro model
+            # send the message to the micro model
             instance.send('state_out', cur_state)
-    
-            #reveive a message from the micro model, i.e. the two reduced subgrid-scale terms
+
+            # reveive a message from the micro model, i.e. the two reduced subgrid-scale terms
             msg = instance.receive('sgs_in')
             reduced_sgs_u_re = msg.data['reduced_sgs_u_re'].array
             reduced_sgs_u_im = msg.data['reduced_sgs_u_im'].array
             reduced_sgs_v_re = msg.data['reduced_sgs_v_re'].array
             reduced_sgs_v_im = msg.data['reduced_sgs_v_im'].array
-            
-            #recreate the reduced subgrid-scale terms for the u and v pde
-            reduced_sgs_u = reduced_sgs_u_re + 1.0j*reduced_sgs_u_im
-            reduced_sgs_v = reduced_sgs_v_re + 1.0j*reduced_sgs_v_im
-            
+
+            # recreate the reduced subgrid-scale terms for the u and v pde
+            reduced_sgs_u = reduced_sgs_u_re + 1.0j * reduced_sgs_u_im
+            reduced_sgs_v = reduced_sgs_v_re + 1.0j * reduced_sgs_v_im
+
             ###########################
             # End MUSCLE modification #
             ###########################
@@ -414,9 +415,9 @@ def gray_scott_macro():
             if np.mod(n, 1000) == 0:
                 print('time step %d of %d' % (n, n_steps))
 
-            #evolve the state in time, with the new reduced sgs terms
-            u_hat, v_hat = rk4(u_hat, v_hat, int_fac_u, int_fac_u2, int_fac_v, int_fac_v2, dt, feed, kill,
-                                reduced_sgs_u=reduced_sgs_u, reduced_sgs_v=reduced_sgs_v)
+            # evolve the state in time, with the new reduced sgs terms
+            u_hat, v_hat = rk4(u_hat, v_hat, int_fac_u, int_fac_u2, int_fac_v, int_fac_v2,
+                               dt, feed, kill, reduced_sgs_u=reduced_sgs_u, reduced_sgs_v=reduced_sgs_v)
 
             j += 1
             j2 += 1
@@ -440,26 +441,27 @@ def gray_scott_macro():
     np.savetxt(fname, samples_uq,
                delimiter=",", comments='',
                header=header)
-    
+
     # store the state of the system to allow for a simulation restart at t > 0
     if state_store:
-    
+
         keys = ['u_hat', 'v_hat']
-    
+
         if os.path.exists(HOME + '/restart') == False:
             os.makedirs(HOME + '/restart')
-    
+
         fname = HOME + '/restart/' + sim_ID + '_t_' + str(np.around(t, 1)) + '.hdf5'
-    
+
         # create HDF5 file
         h5f = h5py.File(fname, 'w')
-    
+
         # store numpy sample arrays as individual datasets in the hdf5 file
         for key in keys:
             qoi = eval(key)
             h5f.create_dataset(key, data=qoi)
-    
+
         h5f.close()
-    
+
+
 if __name__ == '__main__':
     gray_scott_macro()
