@@ -50,8 +50,8 @@ class KMN_analysis(BaseAnalysis):
         """
 
         # get the (normalized, time-lagged) training data from the neural network
-        X = self.kmn_surrogate.surrogate.X
-        y = self.kmn_surrogate.surrogate.y
+        X = self.kmn_surrogate.neural_net.X
+        y = self.kmn_surrogate.neural_net.y
 
         print('===============================')
         print('Making movie...')
@@ -84,7 +84,7 @@ class KMN_analysis(BaseAnalysis):
         for i in range(n_frames):
 
             # draw a random sample from the network
-            w, idx_max, _ = self.kmn_surrogate.surrogate.get_softmax(X[i].reshape([1, n_feat]))
+            w, idx_max, _ = self.kmn_surrogate.neural_net.get_softmax(X[i].reshape([1, n_feat]))
             for j in range(n_softmax):
                 kde[:, j] = self.compute_kde(dom, w[j], mu[j], sigma[j])
                 samples[i, j] = norm.rvs(mu[j][idx_max[j]], sigma[j][idx_max[j]])
