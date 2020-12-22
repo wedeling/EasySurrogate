@@ -5,14 +5,15 @@ CLASS FOR A ARTIFICIAL NEURAL NETWORK
 Author: W. Edeling
 ==============================================================================
 """
-from itertools import chain
-import numpy as np
-# import h5py
-from ..campaign import Campaign
+
 import easysurrogate as es
+from ..campaign import Campaign
 
 
 class ANN_Surrogate(Campaign):
+    """
+    ANN_surrogate class for a standard feed forward neural network.
+    """
 
     def __init__(self, **kwargs):
         print('Creating ANN_Surrogate Object')
@@ -28,7 +29,7 @@ class ANN_Surrogate(Campaign):
               test_frac=0.0,
               n_layers=2, n_neurons=100,
               activation='tanh',
-              batch_size=64, lamb=0.0, **kwargs):
+              batch_size=64, lamb=0.0):
         """
         Perform back propagation to train the ANN
 
@@ -111,10 +112,11 @@ class ANN_Surrogate(Campaign):
 
         """
 
-        X_train, y_train = self.feat_eng.get_online_training_data()
+        X_train, y_train = self.feat_eng.get_online_training_data(n_in=self.neural_net.n_in,
+                                                                  n_out=self.neural_net.n_out)
 
         # set the training data, training size and batch size for the online backprop step
-        if not self.neural_net.batch_size == batch_size:
+        if self.neural_net.batch_size != batch_size:
             self.neural_net.set_batch_size(batch_size)
         self.neural_net.n_train = X_train.shape[0]
         # standardize training data
@@ -173,9 +175,7 @@ class ANN_Surrogate(Campaign):
         None.
 
         """
-        self.feat_eng.tau_nudge = tau_nudge
-        self.feat_eng.dt_LR = dt_LR
-        self.feat_eng.window_length = window_length
+        self.feat_eng.set_online_training_parameters(tau_nudge, dt_LR, window_length)
 
     def predict(self, feat):
         """
@@ -213,7 +213,7 @@ class ANN_Surrogate(Campaign):
             the prediction of the neural net.
 
         """
-        
+
         # features were standardized during training, do so here as well
         feat = (feat - self.feat_mean) / self.feat_std
         # feed forward prediction step
