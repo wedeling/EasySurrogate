@@ -40,7 +40,7 @@ campaign.save_state(file_path='../samples/campaign.pickle')
 # plot fit
 fig = plt.figure(figsize=[4, 4])
 ax = fig.add_subplot(111)
-ax.plot(target[:,0], 'b.')
+ax.plot(target[:, 0], 'b.')
 I = features[0].shape[0] - surrogate.max_lag
 prediction = np.zeros([I])
 for i in range(I):

@@ -80,17 +80,45 @@ class Reduced_Surrogate(Campaign):
 
         return self.reduced_r(V_hat, dQ_data)
 
-    def predict(self):
+    def predict(self, V, features, **kwargs):
         """
-        Not yet implemented.
+        Predict using a reduced subgrid-scale term, with a surrogate for dQ := qois_ref - qois_model
+
+        Parameters
+        ----------
+        V : list
+            A list containing the Fourier coefficients of reduced basis functions V_i.
+        features : list or array
+            A single feature array ot a list of multiple feature arrays.
 
         Returns
         -------
-        NotImplementedError : TYPE
-            DESCRIPTION.
+        dict
+            A dictionary containing:
+            'sgs_hat': the reduced subgrid-scale term,
+            'c_ij': the coefficients of the linear system A_i * c_i = b_i (Eq 20-21 in the paper),
+            'inner_prods': the inner products (V_i, T_{i,j}) (Eq 21),
+            'src_Q': the inner product (V_i, P_i) that is part of a source term of Q (Eq 23),
+            'tau': the multiplier of (V_i, P_i) (Eq 23).
 
         """
-        return NotImplementedError
+
+        # add all V_i into a single array
+        V_hat = np.zeros([self.n_qoi, self.n_model_1d, self.n_model_1d]) + 0.0j
+        for i in range(self.n_qoi):
+            V_hat[i] = V[i]
+
+        # predict dQ := qois_ref - qoi_model using an EasySurrogate surrogate
+        if 'dQ' not in kwargs:
+            if not hasattr(self, 'dQ_surr'):
+                print('Reduced_Surrogate object does not have a surrogate for dQ:')
+                print('use set_dQ_surrogate subroutine.')
+                return
+            dQ_surr = self.dQ_surr.predict(features)
+        else:
+            dQ_surr = kwargs['dQ']
+
+        return self.reduced_r(V_hat, dQ_surr)
 
     def save_state(self):
         """
@@ -119,6 +147,22 @@ class Reduced_Surrogate(Campaign):
     ##########################
     # END COMMON SUBROUTINES #
     ##########################
+
+    def set_dQ_surrogate(self, surrogate):
+        """
+        Set the surrogate model for dQ := Q_reference - Q_model
+
+        Parameters
+        ----------
+        surrogate : object
+            An EasySurrogate method trained to predict dQ.
+
+        Returns
+        -------
+        None.
+
+        """
+        self.dQ_surr = surrogate
 
     def reduced_r(self, V_hat, dQ):
         """
