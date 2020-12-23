@@ -8,8 +8,9 @@ Reduced SGS:
 W. Edeling, D. Crommelin, Reducing data-driven dynamical subgrid scale
 models by physical constraints, Computer & Fluids, 2020.
 
-This script runs the Gray-Scott model at lower resolution, and uses the
-training data of the statistics of interest to drive a reduced SGS term.
+This script runs the Gray-Scott model at two resolutions, and uses the higher resolution model
+to compute the statistics of interest, and drive a reduced subgrid-scale term. This script is
+used to generate training data for the predictive phase.
 """
 
 import numpy as np
