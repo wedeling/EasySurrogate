@@ -113,7 +113,7 @@ class GrayScott_2D:
                 ky[i, j] = 1j * k[i]
 
         return kx, ky
-
+    
     def initial_cond(self):
         """
         Compute the initial condition
@@ -235,7 +235,7 @@ class GrayScott_2D:
         self.v_hat = v_hat
 
         return u_hat, v_hat
-
+    
     def store_state(self, fname):
         """
         Store the state to a pickle file.
