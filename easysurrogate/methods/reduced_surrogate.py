@@ -9,6 +9,7 @@ models by physical constraints, Computer & Fluids, 2020.
 """
 
 import numpy as np
+import easysurrogate as es
 from ..campaign import Campaign
 
 
@@ -42,17 +43,17 @@ class Reduced_Surrogate(Campaign):
     # START COMMON SUBROUTINES #
     ############################
 
-    def train(self, V, qois_ref, qois_model):
+    def train(self, V, dQ):
         """
+        A training step of the reduced surrogate.
 
         Parameters
         ----------
         V : list
             A list containing the Fourier coefficients of reduced basis functions V_i.
-        qois_ref : array
-            The reference statistics at a given time step.
-        qois_model : array
-            The same statistics computed by the lower-resolution model.
+        dQ : array
+            The reference statistics at a given time step - the same statistics computed
+            with the lower resolution model.
 
         Returns
         -------
@@ -66,30 +67,140 @@ class Reduced_Surrogate(Campaign):
 
         """
 
-        assert isinstance(qois_ref, np.ndarray) and isinstance(qois_model, np.ndarray), \
-            'Training requires QoI data stored in numpy array'
+        assert isinstance(dQ, np.ndarray), 'dQ must be of type numpy.ndarray'
 
-        assert qois_ref.size == self.n_qoi and qois_model.size == self.n_qoi, \
-            'size dQ_data must be %d' % self.n_qoi
+        assert dQ.size == self.n_qoi, 'size dQ_data must be %d' % self.n_qoi
 
         V_hat = np.zeros([self.n_qoi, self.n_model_1d, self.n_model_1d]) + 0.0j
         for i in range(self.n_qoi):
             V_hat[i] = V[i]
 
-        dQ_data = qois_ref - qois_model
+        return self.reduced_r(V_hat, dQ)
 
-        return self.reduced_r(V_hat, dQ_data)
-
-    def predict(self, V, features, **kwargs):
+    def generate_online_training_data(self, feats, LR_before, LR_after, HR_before, HR_after,
+                                      qoi_func, **kwargs):
         """
-        Predict using a reduced subgrid-scale term, with a surrogate for dQ := qois_ref - qois_model
+        Compute the features and the target data for an online training step. Results are
+        stored internally, and used within the 'train_online' subroutine.
+
+        Source:
+        Rasp, "Coupled online learning as a way to tackle instabilities and biases
+        in neural network parameterizations: general algorithms and Lorenz 96
+        case study", 2020.
+
+        Parameters
+        ----------
+        feats : array or list of arrays
+            The input features
+        LR_before : array or list or arrays
+            Low resolution state(s) at previous time step.
+        LR_after : array or list or arrays
+            Low resolution state(s) at current time step.
+        HR_before : array or list or arrays
+            High resolution state(s) at previous time step.
+        HR_after : array or list or arrays
+            High resolution state(s) at current time step.
+        qoi_func : function
+            A user-specfied function f(state, **kwargs) what computes the QoI from the LR
+            or HR state.
+
+        Returns
+        -------
+        None.
+
+        """
+
+        # multiple features arrays are stored in a list. For consistency put a single
+        # array also in a list.
+        if isinstance(feats, np.ndarray):
+            feats = [feats]
+
+        # allow the state to be stored in a list in case there are multiple states
+        if isinstance(LR_before, np.ndarray):
+            LR_before = [LR_before]
+        if isinstance(LR_after, np.ndarray):
+            LR_after = [LR_after]
+        if isinstance(HR_before, np.ndarray):
+            HR_before = [HR_before]
+        if isinstance(HR_after, np.ndarray):
+            HR_after = [HR_after]
+
+        # store input features
+        for i in range(self.n_feat_arrays):
+            self.dQ_surr.feat_eng.online_feats[i].append(feats[i])
+
+        dQ = []
+
+        # loop over all states
+        for i in range(len(LR_before)):
+
+            # project the hoigh-res model to the low-res grid
+            HR_before_projected = self.down_scale(HR_before[i], self.n_model_1d)
+            HR_after_projected = self.down_scale(HR_after[i], self.n_model_1d)
+
+            # the difference between the low res and high res model (projected to low-res grid)
+            # at time n
+            delta_nudge = LR_before[i] - HR_before_projected
+
+            # the estimated state of the (projected) HR model would there have been no nudging
+            HR_no_nudge = HR_after_projected - delta_nudge / self.tau_nudge * self.dt_LR
+
+            # compute the HR QoI
+            Q_HR = qoi_func(HR_no_nudge, **kwargs)
+
+            # compute the LR QoI
+            # Note: could store multiple functions in a list if required.
+            Q_LR = qoi_func(LR_after[i], **kwargs)
+
+            dQ.append(Q_HR - Q_LR)
+
+        # The difference in HR and LR QoI is the target of the surrogate
+        self.dQ_surr.feat_eng.online_target.append(np.concatenate(dQ))
+
+        # remove oldest item from the online features is the window lendth is exceeded
+        if len(self.dQ_surr.feat_eng.online_feats) > self.window_length:
+            self.feat_eng.online_feats.pop(0)
+            self.feat_eng.online_target.pop(0)
+
+    def set_online_training_parameters(self, tau_nudge, dt_LR, window_length):
+        """
+        Stores parameters required for online training.
+
+        Parameters
+        ----------
+        tau_nudge : float
+            Nudging time scale.
+        dt_LR : float
+            Time step low resolution model.
+        window_length : int
+            The length of the moving window in which online features are stored.
+
+        Returns
+        -------
+        None.
+
+        """
+        assert hasattr(self, 'dQ_surr'), "A surrogate for dQ must be set using set_dQ_surr(...)"
+        # store the parameters in the Feature Engineering object of the dQ surrogate
+        self.dQ_surr.feat_eng.set_online_training_parameters(tau_nudge, dt_LR, window_length)
+        # als store it locally
+        self.tau_nudge = tau_nudge
+        self.dt_LR = dt_LR
+        self.window_length = window_length
+        # the number of feature vectors for the dQ surrogate
+        self.n_feat_arrays = self.dQ_surr.feat_eng.n_feat_arrays
+
+    def predict(self, V, dQ_surr):
+        """
+        Compute the reduced surrogate subgrid-scale term using a surrogate for dQ := qoi_ref -
+        qoi_model
 
         Parameters
         ----------
         V : list
             A list containing the Fourier coefficients of reduced basis functions V_i.
-        features : list or array
-            A single feature array ot a list of multiple feature arrays.
+        dQ_surr : array
+            A surrogate prediction of dQ.
 
         Returns
         -------
@@ -102,23 +213,9 @@ class Reduced_Surrogate(Campaign):
             'tau': the multiplier of (V_i, P_i) (Eq 23).
 
         """
-
-        # add all V_i into a single array
-        V_hat = np.zeros([self.n_qoi, self.n_model_1d, self.n_model_1d]) + 0.0j
-        for i in range(self.n_qoi):
-            V_hat[i] = V[i]
-
-        # predict dQ := qois_ref - qoi_model using an EasySurrogate surrogate
-        if 'dQ' not in kwargs:
-            if not hasattr(self, 'dQ_surr'):
-                print('Reduced_Surrogate object does not have a surrogate for dQ:')
-                print('use set_dQ_surrogate subroutine.')
-                return
-            dQ_surr = self.dQ_surr.predict(features)
-        else:
-            dQ_surr = kwargs['dQ']
-
-        return self.reduced_r(V_hat, dQ_surr)
+        # the code is acutally the same as in the training step, only dQ is computed using a
+        # surrogate, instead of extracted from the high-resolution model.
+        return self.train(V, dQ_surr)
 
     def save_state(self):
         """
@@ -148,14 +245,14 @@ class Reduced_Surrogate(Campaign):
     # END COMMON SUBROUTINES #
     ##########################
 
-    def set_dQ_surrogate(self, surrogate):
+    def set_dQ_surr(self, surrogate):
         """
-        Set the surrogate model for dQ := Q_reference - Q_model
+        Set the surrogate used for predicting dQ := Q_reference - Q_model
 
         Parameters
         ----------
         surrogate : object
-            An EasySurrogate method trained to predict dQ.
+            A surrogate trained on dQ data.
 
         Returns
         -------
@@ -292,10 +389,32 @@ class Reduced_Surrogate(Campaign):
         """
         V_hat = V_hat.reshape([self.n_qoi, self.n_model_1d**2])
 
-        # TODO: I added the .real to get rid of a warning. Should be ok, but check if this does
-        # not yield problems
         return np.dot(V_hat, np.conjugate(V_hat).T).real / self.n_model_1d**4
 
+    def down_scale(self, X_hat, N):
+        """
+        Down-scale X to a lower spatial resolution by removing high-frequency Fourier coefficients.
+
+        Parameters
+        ----------
+        X_hat : array (complex)
+            An array of Fourier coefficients of X, where the spatial resolution in 1D is higher than N.
+        N : int
+            The new, lower, spatial resolution (X.shape[0] < N).
+
+        Returns
+        -------
+        X_hat : array (complex)
+            The Fourier coefficients of X at a spatial resolution determined by N.
+
+        """
+        start = int(N/2)
+        end = X_hat.shape[0] - start
+        # remove the Fourier coefficients that are not present in the lower-resolution version
+        # of X_hat
+        for i in range(X_hat.ndim):
+            X_hat = np.delete(X_hat, np.arange(start, end), axis=i)
+        return X_hat
 
 def compute_int(X1_hat, X2_hat, N):
     """
@@ -319,3 +438,4 @@ def compute_int(X1_hat, X2_hat, N):
     """
     integral = np.dot(X1_hat.flatten(), np.conjugate(X2_hat.flatten())) / N**4
     return integral.real
+        

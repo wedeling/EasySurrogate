@@ -14,19 +14,20 @@ Q_LR = data_frame['Q_LR']
 c_ij_u = data_frame['c_ij_u']
 c_ij_u = c_ij_u.reshape([c_ij_u.shape[0], c_ij_u.shape[1]])
 c_ij_v = data_frame['c_ij_v']
-c_ij_v = c_ij_u.reshape([c_ij_v.shape[0], c_ij_v.shape[1]])
+c_ij_v = c_ij_v.reshape([c_ij_v.shape[0], c_ij_v.shape[1]])
 src_Q_u = data_frame['src_Q_u']
 src_Q_v = data_frame['src_Q_v']
 
-features = [Q_LR, c_ij_u, c_ij_v, src_Q_u, src_Q_v]
+# features = [Q_LR, c_ij_u, c_ij_v, src_Q_u, src_Q_v]
+features = [Q_LR]
 target = data_frame['Q_HR'] - data_frame['Q_LR']
 
 # create a (time-lagged) ANN surrogate
 surrogate = es.methods.ANN_Surrogate()
 
 # create time-lagged features
-lags = [range(1, 10), range(1, 10), range(1, 10), range(1, 10), range(1, 10)]
-# lags = None
+# lags = [range(1, 10), range(1, 10), range(1, 10), range(1, 10), range(1, 10)]
+lags = None
 
 # train the surrogate on the data
 n_iter = 20000
