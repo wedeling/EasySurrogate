@@ -26,26 +26,28 @@ def draw():
     """
     plt.clf()
 
-    ax1 = fig.add_subplot(221)
-    ax2 = fig.add_subplot(222)
-    ax3 = fig.add_subplot(223)
-    ax4 = fig.add_subplot(224)
+    ax1 = fig.add_subplot(121)
+    ax2 = fig.add_subplot(122)
+    ct = ax1.contourf(sgs_u, 100)
+    ct = ax2.contourf(sgs_v, 100)
 
-    # ct = ax1.contourf(xx, yy, u, 100)
-    # ct = ax2.contourf(xx, yy, v, 100)
+    # ax1 = fig.add_subplot(221)
+    # ax2 = fig.add_subplot(222)
+    # ax3 = fig.add_subplot(223)
+    # ax4 = fig.add_subplot(224)
 
-    ax1.plot(T, plot_dict_LR[0], label='model')
-    ax1.plot(T, plot_dict_HR[0], 'o', label='ref')
-    ax1.legend(loc=0)
-    ax2.plot(T, plot_dict_LR[1], label='model')
-    ax2.plot(T, plot_dict_HR[1], 'o', label='ref')
-    ax2.legend(loc=0)
-    ax3.plot(T, plot_dict_LR[2], label='model')
-    ax3.plot(T, plot_dict_HR[2], 'o', label='ref')
-    ax3.legend(loc=0)
-    ax4.plot(T, plot_dict_LR[3], label='model')
-    ax4.plot(T, plot_dict_HR[3], 'o', label='ref')
-    ax4.legend(loc=0)
+    # ax1.plot(T, plot_dict_LR[0], label='model')
+    # ax1.plot(T, plot_dict_HR[0], 'o', label='ref')
+    # ax1.legend(loc=0)
+    # ax2.plot(T, plot_dict_LR[1], label='model')
+    # ax2.plot(T, plot_dict_HR[1], 'o', label='ref')
+    # ax2.legend(loc=0)
+    # ax3.plot(T, plot_dict_LR[2], label='model')
+    # ax3.plot(T, plot_dict_HR[2], 'o', label='ref')
+    # ax3.legend(loc=0)
+    # ax4.plot(T, plot_dict_LR[3], label='model')
+    # ax4.plot(T, plot_dict_HR[3], 'o', label='ref')
+    # ax4.legend(loc=0)
 
     plt.tight_layout()
 
@@ -186,8 +188,8 @@ for n in range(n_steps):
     Q_LR[3] = 0.5 * compute_int(v_hat_LR, v_hat_LR, N_LR)
 
     # train the two reduced sgs source terms using the recieved reference data Q_HR
-    reduced_dict_u = surrogate.train([V_hat_1_LR, u_hat_LR], Q_HR[0:N_Q], Q_LR[0:N_Q])
-    reduced_dict_v = surrogate.train([V_hat_1_LR, v_hat_LR], Q_HR[N_Q:], Q_LR[N_Q:])
+    reduced_dict_u = surrogate.train([V_hat_1_LR, u_hat_LR], Q_HR[0:N_Q] - Q_LR[0:N_Q])
+    reduced_dict_v = surrogate.train([V_hat_1_LR, v_hat_LR], Q_HR[N_Q:] - Q_LR[N_Q:])
 
     # get the two reduced sgs terms from the dict
     reduced_sgs_u = np.fft.ifft2(reduced_dict_u['sgs_hat'])
@@ -218,8 +220,10 @@ for n in range(n_steps):
     if np.mod(j, plot_frame_rate) == 0 and plot:
 
         # compute concentration field
-        u = np.fft.ifft2(u_hat_LR)
-        v = np.fft.ifft2(v_hat_LR)
+        # u = np.fft.ifft2(u_hat_LR)
+        # v = np.fft.ifft2(v_hat_LR)
+        sgs_u = np.fft.ifft2(reduced_sgs_u)
+        sgs_v = np.fft.ifft2(reduced_sgs_v)
 
         # append stats
         for i in range(2 * N_Q):

@@ -113,7 +113,7 @@ class GrayScott_2D:
                 ky[i, j] = 1j * k[i]
 
         return kx, ky
-    
+
     def initial_cond(self):
         """
         Compute the initial condition
@@ -176,11 +176,19 @@ class GrayScott_2D:
         else:
             reduced_sgs_u = reduced_sgs_v = 0
 
+        if 'nudge_u_hat' in kwargs and 'nudge_v_hat' in kwargs:
+            nudge_u_hat = kwargs['nudge_u_hat']
+            nudge_v_hat = kwargs['nudge_v_hat']
+            nudge_u = np.fft.ifft2(nudge_u_hat)
+            nudge_v = np.fft.ifft2(nudge_v_hat)
+        else:
+            nudge_u = nudge_v = 0.0
+
         u = np.fft.ifft2(u_hat)
         v = np.fft.ifft2(v_hat)
 
-        f = -u * v * v + self.feed * (1 - u) - reduced_sgs_u
-        g = u * v * v - (self.feed + self.kill) * v - reduced_sgs_v
+        f = -u * v * v + self.feed * (1 - u) - reduced_sgs_u + nudge_u
+        g = u * v * v - (self.feed + self.kill) * v - reduced_sgs_v + nudge_v
 
         f_hat = np.fft.fft2(f)
         g_hat = np.fft.fft2(g)
@@ -235,7 +243,7 @@ class GrayScott_2D:
         self.v_hat = v_hat
 
         return u_hat, v_hat
-    
+
     def store_state(self, fname):
         """
         Store the state to a pickle file.
