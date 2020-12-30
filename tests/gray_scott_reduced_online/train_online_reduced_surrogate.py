@@ -84,6 +84,7 @@ def qoi_func(X_hat, **kwargs):
 
     return np.array([integral1.real, integral2.real])
 
+
 def compute_int(X1_hat, X2_hat, N):
     """
     Compute the integral of X1*X2 using the Fourier expansion
@@ -162,9 +163,13 @@ dQ_surr = dQ_campaign.surrogate
 # store the surrogate used to predict dQ
 campaign.surrogate.set_dQ_surr(dQ_surr)
 # online learning nudging time scale
-tau_nudge = 0.1
+tau_nudge = 1.0
 # length of the moving window (in time steps) in which the online training data is stored
 window_length = 1
+#
+batch_size = window_length
+#
+M = 1
 # store the online learning parameters
 campaign.surrogate.set_online_training_parameters(tau_nudge, dt_LR, window_length)
 
@@ -194,7 +199,7 @@ plot_frame_rate = 100
 
 # initial time and number of LR time steps to take
 t = 0.0
-n_steps = 500
+n_steps = 50000
 
 # Initial condition
 if restart:
@@ -214,86 +219,92 @@ for n in range(n_steps):
     if np.mod(n, 1000) == 0:
         print('time step %d of %d' % (n, n_steps))
 
+    # store the states before the next update
     u_hat_HR_before = np.copy(u_hat_HR)
     v_hat_HR_before = np.copy(v_hat_HR)
 
-    for i in range(dt_multiplier):
-        u_hat_HR, v_hat_HR = gray_scott_HR.rk4(u_hat_HR, v_hat_HR)
+    # compute the difference between the LR and the HR states. To do so,
+    # the LR state muts be upscaled to the HR grid.
+    Delta_u_hat = campaign.surrogate.up_scale(u_hat_LR, N_HR) - u_hat_HR
+    Delta_v_hat = campaign.surrogate.up_scale(v_hat_LR, N_HR) - v_hat_HR
 
-    # # compute LR and HR stats
-    # Q_HR = np.zeros(2 * N_Q)
-    # Q_HR[0:N_Q] = compute_stats(u_hat_HR, V_hat_1=V_hat_1_HR, N=N_HR)
-    # Q_HR[N_Q:] = compute_stats(v_hat_HR, V_hat_1=V_hat_1_HR, N=N_HR)
+    # Solve the HR equation with nudging
+    for i in range(dt_multiplier):
+        u_hat_HR, v_hat_HR = gray_scott_HR.rk4(u_hat_HR, v_hat_HR,
+                                                nudge_u_hat=Delta_u_hat / tau_nudge,
+                                                nudge_v_hat=Delta_v_hat / tau_nudge)
+
+    # compute LR and HR QoIs
+    Q_HR = np.zeros(2 * N_Q)
+    Q_HR[0:N_Q] = qoi_func(u_hat_HR, V_hat_1_HR=V_hat_1_HR)
+    Q_HR[N_Q:] = qoi_func(v_hat_HR, V_hat_1_HR=V_hat_1_HR)
 
     Q_LR = np.zeros(2 * N_Q)
     Q_LR[0:N_Q] = qoi_func(u_hat_LR, V_hat_1_LR=V_hat_1_LR)
     Q_LR[N_Q:] = qoi_func(v_hat_LR, V_hat_1_LR=V_hat_1_LR)
-
-    # if n < dQ_surr.max_lag + 1:
-    #     # train the two reduced sgs source terms using the recieved reference data Q_HR
-    #     reduced_dict_u = surrogate.train([V_hat_1_LR, u_hat_LR], Q_HR[0:N_Q] - Q_LR[0:N_Q])
-    #     reduced_dict_v = surrogate.train([V_hat_1_LR, v_hat_LR], Q_HR[N_Q:] - Q_LR[N_Q:])
-    # else:
-    #     c_ij_u = reduced_dict_u['c_ij'].reshape(N_Q)
-    #     c_ij_v = reduced_dict_v['c_ij'].reshape(N_Q)
-    #     src_Q_u = reduced_dict_u['src_Q']
-    #     src_Q_v = reduced_dict_v['src_Q']
-    #     feat = [Q_LR, c_ij_u, c_ij_v, src_Q_u, src_Q_v]
-    #     dQ = dQ_surr.predict(feat)
-    #     reduced_dict_u = surrogate.predict([V_hat_1_LR, u_hat_LR], dQ[0:N_Q])
-    #     reduced_dict_v = surrogate.predict([V_hat_1_LR, v_hat_LR], dQ[N_Q:])
-
-    # # get the two reduced sgs terms from the dict
-    # reduced_sgs_u = np.fft.ifft2(reduced_dict_u['sgs_hat'])
-    # reduced_sgs_v = np.fft.ifft2(reduced_dict_v['sgs_hat'])
 
     # pass reduced sgs terms to rk4
     u_hat_LR_before = np.copy(u_hat_LR)
     v_hat_LR_before = np.copy(v_hat_LR)
     u_hat_LR, v_hat_LR = gray_scott_LR.rk4(u_hat_LR, v_hat_LR)
 
-    # TODO: this will only work for u and not u and v together
+    # Generate the training data for the online learning back prop step
     campaign.surrogate.generate_online_training_data(Q_LR,
-                                                     [u_hat_LR_before, v_hat_LR_before],
-                                                     [u_hat_LR, v_hat_LR],
-                                                     [u_hat_HR_before, v_hat_HR_before],
-                                                     [u_hat_HR, v_hat_HR],
-                                                     qoi_func,
-                                                     V_hat_1_LR=V_hat_1_LR, V_hat_1_HR=V_hat_1_HR)
+                                                      [u_hat_LR_before, v_hat_LR_before],
+                                                      [u_hat_LR, v_hat_LR],
+                                                      [u_hat_HR_before, v_hat_HR_before],
+                                                      [u_hat_HR, v_hat_HR],
+                                                      qoi_func,
+                                                      V_hat_1_LR=V_hat_1_LR, V_hat_1_HR=V_hat_1_HR)
 
-    # # we do not want to store the full field reduced source terms
-    # del reduced_dict_u['sgs_hat']
-    # del reduced_dict_v['sgs_hat']
+    # make a prediction for the reduced sgs terms
+    dQ_pred = dQ_surr.predict(Q_LR)
+    reduced_dict_u = campaign.surrogate.predict([V_hat_1_LR, u_hat_LR], dQ_pred[0:N_Q])
+    reduced_dict_v = campaign.surrogate.predict([V_hat_1_LR, v_hat_LR], dQ_pred[N_Q:])
+    reduced_sgs_u = np.fft.ifft2(reduced_dict_u['sgs_hat'])
+    reduced_sgs_v = np.fft.ifft2(reduced_dict_v['sgs_hat'])
 
-    # # accumulate the time series in the campaign object
-    # campaign.accumulate_data(reduced_dict_u, names=['c_ij_u',
-    #                                                 'inner_prods_u', 'src_Q_u',
-    #                                                 'tau_u'])
+    # update the LR state with the sgs terms in a post-processing step
+    u_hat_LR += reduced_sgs_u * dt_LR
+    v_hat_LR += reduced_sgs_v * dt_LR
 
-    # campaign.accumulate_data(reduced_dict_v, names=['c_ij_v',
-    #                                                 'inner_prods_v', 'src_Q_v',
-    #                                                 'tau_v'])
+    # update the neural network for dQ every M time steps
+    if np.mod(j, M) == 0 and j != 0 and j > window_length:
+        dQ_surr.train_online(batch_size=batch_size)
 
-    # campaign.accumulate_data({'Q_HR': Q_HR, 'Q_LR': Q_LR})
+    # we do not want to store the full field reduced source terms
+    del reduced_dict_u['sgs_hat']
+    del reduced_dict_v['sgs_hat']
+
+    # accumulate the time series in the campaign object
+    campaign.accumulate_data(reduced_dict_u, names=['c_ij_u',
+                                                    'inner_prods_u', 'src_Q_u',
+                                                    'tau_u'])
+
+    campaign.accumulate_data(reduced_dict_v, names=['c_ij_v',
+                                                    'inner_prods_v', 'src_Q_v',
+                                                    'tau_v'])
+
+    campaign.accumulate_data({'Q_HR': Q_HR, 'Q_LR': Q_LR})
 
     j += 1
     t += dt_LR
     # plot while running simulation
-    # if np.mod(j, plot_frame_rate) == 0 and plot:
+    if np.mod(j, plot_frame_rate) == 0 and plot:
 
-    #     # compute concentration field
-    #     u = np.fft.ifft2(u_hat_LR)
-    #     v = np.fft.ifft2(v_hat_LR)
+        # compute concentration field
+        u = np.fft.ifft2(u_hat_LR)
+        v = np.fft.ifft2(v_hat_LR)
 
-    #     # append stats
-    #     for i in range(2 * N_Q):
-    #         plot_dict_LR[i].append(Q_LR[i])
-    #         plot_dict_HR[i].append(Q_HR[i])
-    #         # plot_dict_LR[i].append(dQ[i])
-    #         # plot_dict_HR[i].append(Q_HR[i] - Q_LR[i])
+        # append stats
+        for i in range(2 * N_Q):
+            plot_dict_LR[i].append(Q_LR[i])
+            plot_dict_HR[i].append(Q_HR[i])
+            # plot_dict_LR[i].append(dQ[i])
+            # plot_dict_HR[i].append(Q_HR[i] - Q_LR[i])
 
-    # T.append(t)
-    # draw()
+        T.append(t)
+        draw()
 
 print('*************************************')
 print('Simulation time = %f [s]' % (time.time() - t0))

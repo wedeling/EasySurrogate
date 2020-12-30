@@ -158,9 +158,10 @@ class Reduced_Surrogate(Campaign):
         self.dQ_surr.feat_eng.online_target.append(np.concatenate(dQ))
 
         # remove oldest item from the online features is the window lendth is exceeded
-        if len(self.dQ_surr.feat_eng.online_feats) > self.window_length:
-            self.feat_eng.online_feats.pop(0)
-            self.feat_eng.online_target.pop(0)
+        if len(self.dQ_surr.feat_eng.online_feats[0]) > self.window_length:
+            for i in range(self.n_feat_arrays):
+                self.dQ_surr.feat_eng.online_feats[i].pop(0)
+            self.dQ_surr.feat_eng.online_target.pop(0)
 
     def set_online_training_parameters(self, tau_nudge, dt_LR, window_length):
         """
@@ -391,7 +392,7 @@ class Reduced_Surrogate(Campaign):
 
         return np.dot(V_hat, np.conjugate(V_hat).T).real / self.n_model_1d**4
 
-    def down_scale(self, X_hat, N):
+    def down_scale(self, X_hat, N_LR):
         """
         Down-scale X to a lower spatial resolution by removing high-frequency Fourier coefficients.
 
@@ -399,7 +400,7 @@ class Reduced_Surrogate(Campaign):
         ----------
         X_hat : array (complex)
             An array of Fourier coefficients of X, where the spatial resolution in 1D is higher than N.
-        N : int
+        N_LR : int
             The new, lower, spatial resolution (X.shape[0] < N).
 
         Returns
@@ -408,13 +409,65 @@ class Reduced_Surrogate(Campaign):
             The Fourier coefficients of X at a spatial resolution determined by N.
 
         """
-        start = int(N/2)
+        assert N_LR < X_hat.shape[0], "N must be smaller than X_hat.shape[0] to down scale."
+
+        # The spatial dimension of the problem
+        d = X_hat.ndim
+        # The HR grid resolution
+        N_HR = X_hat.shape[0]
+
+        # the range that should be deleted
+        start = int(N_LR / 2)
         end = X_hat.shape[0] - start
-        # remove the Fourier coefficients that are not present in the lower-resolution version
+        # Remove the Fourier coefficients that are not present in the lower-resolution version
         # of X_hat
         for i in range(X_hat.ndim):
             X_hat = np.delete(X_hat, np.arange(start, end), axis=i)
-        return X_hat
+        # In numpy only the inverse transform is scaled. The following term must be applied
+        # to ensure the correct scaling factor is applied in the inverse transform.
+        scaling_factor = (N_LR / N_HR)**d
+        return X_hat * scaling_factor
+
+    def up_scale(self, X_hat, N_HR):
+        """
+        Up-scale X to a higher spatial resolution by padding high-frequency Fourier coefficients with
+        zeros. Thus far this will only work for 1 or 2 dimensional arrays.
+
+
+        Parameters
+        ----------
+        X_hat : array (complex)
+            The Fourier coefficients of X.
+        N_HR : int
+            The new, higher, spatial resolution (X.shape[0] > N).
+
+        Returns
+        -------
+        X_hat : array (complex)
+            The Fourier coefficients of X at a higher spatial resolution determined ny N.
+
+        """
+
+        N_LR = X_hat.shape[0]
+        d = X_hat.ndim
+
+        # assert N_LR < N_HR, "X_hat.shape[0] must be < N_HR in order to upscale X_hat."
+        assert d == 1 or d == 2, "Upscaling only implemented for 1d or 2d arrays."
+
+        start = int(N_LR / 2)
+        pad_size = N_HR - N_LR
+        if X_hat.ndim == 1:
+            # pad the 1d array with zeros
+            X_hat = np.insert(X_hat, start, np.zeros(pad_size) + 0j)
+        elif X_hat.ndim == 2:
+            # pad the 2d array with a 'cross' of zeros
+            X_hat = np.insert(X_hat, start, np.zeros([pad_size, N_LR]) + 0j, axis=0)
+            X_hat = np.insert(X_hat, start, np.zeros([pad_size, N_HR]) + 0j, axis=1)
+        # In numpy only the inverse transform is scaled. The following term must be applied
+        # to ensure the correct scaling factor is applied in the inverse transform.
+        scaling_factor = (N_HR / N_LR)**d
+        return X_hat * scaling_factor
+
 
 def compute_int(X1_hat, X2_hat, N):
     """
@@ -438,4 +491,3 @@ def compute_int(X1_hat, X2_hat, N):
     """
     integral = np.dot(X1_hat.flatten(), np.conjugate(X2_hat.flatten())) / N**4
     return integral.real
-        
