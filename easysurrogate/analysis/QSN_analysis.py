@@ -33,10 +33,10 @@ class QSN_analysis(BaseAnalysis):
         """
 
         if index is not None:
-            X = self.qsn_surrogate.surrogate.X[index]
-            y = self.qsn_surrogate.surrogate.y[index]
+            X = self.qsn_surrogate.neural_net.X[index]
+            y = self.qsn_surrogate.neural_net.y[index]
         else:
-            X = self.qsn_surrogate.surrogate.X
-            y = self.qsn_surrogate.surrogate.y
+            X = self.qsn_surrogate.neural_net.X
+            y = self.qsn_surrogate.neural_net.y
 
-        self.qsn_surrogate.surrogate.compute_misclass_softmax(X=X, y=y)
+        self.qsn_surrogate.neural_net.compute_misclass_softmax(X=X, y=y)

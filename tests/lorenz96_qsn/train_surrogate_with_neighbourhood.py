@@ -1,3 +1,8 @@
+"""
+Here a pointwise surrogate is trained, with feature vectors that include the local point
+plus a number of neighbouring points.
+"""
+
 from itertools import chain
 import numpy as np
 import easysurrogate as es
@@ -9,14 +14,15 @@ campaign = es.Campaign()
 data_frame = campaign.load_hdf5_data()
 
 # supervised training data set
-features = data_frame['X_data']
-target = data_frame['B_data']
+I = 9
+features = data_frame['X_data'][:, I-1:I+2]
+target = data_frame['B_data'][:, I].reshape([-1,1])
 
-# create a (time-lagged) ANN surrogate
-surrogate = es.methods.ANN_Surrogate()
+# create Quantized Softmax Network surrogate
+surrogate = es.methods.QSN_Surrogate()
 
 # create time-lagged features
-lags = [[1, 10]]
+lags = [range(1, 10)]
 
 # train the surrogate on the data
 n_iter = 10000
@@ -25,3 +31,7 @@ surrogate.train([features], target, n_iter, lags=lags, n_layers=4, n_neurons=256
 
 campaign.add_app(name='test_campaign', surrogate=surrogate)
 campaign.save_state()
+
+# QSN analysis object
+analysis = es.analysis.QSN_analysis(surrogate)
+analysis.get_classification_error(index=np.arange(0, 10000))
