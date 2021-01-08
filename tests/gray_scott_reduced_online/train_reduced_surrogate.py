@@ -26,28 +26,30 @@ def draw():
     """
     plt.clf()
 
-    ax1 = fig.add_subplot(121)
-    ax2 = fig.add_subplot(122)
-    ct = ax1.contourf(sgs_u, 100)
-    ct = ax2.contourf(sgs_v, 100)
+    # ax1 = fig.add_subplot(121)
+    # ax2 = fig.add_subplot(122)
+    # ct = ax1.contourf(reduced_sgs_u, 100)
+    # plt.colorbar(ct)
+    # ct = ax2.contourf(reduced_sgs_v, 100)
+    # plt.colorbar(ct)
 
-    # ax1 = fig.add_subplot(221)
-    # ax2 = fig.add_subplot(222)
-    # ax3 = fig.add_subplot(223)
-    # ax4 = fig.add_subplot(224)
+    ax1 = fig.add_subplot(221)
+    ax2 = fig.add_subplot(222)
+    ax3 = fig.add_subplot(223)
+    ax4 = fig.add_subplot(224)
 
-    # ax1.plot(T, plot_dict_LR[0], label='model')
-    # ax1.plot(T, plot_dict_HR[0], 'o', label='ref')
-    # ax1.legend(loc=0)
-    # ax2.plot(T, plot_dict_LR[1], label='model')
-    # ax2.plot(T, plot_dict_HR[1], 'o', label='ref')
-    # ax2.legend(loc=0)
-    # ax3.plot(T, plot_dict_LR[2], label='model')
-    # ax3.plot(T, plot_dict_HR[2], 'o', label='ref')
-    # ax3.legend(loc=0)
-    # ax4.plot(T, plot_dict_LR[3], label='model')
-    # ax4.plot(T, plot_dict_HR[3], 'o', label='ref')
-    # ax4.legend(loc=0)
+    ax1.plot(T, plot_dict_LR[0], label='model')
+    ax1.plot(T, plot_dict_HR[0], 'o', label='ref')
+    ax1.legend(loc=0)
+    ax2.plot(T, plot_dict_LR[1], label='model')
+    ax2.plot(T, plot_dict_HR[1], 'o', label='ref')
+    ax2.legend(loc=0)
+    ax3.plot(T, plot_dict_LR[2], label='model')
+    ax3.plot(T, plot_dict_HR[2], 'o', label='ref')
+    ax3.legend(loc=0)
+    ax4.plot(T, plot_dict_LR[3], label='model')
+    ax4.plot(T, plot_dict_HR[3], 'o', label='ref')
+    ax4.legend(loc=0)
 
     plt.tight_layout()
 
@@ -94,9 +96,9 @@ kill = 0.05
 # kill = 0.055
 
 # time step HR model
-dt_HR = 0.1
+dt_HR = 0.05
 # multiplier which regulates the difference between the HR and LR time step
-dt_multiplier = 1
+dt_multiplier = 2
 # time step LR model
 dt_LR = dt_multiplier * dt_HR
 
@@ -133,7 +135,7 @@ campaign.add_app(name="gray_scott_reduced", surrogate=surrogate)
 plot = True
 store = True
 state_store = True
-restart = False
+restart = True
 
 sim_ID = 'test_gray_scott_reduced'
 
@@ -150,13 +152,13 @@ if plot:
 plot_frame_rate = 100
 
 # initial time and number of LR time steps to take
-t = 0.0
-n_steps = 50000
+t = 3000.0
+n_steps = 100000
 
 # Initial condition
 if restart:
-    u_hat_LR, v_hat_LR = gray_scott_LR.load_state('./restart/state_LR.pickle')
-    u_hat_HR, v_hat_HR = gray_scott_HR.load_state('./restart/state_HR.pickle')
+    u_hat_LR, v_hat_LR = gray_scott_LR.load_state('./restart/state_LR_t=%.4f.pickle' % t)
+    u_hat_HR, v_hat_HR = gray_scott_HR.load_state('./restart/state_HR_t=%.4f.pickle' % t)
 else:
     u_hat_LR, v_hat_LR = gray_scott_LR.initial_cond()
     u_hat_HR, v_hat_HR = gray_scott_HR.initial_cond()
@@ -197,7 +199,8 @@ for n in range(n_steps):
 
     # pass reduced sgs terms to rk4
     u_hat_LR, v_hat_LR = gray_scott_LR.rk4(u_hat_LR, v_hat_LR,
-                                           reduced_sgs_u=reduced_sgs_u, reduced_sgs_v=reduced_sgs_v)
+                                           reduced_sgs_u=reduced_sgs_u,
+                                           reduced_sgs_v=reduced_sgs_v)
 
     # we do not want to store the full field reduced source terms
     del reduced_dict_u['sgs_hat']
@@ -222,8 +225,6 @@ for n in range(n_steps):
         # compute concentration field
         # u = np.fft.ifft2(u_hat_LR)
         # v = np.fft.ifft2(v_hat_LR)
-        sgs_u = np.fft.ifft2(reduced_sgs_u)
-        sgs_v = np.fft.ifft2(reduced_sgs_v)
 
         # append stats
         for i in range(2 * N_Q):
@@ -239,8 +240,8 @@ print('*************************************')
 
 # store the state of the system to allow for a simulation restart at t > 0
 if state_store:
-    gray_scott_LR.store_state('./restart/state_LR.pickle')
-    gray_scott_HR.store_state('./restart/state_HR.pickle')
+    gray_scott_LR.store_state('./restart/state_LR_t=%.4f.pickle' % t)
+    gray_scott_HR.store_state('./restart/state_HR_t=%.4f.pickle' % t)
 
 # store the accumulate data to a HDF5 file
 if store:

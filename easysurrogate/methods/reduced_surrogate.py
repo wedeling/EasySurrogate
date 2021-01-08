@@ -130,23 +130,23 @@ class Reduced_Surrogate(Campaign):
             self.dQ_surr.feat_eng.online_feats[i].append(feats[i])
 
         dQ = []
-
+        n_HR = HR_before[0].shape[0]
         # loop over all states
         for i in range(len(LR_before)):
 
             # project the hoigh-res model to the low-res grid
-            HR_before_projected = self.down_scale(HR_before[i], self.n_model_1d)
-            HR_after_projected = self.down_scale(HR_after[i], self.n_model_1d)
+            LR_before_projected = self.up_scale(LR_before[i], n_HR)
 
             # the difference between the low res and high res model (projected to low-res grid)
             # at time n
-            delta_nudge = LR_before[i] - HR_before_projected
+            delta_nudge = LR_before_projected - HR_before[i]
 
             # the estimated state of the (projected) HR model would there have been no nudging
-            HR_no_nudge = HR_after_projected - delta_nudge / self.tau_nudge * self.dt_LR
+            HR_no_nudge = HR_after[i] - delta_nudge / self.tau_nudge * self.dt_LR
 
             # compute the HR QoI
             Q_HR = qoi_func(HR_no_nudge, **kwargs)
+            # Q_HR = qoi_func(HR_after[i], **kwargs)
 
             # compute the LR QoI
             # Note: could store multiple functions in a list if required.
@@ -324,7 +324,7 @@ class Reduced_Surrogate(Campaign):
             src_Q[i] = src_Q_i
             tau[i] = tau_i
 
-            # compute reduced soure term
+            # compute reduced subgrid-scale source term
             sgs_hat -= tau_i * P_hat_i
 
         reduced_dict = {'sgs_hat': sgs_hat, 'c_ij': c_ij,
