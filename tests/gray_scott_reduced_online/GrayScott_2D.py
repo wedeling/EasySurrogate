@@ -171,21 +171,21 @@ class GrayScott_2D:
         """
 
         if 'reduced_sgs_u' in kwargs and 'reduced_sgs_v' in kwargs:
-            reduced_sgs_u = kwargs['reduced_sgs_u']
-            reduced_sgs_v = kwargs['reduced_sgs_v']
+            reduced_sgs_u = kwargs['reduced_sgs_u'].real
+            reduced_sgs_v = kwargs['reduced_sgs_v'].real
         else:
             reduced_sgs_u = reduced_sgs_v = 0
 
         if 'nudge_u_hat' in kwargs and 'nudge_v_hat' in kwargs:
             nudge_u_hat = kwargs['nudge_u_hat']
             nudge_v_hat = kwargs['nudge_v_hat']
-            nudge_u = np.fft.ifft2(nudge_u_hat)
-            nudge_v = np.fft.ifft2(nudge_v_hat)
+            nudge_u = np.fft.ifft2(nudge_u_hat).real
+            nudge_v = np.fft.ifft2(nudge_v_hat).real
         else:
             nudge_u = nudge_v = 0.0
 
-        u = np.fft.ifft2(u_hat)
-        v = np.fft.ifft2(v_hat)
+        u = np.fft.ifft2(u_hat).real
+        v = np.fft.ifft2(v_hat).real
 
         f = -u * v * v + self.feed * (1 - u) - reduced_sgs_u + nudge_u
         g = u * v * v - (self.feed + self.kill) * v - reduced_sgs_v + nudge_v

@@ -26,26 +26,63 @@ def draw():
     """
     plt.clf()
 
-    ax1 = fig.add_subplot(221)
-    ax2 = fig.add_subplot(222)
-    ax3 = fig.add_subplot(223)
-    ax4 = fig.add_subplot(224)
+    ax1 = fig.add_subplot(331)
+    ax2 = fig.add_subplot(332)
+    ax3 = fig.add_subplot(333)
+    ax4 = fig.add_subplot(334)
+    ax5 = fig.add_subplot(335)
+    ax6 = fig.add_subplot(336)
+    ax7 = fig.add_subplot(337)
+    ax8 = fig.add_subplot(338)
+    ax9 = fig.add_subplot(339)
 
-    # ct = ax1.contourf(xx, yy, u, 100)
-    # ct = ax2.contourf(xx, yy, v, 100)
+    ct1 = ax8.contourf(u, 50)
+    plt.colorbar(ct1)
+    ct2 = ax9.contourf(v, 50)
+    plt.colorbar(ct2)
 
-    ax1.plot(T, plot_dict_LR[0], label='model')
-    ax1.plot(T, plot_dict_HR[0], 'o', label='ref')
+    ax1.plot(T, plot_dict_LR[0], label='LR')
+    ax1.plot(T, plot_dict_HR[0], 'o', label='HR')
+    ax1.plot(T, plot_dict_ref[0], label='ref')
     ax1.legend(loc=0)
-    ax2.plot(T, plot_dict_LR[1], label='model')
-    ax2.plot(T, plot_dict_HR[1], 'o', label='ref')
+    ax2.plot(T, plot_dict_LR[1], label='LR')
+    ax2.plot(T, plot_dict_HR[1], 'o', label='HR')
+    ax2.plot(T, plot_dict_ref[1], label='ref')
     ax2.legend(loc=0)
-    ax3.plot(T, plot_dict_LR[2], label='model')
-    ax3.plot(T, plot_dict_HR[2], 'o', label='ref')
+    ax3.plot(T, plot_dict_LR[2], label='LR')
+    ax3.plot(T, plot_dict_HR[2], 'o', label='HR')
+    ax3.plot(T, plot_dict_ref[2], label='ref')
     ax3.legend(loc=0)
-    ax4.plot(T, plot_dict_LR[3], label='model')
-    ax4.plot(T, plot_dict_HR[3], 'o', label='ref')
+    ax4.plot(T, plot_dict_LR[3], label='LR')
+    ax4.plot(T, plot_dict_HR[3], 'o', label='HR')
+    ax4.plot(T, plot_dict_ref[3], label='ref')
     ax4.legend(loc=0)
+    # computed tau
+    ax5.plot(T, plot_dict_tau[0], 'r', label='tau_1')
+    ax5.plot(T, plot_dict_tau[1], 'g', label='tau_2')
+    ax5.plot(T, plot_dict_tau[2], 'b', label='tau_3')
+    ax5.plot(T, plot_dict_tau[3], 'y', label='tau_4')
+    # training tau
+    ax5.plot(T, plot_dict_tau_ref[0], 'ro', label='tau_1_ref')
+    ax5.plot(T, plot_dict_tau_ref[1], 'go', label='tau_2_ref')
+    ax5.plot(T, plot_dict_tau_ref[2], 'bo', label='tau_3_ref')
+    ax5.plot(T, plot_dict_tau_ref[3], 'yo', label='tau_4_ref')
+    # ax5.legend(loc=0)
+    # computed dQ
+    ax6.plot(T, plot_dict_dQ[0], 'r', label='dQ_1')
+    ax6.plot(T, plot_dict_dQ[1], 'g', label='dQ_2')
+    ax6.plot(T, plot_dict_dQ[2], 'b', label='dQ_3')
+    ax6.plot(T, plot_dict_dQ[3], 'y', label='dQ_4')
+    # training dQ
+    ax6.plot(T, plot_dict_dQ_ref[0], 'ro', label='dQ_1_ref')
+    ax6.plot(T, plot_dict_dQ_ref[1], 'go', label='dQ_2_ref')
+    ax6.plot(T, plot_dict_dQ_ref[2], 'bo', label='dQ_3_ref')
+    ax6.plot(T, plot_dict_dQ_ref[3], 'yo', label='dQ_4_ref')
+    # ax6.legend(loc=0)
+    ax7.plot(T, plot_dict_src[0], 'r', label='src_1')
+    ax7.plot(T, plot_dict_src[1], 'g', label='src_2')
+    ax7.plot(T, plot_dict_src[2], 'b', label='src_3')
+    ax7.plot(T, plot_dict_src[3], 'y', label='src_4')
 
     plt.tight_layout()
 
@@ -163,7 +200,7 @@ dQ_surr = dQ_campaign.surrogate
 # store the surrogate used to predict dQ
 campaign.surrogate.set_dQ_surr(dQ_surr)
 # online learning nudging time scale
-tau_nudge = 1.0
+tau_nudge = 2.0
 # length of the moving window (in time steps) in which the online training data is stored
 window_length = 1
 #
@@ -173,6 +210,10 @@ M = 1
 # store the online learning parameters
 campaign.surrogate.set_online_training_parameters(tau_nudge, dt_LR, window_length)
 
+# the reference data frame used to train the ANN
+data_frame_ref = campaign.load_hdf5_data(file_path='../samples/gray_scott_training.hdf5')
+dQ_ref = data_frame_ref['Q_HR'] - data_frame_ref['Q_LR']
+
 ###########################
 # End Easysurrogate setup #
 ###########################
@@ -180,7 +221,7 @@ campaign.surrogate.set_online_training_parameters(tau_nudge, dt_LR, window_lengt
 # user flags
 plot = True
 store = True
-state_store = True
+state_store = False
 restart = False
 
 sim_ID = 'test_gray_scott_reduced'
@@ -189,10 +230,22 @@ if plot:
     fig = plt.figure(figsize=[8, 8])
     plot_dict_LR = {}
     plot_dict_HR = {}
+    plot_dict_ref = {}
+    plot_dict_tau = {}
+    plot_dict_tau_ref = {}
+    plot_dict_dQ = {}
+    plot_dict_dQ_ref = {}
+    plot_dict_src = {}
     T = []
     for i in range(2 * N_Q):
         plot_dict_LR[i] = []
         plot_dict_HR[i] = []
+        plot_dict_ref[i] = []
+        plot_dict_tau[i] = []
+        plot_dict_tau_ref[i] = []
+        plot_dict_dQ[i] = []
+        plot_dict_dQ_ref[i] = []
+        plot_dict_src[i] = []
 
 # if plot is true, draw() is called every plot_frame_rate time steps
 plot_frame_rate = 100
@@ -231,8 +284,8 @@ for n in range(n_steps):
     # Solve the HR equation with nudging
     for i in range(dt_multiplier):
         u_hat_HR, v_hat_HR = gray_scott_HR.rk4(u_hat_HR, v_hat_HR,
-                                                nudge_u_hat=Delta_u_hat / tau_nudge,
-                                                nudge_v_hat=Delta_v_hat / tau_nudge)
+                                               nudge_u_hat=Delta_u_hat / tau_nudge,
+                                               nudge_v_hat=Delta_v_hat / tau_nudge)
 
     # compute LR and HR QoIs
     Q_HR = np.zeros(2 * N_Q)
@@ -246,31 +299,43 @@ for n in range(n_steps):
     # pass reduced sgs terms to rk4
     u_hat_LR_before = np.copy(u_hat_LR)
     v_hat_LR_before = np.copy(v_hat_LR)
-    u_hat_LR, v_hat_LR = gray_scott_LR.rk4(u_hat_LR, v_hat_LR)
-
-    # Generate the training data for the online learning back prop step
-    campaign.surrogate.generate_online_training_data(Q_LR,
-                                                      [u_hat_LR_before, v_hat_LR_before],
-                                                      [u_hat_LR, v_hat_LR],
-                                                      [u_hat_HR_before, v_hat_HR_before],
-                                                      [u_hat_HR, v_hat_HR],
-                                                      qoi_func,
-                                                      V_hat_1_LR=V_hat_1_LR, V_hat_1_HR=V_hat_1_HR)
+    # u_hat_LR, v_hat_LR = gray_scott_LR.rk4(u_hat_LR, v_hat_LR)
 
     # make a prediction for the reduced sgs terms
     dQ_pred = dQ_surr.predict(Q_LR)
+    # dQ_pred = dQ_ref[n]
     reduced_dict_u = campaign.surrogate.predict([V_hat_1_LR, u_hat_LR], dQ_pred[0:N_Q])
     reduced_dict_v = campaign.surrogate.predict([V_hat_1_LR, v_hat_LR], dQ_pred[N_Q:])
     reduced_sgs_u = np.fft.ifft2(reduced_dict_u['sgs_hat'])
     reduced_sgs_v = np.fft.ifft2(reduced_dict_v['sgs_hat'])
+    tau_u = reduced_dict_u['tau']
+    tau_v = reduced_dict_v['tau']
+    tau = np.concatenate((tau_u, tau_v))
+    src_u = reduced_dict_u['src_Q']
+    src_v = reduced_dict_v['src_Q']
+    src = np.concatenate((src_u, src_v))
 
-    # update the LR state with the sgs terms in a post-processing step
-    u_hat_LR += reduced_sgs_u * dt_LR
-    v_hat_LR += reduced_sgs_v * dt_LR
+    # solve the LR equations
+    u_hat_LR, v_hat_LR = gray_scott_LR.rk4(u_hat_LR, v_hat_LR,
+                                           reduced_sgs_u=reduced_sgs_u,
+                                           reduced_sgs_v=reduced_sgs_v)
+
+    # Generate the training data for the online learning back prop step
+    campaign.surrogate.generate_online_training_data(Q_LR,
+                                                     [u_hat_LR_before, v_hat_LR_before],
+                                                     [u_hat_LR, v_hat_LR],
+                                                     [u_hat_HR_before, v_hat_HR_before],
+                                                     [u_hat_HR, v_hat_HR],
+                                                     qoi_func,
+                                                     V_hat_1_LR=V_hat_1_LR, V_hat_1_HR=V_hat_1_HR)
+
+    # # update the LR state with the sgs terms in a post-processing step
+    # u_hat_LR += reduced_sgs_u * dt_LR
+    # v_hat_LR += reduced_sgs_v * dt_LR
 
     # update the neural network for dQ every M time steps
     if np.mod(j, M) == 0 and j != 0 and j > window_length:
-        dQ_surr.train_online(batch_size=batch_size)
+        dQ_surr.train_online(batch_size=batch_size, verbose=True)
 
     # we do not want to store the full field reduced source terms
     del reduced_dict_u['sgs_hat']
@@ -299,7 +364,19 @@ for n in range(n_steps):
         # append stats
         for i in range(2 * N_Q):
             plot_dict_LR[i].append(Q_LR[i])
-            plot_dict_HR[i].append(Q_HR[i])
+            # plot_dict_HR[i].append(Q_HR[i])
+            plot_dict_HR[i].append(campaign.surrogate.foo[i])
+            plot_dict_ref[i].append(data_frame_ref['Q_HR'][n][i])
+            plot_dict_tau[i].append(tau[i])
+            plot_dict_dQ[i].append(dQ_pred[i])
+            plot_dict_dQ_ref[i].append(dQ_ref[n][i])
+            plot_dict_src[i].append(1.0 / src[i])
+
+            if i < 2:
+                plot_dict_tau_ref[i].append(data_frame_ref['tau_u'][n][i])
+            else:
+                plot_dict_tau_ref[i].append(data_frame_ref['tau_v'][n][i - 2])
+
             # plot_dict_LR[i].append(dQ[i])
             # plot_dict_HR[i].append(Q_HR[i] - Q_LR[i])
 
