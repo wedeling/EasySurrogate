@@ -2,7 +2,7 @@
 ===============================================================================
 Applies the Quantized Softmax Network to the Lorenz 96 system
 
-Both the surrogate and the features are local in space.
+The surrogate is local here, yet the features are non-local in space.
 ===============================================================================
 """
 
@@ -119,7 +119,7 @@ plt.close('all')
 K = 18
 J = 20
 F = 10.0
-h_x = -1.0
+h_x = -2.0
 h_y = 1.0
 epsilon = 0.5
 
@@ -137,7 +137,7 @@ max_lag = np.max(list(chain(*lags)))
 ###################
 # Simulation flags
 ###################
-train = False            #train the network
+train = True            #train the network
 make_movie = False      #make a movie (of the training)
 predict = True          #predict using the learned SGS term
 store = True            #store the prediction 
@@ -156,9 +156,17 @@ h5f = feat_eng.get_hdf5_file()
 X_data = h5f['X_data'][()]
 B_data = h5f['B_data'][()]
 
+#spatial point to use for training
+I = 9
+#number of neighbouring points to include in the feature vector
+n_neighbours = K
+#indices which define the immediate neighbourshood of spatial point 1
+base_stencil = np.arange(-n_neighbours, n_neighbours + 1)
+#center the base stentil on the point selected for training
+training_stencil = np.mod(base_stencil + I, K)
 #Lag features as defined in 'lags'
-X_train, y_train = feat_eng.lag_training_data([X_data[:, 0]], 
-                                               B_data[:, 0], lags = lags)
+X_train, y_train = feat_eng.lag_training_data([X_data[:, training_stencil]], 
+                                               B_data[:, I], lags = lags)
 
 #number of bins per B_k
 n_bins = 10
@@ -190,9 +198,9 @@ if train:
     print('Training Quantized Softmax Network...')
 
     #train network for N_inter mini batches
-    N_iter = 10000
+    N_iter = 25000
     surrogate.train(N_iter, store_loss = True)
-    # surrogate.compute_misclass_softmax()
+    surrogate.compute_misclass_softmax()
 
 #load a neural network from disk
 else:
@@ -200,7 +208,7 @@ else:
     surrogate = es.methods.ANN(X=X_train, y=y_train)
     #the load trained network from disk
     surrogate.load_ANN()
-    
+
 X_mean = surrogate.X_mean
 X_std = surrogate.X_std
     
@@ -286,13 +294,18 @@ if predict:
  
         #get time lagged features from Feature Engineering object
         feats = feat_eng.get_feat_history(max_lag)
-        feats = feats.reshape([n_feat, K])
-        
+        #reshape to max_lag, K
+        feats = feats.reshape([-1, K])
+        #allocate memory for the local sgs predictions
         B_n = np.zeros(K)
         for k in range(K):
-            feat = (feats[:, k] - X_mean)/X_std
+            #create the neighbourhood feature vector of point k plus its immediate neighbours
+            neighbours = np.mod(base_stencil + k, K)
+            feat_k = feats[:, neighbours].flatten()
+            #standardize
+            feat_k = (feat_k - X_mean)/X_std
             #SGS solve, draw random sample from network
-            o_i, idx_max, rv_idx = surrogate.get_softmax(feat.reshape([1, n_feat]))
+            o_i, idx_max, rv_idx = surrogate.get_softmax(feat_k.reshape([1, n_feat]))
             B_n[k] = sampler.resample(idx_max)
             # B_n = sampler.resample_mean(idx_max)
 
