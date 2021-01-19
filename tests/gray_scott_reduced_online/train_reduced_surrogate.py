@@ -83,17 +83,17 @@ L = 1.25
 epsilon_u = 2e-5
 epsilon_v = 1e-5
 
-# alpha pattern
-feed = 0.02
-kill = 0.05
+# # alpha pattern
+# feed = 0.02
+# kill = 0.05
 
-# beta pattern
+# # beta pattern
 # feed = 0.02
 # kill = 0.045
 
 # epsilon pattern
-# feed = 0.02
-# kill = 0.055
+feed = 0.02
+kill = 0.055
 
 # time step HR model
 dt_HR = 0.05
@@ -157,8 +157,8 @@ n_steps = 100000
 
 # Initial condition
 if restart:
-    u_hat_LR, v_hat_LR = gray_scott_LR.load_state('./restart/state_LR_t=%.4f.pickle' % t)
-    u_hat_HR, v_hat_HR = gray_scott_HR.load_state('./restart/state_HR_t=%.4f.pickle' % t)
+    u_hat_LR, v_hat_LR = gray_scott_LR.load_state('./restart/state_LR_epsilon_t=%.4f.pickle' % t)
+    u_hat_HR, v_hat_HR = gray_scott_HR.load_state('./restart/state_HR_epsilon_t=%.4f.pickle' % t)
 else:
     u_hat_LR, v_hat_LR = gray_scott_LR.initial_cond()
     u_hat_HR, v_hat_HR = gray_scott_HR.initial_cond()
@@ -240,8 +240,8 @@ print('*************************************')
 
 # store the state of the system to allow for a simulation restart at t > 0
 if state_store:
-    gray_scott_LR.store_state('./restart/state_LR_t=%.4f.pickle' % t)
-    gray_scott_HR.store_state('./restart/state_HR_t=%.4f.pickle' % t)
+    gray_scott_LR.store_state('./restart/state_LR_epsilon_t=%.4f.pickle' % t)
+    gray_scott_HR.store_state('./restart/state_HR_epsilon_t=%.4f.pickle' % t)
 
 # store the accumulate data to a HDF5 file
 if store:
