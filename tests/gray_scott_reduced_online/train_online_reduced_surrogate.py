@@ -200,18 +200,19 @@ dQ_surr = dQ_campaign.surrogate
 # store the surrogate used to predict dQ
 campaign.surrogate.set_dQ_surr(dQ_surr)
 # online learning nudging time scale
-tau_nudge = 2.0
+tau_nudge = 1.0
 # length of the moving window (in time steps) in which the online training data is stored
 window_length = 1
 #
 batch_size = window_length
+settling_period = 1
 #
 M = 1
 # store the online learning parameters
 campaign.surrogate.set_online_training_parameters(tau_nudge, dt_LR, window_length)
 
 # the reference data frame used to train the ANN
-data_frame_ref = campaign.load_hdf5_data(file_path='../samples/gray_scott_training.hdf5')
+data_frame_ref = campaign.load_hdf5_data(file_path='../samples/gray_scott_training_stationary.hdf5')
 dQ_ref = data_frame_ref['Q_HR'] - data_frame_ref['Q_LR']
 
 ###########################
@@ -222,7 +223,7 @@ dQ_ref = data_frame_ref['Q_HR'] - data_frame_ref['Q_LR']
 plot = True
 store = True
 state_store = False
-restart = False
+restart = True
 
 sim_ID = 'test_gray_scott_reduced'
 
@@ -251,13 +252,13 @@ if plot:
 plot_frame_rate = 100
 
 # initial time and number of LR time steps to take
-t = 0.0
-n_steps = 50000
+t = 3000.0
+n_steps = 100000
 
 # Initial condition
 if restart:
-    u_hat_LR, v_hat_LR = gray_scott_LR.load_state('./restart/state_LR.pickle')
-    u_hat_HR, v_hat_HR = gray_scott_HR.load_state('./restart/state_HR.pickle')
+    u_hat_LR, v_hat_LR = gray_scott_LR.load_state('./restart/state_LR_t=3000.0000.pickle')
+    u_hat_HR, v_hat_HR = gray_scott_HR.load_state('./restart/state_HR_t=3000.0000.pickle')
 else:
     u_hat_LR, v_hat_LR = gray_scott_LR.initial_cond()
     u_hat_HR, v_hat_HR = gray_scott_HR.initial_cond()
@@ -284,8 +285,8 @@ for n in range(n_steps):
     # Solve the HR equation with nudging
     for i in range(dt_multiplier):
         u_hat_HR, v_hat_HR = gray_scott_HR.rk4(u_hat_HR, v_hat_HR,
-                                               nudge_u_hat=Delta_u_hat / tau_nudge,
-                                               nudge_v_hat=Delta_v_hat / tau_nudge)
+                                                nudge_u_hat=Delta_u_hat / tau_nudge,
+                                                nudge_v_hat=Delta_v_hat / tau_nudge)
 
     # compute LR and HR QoIs
     Q_HR = np.zeros(2 * N_Q)
@@ -302,8 +303,11 @@ for n in range(n_steps):
     # u_hat_LR, v_hat_LR = gray_scott_LR.rk4(u_hat_LR, v_hat_LR)
 
     # make a prediction for the reduced sgs terms
-    dQ_pred = dQ_surr.predict(Q_LR)
-    # dQ_pred = dQ_ref[n]
+    if n > settling_period:
+        dQ_pred = dQ_surr.predict(Q_LR)
+    else:
+        dQ_pred = dQ_ref[n]
+
     reduced_dict_u = campaign.surrogate.predict([V_hat_1_LR, u_hat_LR], dQ_pred[0:N_Q])
     reduced_dict_v = campaign.surrogate.predict([V_hat_1_LR, v_hat_LR], dQ_pred[N_Q:])
     reduced_sgs_u = np.fft.ifft2(reduced_dict_u['sgs_hat'])
@@ -317,24 +321,24 @@ for n in range(n_steps):
 
     # solve the LR equations
     u_hat_LR, v_hat_LR = gray_scott_LR.rk4(u_hat_LR, v_hat_LR,
-                                           reduced_sgs_u=reduced_sgs_u,
-                                           reduced_sgs_v=reduced_sgs_v)
+                                            reduced_sgs_u=reduced_sgs_u,
+                                            reduced_sgs_v=reduced_sgs_v)
 
     # Generate the training data for the online learning back prop step
     campaign.surrogate.generate_online_training_data(Q_LR,
-                                                     [u_hat_LR_before, v_hat_LR_before],
-                                                     [u_hat_LR, v_hat_LR],
-                                                     [u_hat_HR_before, v_hat_HR_before],
-                                                     [u_hat_HR, v_hat_HR],
-                                                     qoi_func,
-                                                     V_hat_1_LR=V_hat_1_LR, V_hat_1_HR=V_hat_1_HR)
+                                                      [u_hat_LR_before, v_hat_LR_before],
+                                                      [u_hat_LR, v_hat_LR],
+                                                      [u_hat_HR_before, v_hat_HR_before],
+                                                      [u_hat_HR, v_hat_HR],
+                                                      qoi_func,
+                                                      V_hat_1_LR=V_hat_1_LR, V_hat_1_HR=V_hat_1_HR)
 
     # # update the LR state with the sgs terms in a post-processing step
     # u_hat_LR += reduced_sgs_u * dt_LR
     # v_hat_LR += reduced_sgs_v * dt_LR
 
     # update the neural network for dQ every M time steps
-    if np.mod(j, M) == 0 and j != 0 and j > window_length:
+    if np.mod(j, M) == 0 and n > settling_period and j > window_length:
         dQ_surr.train_online(batch_size=batch_size, verbose=True)
 
     # we do not want to store the full field reduced source terms
@@ -364,8 +368,8 @@ for n in range(n_steps):
         # append stats
         for i in range(2 * N_Q):
             plot_dict_LR[i].append(Q_LR[i])
-            # plot_dict_HR[i].append(Q_HR[i])
-            plot_dict_HR[i].append(campaign.surrogate.foo[i])
+            plot_dict_HR[i].append(Q_HR[i])
+            # plot_dict_HR[i].append(campaign.surrogate.foo[i])
             plot_dict_ref[i].append(data_frame_ref['Q_HR'][n][i])
             plot_dict_tau[i].append(tau[i])
             plot_dict_dQ[i].append(dQ_pred[i])

@@ -26,7 +26,7 @@ target = data_frame['Q_HR'] - data_frame['Q_LR']
 surrogate = es.methods.ANN_Surrogate()
 
 # create time-lagged features
-# lags = [range(1, 10), range(1, 10), range(1, 10), range(1, 10), range(1, 10)]
+# lags = [range(1, 2)]
 lags = None
 
 # train the surrogate on the data
