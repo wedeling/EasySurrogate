@@ -23,7 +23,7 @@ class GP_Surrogate(Campaign):
 
     def train(self, feats, target, n_iter=0,
               test_frac=0.0,
-              kernel=):
+              kernel=['Matern']):
         """
 
         Args:
@@ -37,15 +37,19 @@ class GP_Surrogate(Campaign):
         -------
         None.
         """
+        # save all the data
+        self.X = feats
+        self.y = target
 
         # prepare the training data
-        X_train, y_train = self.feat_eng.get_training_data(feats, target, test_frac=test_frac)
+        X_train, y_train, self.X_test, self.y_test =\
+            self.feat_eng.get_training_data(feats, target, local=False, test_frac=test_frac)
 
         # get dimensionality of the output
         n_out = y_train.shape[1]
 
         # create a GP process
-        self.model = es.methods.GP()
+        self.model = es.methods.GP(X_train, y_train, kernel=kernel[0])
 
         print('===============================')
         print('Fitting Gaussian Process...')
@@ -63,7 +67,8 @@ class GP_Surrogate(Campaign):
         -------
         Stochastic prediction of the output y
         """
-        return self.feat_eng._predict(X, function=lambda x: x)
+        return self.feat_eng._predict(X, feed_forward=lambda x: self.model.predict(x.reshape(1,-1)))
+        #return self.model.predict(X)
 
     def save_state(self):
         """
