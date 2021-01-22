@@ -8,6 +8,8 @@ import h5py
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import DotProduct, WhiteKernel, Matern, RBF, ConstantKernel
 from sklearn.metrics import mean_squared_error as mse
+
+
 class GP:
 
     def __init__(
@@ -15,16 +17,17 @@ class GP:
                  X,
                  y,
                  n_out=1,
+                 kernel='Matern',
                  length_scale=1.0,
                  bias=True,
-                 noize=True,
+                 noize=False,
                  save=True,
                  load=False,
                  name='GP',
                  on_gpu=False,
                  standardize_X=True,
                  standardize_y=True,
-                **kwargs):
+                 **kwargs):
 
         self.X = X
 
@@ -37,7 +40,13 @@ class GP:
         except IndexError:
             self.n_in = 1
 
-        self.kernel = Matern(length_scale=[length_scale]*self.n_in)
+        try:
+            self.n_out = y.shape[1]
+        except IndexError:
+            self.n_out = 1
+
+        if kernel == 'Matern':
+            self.kernel = Matern(length_scale=[length_scale]*self.n_in)
 
         if bias:
             self.kernel = self.kernel + ConstantKernel()
@@ -45,14 +54,17 @@ class GP:
         if noize:
             self.kernel = self.kernel + WhiteKernel(noise_level=0.5)
 
-
-        self.model = GaussianProcessRegressor(kernel=self.kernel, random_state=0)
+        self.instance = GaussianProcessRegressor(kernel=self.kernel, random_state=0)
+        self.train()
 
     def train(self):
-        self.model.fit(self.X)
+        self.instance.fit(self.X, self.y)
+
+    def predict(self, X_i):
+        return self.instance.predict(X_i)  # for single sample should be nparray(1,4)
 
     def forward(self, X_i):
-        self.model.predict(X_i)
+        return self.instance.predict(X_i)  # for single sample should be nparray(1,4)
 
     def print_model_info(self):
         print('===============================')
