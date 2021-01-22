@@ -19,17 +19,18 @@ class GP_analysis(BaseAnalysis):
 
     def plot_err(self, metric, original, name):
         plt.ioff()
-        plt.figure(figsize=(5,1))
+        #plt.figure(figsize=(2,1))
         #plt.subplot(311)
         #plt.title('training sample of size: {}'.format(str(len(train_n))))
         plt.title(name)
-        plt.plot(metric, '.', label='GP metamodel error', color='b')
+        plt.plot(range(len(metric)), metric, '.', label='GP metamodel error', color='b')
         #plt.plot(original, '.', label='Turbulence model', color='green')
         plt.xlabel('Run number')
         plt.ylabel('Prediction of {}'.format(name))
         plt.legend()
         plt.grid()
         plt.yscale("log")
+        plt.savefig('gp_abs_err.png')
 
     def plot_res(prediction, original, name, num, type_train, train_n, out_color, output_folder):
         plt.ioff()
@@ -76,14 +77,19 @@ class GP_analysis(BaseAnalysis):
             X_test = self.gp_surrogate.model.X[index]
             y_test = self.gp_surrogate.model.y[index]
         else:
-            X_test = self.gp_surrogate.model.X
-            y_test = self.gp_surrogate.model.y
+            X_test = self.gp_surrogate.X_test  # TODO: turn to list of length 4
+            y_test = self.gp_surrogate.y_test
 
-        y_pred = self.gp_surrogate.model.predict(X_test)
+        #X_single = X_test[0, :] ### we use this a single sample to pass
+        #y_pred_single = self.gp_surrogate.predict(X_single)
 
-        err_abs = y_pred - y_test
-        err_rel = err_abs / y_test
+        print("Prediction of new fluxes")
+        y_pred = [self.gp_surrogate.predict(X_test[i,:]) for i in range(X_test.shape[0])]
 
-        self.plot_err(self, err_rel, y_test, 'relative error')
+        y_pred = np.squeeze(np.array(y_pred), axis=1)
+        err_abs = np.subtract(y_pred[:-1,:], y_test)
+        err_rel = np.divide(err_abs, y_test)
 
-        print('MSE of the GPR predistion is: {0}'.format(mse(y_pred, y_test)))
+        self.plot_err(err_rel[:,0], y_test[:,0], 'relative error in Te fluxes')
+
+        print('MSE of the GPR predistion is: {0}'.format(mse(y_pred[:-1,0], y_test[:,0])))
