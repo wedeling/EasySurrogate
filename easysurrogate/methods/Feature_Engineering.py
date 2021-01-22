@@ -8,6 +8,7 @@ import numpy as np
 from itertools import chain
 from scipy import stats
 
+from scipy.optimize import minimize
 
 class Feature_Engineering:
     """
@@ -93,10 +94,10 @@ class Feature_Engineering:
                 X = np.array(X).reshape([n_points, len(X)])
                 y = []
                 for p in range(n_points):
-                    y.append(feed_forward(X[p]))
+                    y.append(feed_forward(X[p]))  # GP case: for single sample should be one point
                 return np.array(y).flatten()
 
-    def get_training_data(self, feats, target, lags=None, local=False, test_frac=0.0):
+    def get_training_data(self, feats, target, lags=None, local=False, test_frac=0.0, train_sample_choice=None):
         """
         Generate trainig data. Training data can be made (time) lagged and/or local.
 
@@ -147,27 +148,55 @@ class Feature_Engineering:
         self.n_samples = feats[0].shape[0]
         # number of points in the computational grid
         self.n_points = feats[0].shape[1]
+
+        # chose training data set according to some criteria:
+        # 1) test_frac: choose first (1-test_frac) fraction of the data set points, if points arranged in time
+        # 2) test_frac random: choose (1-test_frace) fraction of data set at random without replacement
+        # 3) acquisition: choose points
+
+        #if train_sample_choice is not None:
+        #    points = minimize(train_sample_choice)
+        #    test_frac = self.n_samples / len(points)
+        #    self.train_indices = points
+
         # compute the size of the training set based on value of test_frac
         self.n_train = np.int(self.n_samples * (1.0 - test_frac))
-        print('Using first %d/%d samples to train ANN' % (self.n_train, self.n_samples))
+        print('Using  %d/%d samples to train the ML model' % (self.n_train, self.n_samples))
+        # number of testing points, as what is left after excluding training set
+        self.n_test = np.int(self.n_samples - self.n_train)
+        # get indices for grid points to be used for training
+        self.train_indices = np.random.choice(self.n_samples, self.n_train, replace=False)  # chose train fraction randomly
+        self.test_indices = np.array([el for el in list(range(0, self.n_samples)) if el not in self.train_indices]) # chose train fraction randomly
 
         X = {}
         y = {}
+        X_r = {}
+        y_r = {}
         # use the entire row as a feature
         if not local:
             # list of features
-            X[0] = [X_i[0:self.n_train] for X_i in feats]
+            #X[0] = [X_i[0:self.n_train] for X_i in feats]
+            #X_r[0] = [X_i[-self.n_test:] for X_i in feats]
+            X[0] = [X_i[self.train_indices] for X_i in feats]  # chose train fraction randomly
+            X_r[0] = [X_i[self.test_indices] for X_i in feats]  # chose train fraction randomly
             # the data
             y[0] = target[0:self.n_train]
+            y_r[0] = target[-self.n_test:]
         # do not use entire row as feature, apply surrogate locally along second dimension
         else:
             # create a separate training set for every grid point
             for i in range(self.n_points):
                 X[i] = [X_i[0:self.n_train, i] for X_i in feats]
                 y[i] = target[0:self.n_train, i].reshape([-1, 1])
+                X_r[i] = [X_i[-self.n_test:, i] for X_i in feats]
+                y_r[i] = target[-self.n_test:, i].reshape([-1, 1])
 
         X_train = []
         y_train = []
+
+        X_test = []
+        y_test = []
+
         # No time-lagged training data
         if lags is not None:
             self.max_lag = np.max(list(chain(*lags)))
@@ -184,12 +213,19 @@ class Feature_Engineering:
             self.max_lag = 0
             # no time lag, just add every entry in X and y to an array
             for i in range(len(X)):
-                X_train.append(np.array(X[i]).reshape([self.n_train, -1]))
+                #X_train.append(np.array(X[i]).reshape([self.n_train, -1]))
+                X_train.append(np.moveaxis(np.array(X[i]), 0, -1).reshape([self.n_train, -1]))
                 y_train.append(y[i])
+                # Testing data
+                X_test.append(np.moveaxis(np.array(X_r[i]), 0, -1).reshape([self.n_test, -1]))  # appends same feature values in a single 4-long array
+                y_test.append(y[i])
             X_train = np.concatenate(X_train)
             y_train = np.concatenate(y_train)
+            # Testing data
+            X_test = np.concatenate(X_test)
+            y_test = np.concatenate(y_test)
 
-        return X_train, y_train
+        return X_train, y_train, X_test, y_test
 
     def get_online_training_data(self, **kwargs):
         """
