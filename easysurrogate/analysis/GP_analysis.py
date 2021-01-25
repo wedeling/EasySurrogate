@@ -17,7 +17,7 @@ class GP_analysis(BaseAnalysis):
         print('Creating GP_analysis object')
         self.gp_surrogate = gp_surrogate
 
-    def plot_err(self, metric, original, name):
+    def plot_err(self, metric, original, name): #TODO: clean up and add subplots, use for abs error
         plt.ioff()
         #plt.figure(figsize=(2,1))
         #plt.subplot(311)
@@ -46,7 +46,7 @@ class GP_analysis(BaseAnalysis):
         plt.yscale("log")
         plt.subplot(312)
         err_abs = prediction - original
-        print(err_abs.where(abs(err_abs) > 2e5))  # no where ar nparray
+        print(err_abs.where(abs(err_abs) > 2e5))  # no where nparray
         plt.plot(err_abs, '.', color=out_color)
         plt.grid()
         plt.yscale("symlog")
@@ -63,7 +63,7 @@ class GP_analysis(BaseAnalysis):
                     bbox_inches='tight', dpi=100)
         plt.clf()
 
-    def get_regression_error(self, index=None, **kwargs):
+    def get_regression_error(self, index=None, **kwargs):  # TODO add correlation analysis
         """
         Compute the regression RMSE error of GP surrogate
         Args:
@@ -74,10 +74,10 @@ class GP_analysis(BaseAnalysis):
         prints RMSE regression error and plots the errors of the prediciton for different simulation runs/samples
         """
         if index is not None:
-            X_test = self.gp_surrogate.model.X[index]
+            X_test = self.gp_surrogate.model.X[index] # TODO store indexes at a model state
             y_test = self.gp_surrogate.model.y[index]
         else:
-            X_test = self.gp_surrogate.X_test  # TODO: turn to list of length 4
+            X_test = self.gp_surrogate.X_test
             y_test = self.gp_surrogate.y_test
 
         #X_single = X_test[0, :] ### we use this a single sample to pass
@@ -87,7 +87,7 @@ class GP_analysis(BaseAnalysis):
         y_pred = [self.gp_surrogate.predict(X_test[i,:]) for i in range(X_test.shape[0])]
 
         y_pred = np.squeeze(np.array(y_pred), axis=1)
-        err_abs = np.subtract(y_pred[:-1,:], y_test)
+        err_abs = np.subtract(y_pred[:-1,:], y_test)  # TODO check why test appears smaller in length
         err_rel = np.divide(err_abs, y_test)
 
         self.plot_err(err_rel[:,0], y_test[:,0], 'relative error in Te fluxes')
