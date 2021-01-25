@@ -9,6 +9,7 @@ from itertools import chain
 from scipy import stats
 
 from scipy.optimize import minimize
+import statistics
 
 class Feature_Engineering:
     """
@@ -97,6 +98,17 @@ class Feature_Engineering:
                     y.append(feed_forward(X[p]))  # GP case: for single sample should be one point
                 return np.array(y).flatten()
 
+    def filter_values(self, feats, interval):
+        """
+        Choose only those samples for which feature value lies
+        Args:
+            feats:
+            interval:
+
+        Returns:
+
+        """
+
     def get_training_data(self, feats, target, lags=None, local=False, test_frac=0.0, train_sample_choice=None):
         """
         Generate trainig data. Training data can be made (time) lagged and/or local.
@@ -118,7 +130,7 @@ class Feature_Engineering:
         local : boolean, optional
             If false, each feature sample of n_points_i will be used as input. If true, the
             surrogate will be applied locally, meaning that n_points_i separate scalar input
-            faetures will be extracted from each feature sample. If true, the size of all
+            features will be extracted from each feature sample. If true, the size of all
             features and target must be the same: n_points_i (for all i) = n_target = a fixed
             number. The default is False.
         test_frac : float, optional
@@ -154,19 +166,41 @@ class Feature_Engineering:
         # 2) test_frac random: choose (1-test_frace) fraction of data set at random without replacement
         # 3) acquisition: choose points
 
-        #if train_sample_choice is not None:
-        #    points = minimize(train_sample_choice)
-        #    test_frac = self.n_samples / len(points)
-        #    self.train_indices = points
+        if train_sample_choice is not None:
+            currbounds = [(0., 2000.), (0., 2000.), (-5000., -500.), (-5000., -500.)]
+            self.n_samples = self.n_samples + 1
+            self.n_train = 1
+            self.n_test = self.n_samples - 1
+            self.train_indices = np.array([self.n_samples - 1])
+            self.test_indices = np.arange(0, self.n_samples - 1)
 
-        # compute the size of the training set based on value of test_frac
-        self.n_train = np.int(self.n_samples * (1.0 - test_frac))
-        print('Using  %d/%d samples to train the ML model' % (self.n_train, self.n_samples))
-        # number of testing points, as what is left after excluding training set
-        self.n_test = np.int(self.n_samples - self.n_train)
-        # get indices for grid points to be used for training
-        self.train_indices = np.random.choice(self.n_samples, self.n_train, replace=False)  # chose train fraction randomly
-        self.test_indices = np.array([el for el in list(range(0, self.n_samples)) if el not in self.train_indices]) # chose train fraction randomly
+            self.new_sample = [statistics.mean(x) for x in currbounds]
+            #print('A CUT OF ACQUISITION FUNCTION')
+            #test_domain_1 = np.arange(0., 2000., 50.)
+            #print([train_sample_choice(np.array([x, 1200., -3000., -3000.])) for x in test_domain_1])  ### debugging only
+            #print('\n')
+            #print([train_sample_choice(np.array([x, 500., -1500., -1500.])) for x in test_domain_1])  ### debugging only
+            #print('\n')
+            #print([train_sample_choice(np.array([x, 2000., -8000., -8000.])) for x in test_domain_1])  ### debugging only
+
+            newpoints = minimize(train_sample_choice, np.array(self.new_sample), bounds=currbounds)  # bounds for current GP case
+            if newpoints.success:
+                self.new_sample = newpoints['x']
+            for i in range(len(feats)):
+                feats[i] = np.concatenate([feats[i], self.new_sample[i].reshape(1,1)])
+
+            print('Using new %d samples to retrain the ML model' % (self.n_train))
+
+        if train_sample_choice is None:
+            # compute the size of the training set based on value of test_frac
+            self.n_train = np.int(self.n_samples * (1.0 - test_frac))
+            # number of testing points, as what is left after excluding training set
+            self.n_test = np.int(self.n_samples - self.n_train)
+            # get indices of samples  to be used for training
+            self.train_indices = np.random.choice(self.n_samples, self.n_train, replace=False)  # chose train fraction randomly
+            self.test_indices = np.array([el for el in list(range(0, self.n_samples)) if el not in self.train_indices]) # chose train fraction randomly
+
+            print('Using  %d/%d samples to train the ML model' % (self.n_train, self.n_samples))
 
         X = {}
         y = {}
