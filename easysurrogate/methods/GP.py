@@ -61,10 +61,12 @@ class GP:
         self.instance.fit(self.X, self.y)
 
     def predict(self, X_i):
-        return self.instance.predict(X_i)  # for single sample should be nparray(1,4)
+        m, v = self.instance.predict(X_i, return_std=True)  # for single sample X_i should be nparray(1,4)
+        return m, v
 
-    def forward(self, X_i):
-        return self.instance.predict(X_i)  # for single sample should be nparray(1,4)
+    def forward(self, X_i):  # for no cases when required different from predict at GP case
+        m, v = self.instance.predict(X_i)
+        return m  # for single sample should be nparray(1,4)
 
     def print_model_info(self):
         print('===============================')

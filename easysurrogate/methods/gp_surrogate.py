@@ -23,7 +23,7 @@ class GP_Surrogate(Campaign):
 
     def train(self, feats, target, n_iter=0,
               test_frac=0.0,
-              kernel=['Matern']):
+              kernel=['Matern'], postrain=False):
         """
 
         Args:
@@ -42,14 +42,24 @@ class GP_Surrogate(Campaign):
         self.y = target
 
         # prepare the training data
-        X_train, y_train, self.X_test, self.y_test =\
-            self.feat_eng.get_training_data(feats, target, local=False, test_frac=test_frac)
+        if postrain == False:
+            X_train, y_train, self.X_test, self.y_test = \
+                                self.feat_eng.get_training_data(feats, target, local=False, test_frac=test_frac)
+
+            # create a GP process
+            self.model = es.methods.GP(X_train, y_train, kernel=kernel[0])
+
+        else:
+            X_train, y_train, X_test, y_test = \
+                                self.feat_eng.get_training_data(feats, target, local=False, test_frac=test_frac,
+                                        train_sample_choice=lambda x: self.acquisition_function(x))  # case with acquisition
+
+            self.model.X = np.concatenate([self.model.X, X_train])
+            self.model.y = np.concatenate([self.model.y, y_train])
+            self.model.train()
 
         # get dimensionality of the output
         n_out = y_train.shape[1]
-
-        # create a GP process
-        self.model = es.methods.GP(X_train, y_train, kernel=kernel[0])
 
         print('===============================')
         print('Fitting Gaussian Process...')
@@ -67,7 +77,7 @@ class GP_Surrogate(Campaign):
         -------
         Stochastic prediction of the output y
         """
-        return self.feat_eng._predict(X, feed_forward=lambda x: self.model.predict(x.reshape(1,-1)))
+        return self.feat_eng._predict(X, feed_forward=lambda x: self.model.predict(x.reshape(1, -1)))  #TODO check if there is a way to pass right shape of sample
         #return self.model.predict(X)
 
     def save_state(self):
@@ -105,3 +115,16 @@ class GP_Surrogate(Campaign):
         else:
             self.output_mean = 0.0
             self.output_std = 1.0
+
+    def acquisition_function(self, sample):
+        """
+        Returns the uncertainty of the model as (a posterior variance on Y) for a given sample
+        Args:
+            sample: a single sample from a feature array
+        Returns:
+            the value of uncertainty (variance) of the model
+        """
+        if sample.ndim == 1:
+            sample = sample[None, :]
+        _, uncertatinty = self.model.predict(sample)
+        return -1.*uncertatinty

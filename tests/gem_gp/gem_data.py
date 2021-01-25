@@ -39,3 +39,4 @@ def load_csv_file():
 campaign = es.Campaign(load_state=False)
 data = load_csv_file()
 campaign.store_data_to_hdf5(data, file_path='gem_data_625.hdf5')
+# TODO try on a larger dataset from a MFW
