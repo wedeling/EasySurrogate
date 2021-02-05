@@ -1,3 +1,10 @@
+import easysurrogate as es
+import easyvvuq as uq
+from custom import CustomEncoder
+import matplotlib.pyplot as plt
+import numpy as np
+
+
 def get_training_data(n_mc, D):
 
     theta = np.random.rand(n_mc, D)
@@ -7,22 +14,17 @@ def get_training_data(n_mc, D):
         sol = 1.0
         for i in range(D):
             sol *= 3 * a[i] * theta[k][i]**2 + 1.0
-        f[k] = sol/2**D
-        
+        f[k] = sol / 2**D
+
     return theta, f
 
-import easysurrogate as es
-import numpy as np
-import matplotlib.pyplot as plt
-from custom import CustomEncoder
 
-import easyvvuq as uq
-#load campaign
+# load campaign
 campaign = uq.Campaign(work_dir='~/VECMA/Campaigns', state_file='campaign3.json')
 sampler = campaign.get_active_sampler()
 sampler.load_state("sampler_campaign3.pickle")
 
-#load data frame, input and output names
+# load data frame, input and output names
 data_frame = campaign.get_collation_result()
 inputs = list(sampler.vary.get_keys())
 qoi_cols = ['cumDeath']
@@ -30,7 +32,7 @@ samples = []
 for k in qoi_cols:
     run_id_int = [int(run_id.split('Run_')[-1]) for run_id in data_frame[k].keys()]
     for run_id in range(1, np.max(run_id_int) + 1):
-            samples.append(data_frame[k]['Run_' + str(run_id)])
+        samples.append(data_frame[k]['Run_' + str(run_id)])
 params = sampler.xi_d
 samples = np.array(samples)[:, -1]
 
@@ -62,10 +64,10 @@ d = 5
 
 # params, samples = get_training_data(n_mc, D)
 test_frac = 0.0
-I = np.int(samples.shape[0]*(1.0 - test_frac))
+I = np.int(samples.shape[0] * (1.0 - test_frac))
 
-surrogate = es.methods.DAS_surrogate(params[0:I], samples[0:I], d, n_layers = 4, n_neurons=50,
-                                      save=False, bias=True, alpha=0.001, batch_size=128)
+surrogate = es.methods.DAS_surrogate(params[0:I], samples[0:I], d, n_layers=4, n_neurons=50,
+                                     save=False, bias=True, alpha=0.001, batch_size=128)
 # train the surrogate on the data
 n_iter = 10000
 surrogate.train(n_iter, store_loss=True)
@@ -84,21 +86,21 @@ plt.close('all')
 if d == 1:
     fig = plt.figure()
     ax = plt.subplot(111, xlabel=r'${\bf y} = W^T\xi$',
-                      title='Link function g(y) in active subspace')
+                     title='Link function g(y) in active subspace')
     ax.plot(y, data, '+', label='data')
     ax.plot(y, pred, 's', label='prediction g(y)', alpha=0.5)
     plt.legend()
-        
+
 else:
     from mpl_toolkits.mplot3d import Axes3D
     fig = plt.figure(figsize=[8, 4])
-    ax1 = fig.add_subplot(121, projection='3d', 
+    ax1 = fig.add_subplot(121, projection='3d',
                           xlabel=r'$y_1$', ylabel=r'$y_2$',
                           title='Link function g(y) in active subspace')
     ax1.plot_trisurf(y[:, 0], y[:, 1], pred, alpha=0.5)
     ax1.plot(y[:, 0], y[:, 1], data, 'o', label=r'data')
     plt.legend()
-    ax2 = fig.add_subplot(122, xlabel=r'$y_1$', ylabel=r'$y_2$', 
+    ax2 = fig.add_subplot(122, xlabel=r'$y_1$', ylabel=r'$y_2$',
                           title='Sampling plan in active subspace')
     ax2.plot(y[:, 0], y[:, 1], 'o')
 
@@ -114,7 +116,7 @@ params_pred = params
 for i in range(n_mc):
     feat_i = (params_pred[i] - surrogate.X_mean) / surrogate.X_std
     pred_i = surrogate.feed_forward(feat_i.reshape([1, -1]))[0][0]
-    pred[i] = pred_i*surrogate.y_std + surrogate.y_mean
+    pred[i] = pred_i * surrogate.y_std + surrogate.y_mean
 
 # das_mean = np.mean(pred)
 # das_std = np.std(pred)
