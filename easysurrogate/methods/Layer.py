@@ -1,13 +1,56 @@
-from .Neuron import Neuron
+"""
+Class for a neural network Layer.
+"""
+import sys
 import numpy as np
 from scipy.stats import norm
 
 
 class Layer:
+    """
+    Class for a neural network Layer.
+
+    Method and notation convention:
+        Aggarwal, Charu C. "Neural networks and deep learning."
+        Springer 10 (2018): 978-3.
+    """
 
     def __init__(self, n_neurons, r, n_layers, activation, loss, bias=False,
-                 neuron_based_compute=False, batch_size=1, lamb=0.0, on_gpu=False,
+                 batch_size=1, lamb=0.0, on_gpu=False,
                  n_softmax=0, **kwargs):
+        """
+        Create a Layer object.
+
+        Parameters
+        ----------
+        n_neurons : int, optional
+            The number of neurons per hidden layer. The default is 16.
+        r : int
+            The layer index, 0 being the input layer and n_layers the output layer.
+        n_layers : int, optional
+            The number of layers, not counting the input layer. The default is 2.
+        activation : string, optional
+            The name of the activation function of the hidden layers.
+            The default is 'tanh'.
+        loss : string, optional
+            The name of the loss function. The default is 'squared'.
+        bias : boolean, optional
+            Use a bias neuron. The default is True.
+        batch_size : int, optional
+            The size of the mini batch. The default is 1.
+        lamb : float, optional
+            L2 weight regularization parameter. The default is 0.0.
+        on_gpu : boolean, optional
+            Train the neural network on a GPU using cupy. NOT IMPLEMENTED IN THIS VERSION.
+            The default is False.
+        n_softmax : int, optional
+            The number of softmax layers attached to the output. The default is 0.
+
+        Returns
+        -------
+        None.
+
+        """
 
         self.n_neurons = n_neurons
         self.r = r
@@ -15,11 +58,9 @@ class Layer:
         self.activation = activation
         self.loss = loss
         self.bias = bias
-        self.neuron_based_compute = neuron_based_compute
         self.batch_size = batch_size
         self.lamb = lamb
         self.n_softmax = n_softmax
-        self.name = 'standard_layer'
 
         # #use either numpy or cupy via xp based on the on_gpu flag
         # global xp
@@ -27,6 +68,7 @@ class Layer:
         #     import numpy as xp
         # else:
         #     import cupy as xp
+
         self.on_gpu = False
 
         if self.bias:
@@ -53,8 +95,22 @@ class Layer:
         if activation == 'parametric_relu':
             self.relu_a = kwargs['relu_a']
 
-    # connect this layer to its neighbors
     def meet_the_neighbors(self, layer_rm1, layer_rp1):
+        """
+        Connect this layer to its neighbors
+
+        Parameters
+        ----------
+        layer_rm1 : Layer object or None
+            The layer before at index r - 1.
+        layer_rp1 : Layer object or None
+            The layer after at index r + 1.
+
+        Returns
+        -------
+        None.
+
+        """
         # if this layer is an input layer
         if self.r == 0:
             self.layer_rm1 = None
@@ -70,18 +126,27 @@ class Layer:
 
         # fill the layer with neurons
         if self.r != 0:
-            self.seed_neurons()
+            self.init_weihjts
 
-    # initialize the neurons of this layer
-    def seed_neurons(self):
+    def init_weights(self):
+        """
+        Initialize the weights and other related matrices of this layer
 
-        # initialize the weight, gradient and momentum matrix
-        #        self.W = np.zeros([self.layer_rm1.n_neurons + self.layer_rm1.n_bias, self.n_neurons])
+        Returns
+        -------
+        None.
+
+        """
+        # weights
         self.W = np.random.randn(self.layer_rm1.n_neurons + self.layer_rm1.n_bias,
                                  self.n_neurons) * np.sqrt(1.0 / self.layer_rm1.n_neurons)
+        # loss gradient
         self.L_grad_W = np.zeros([self.layer_rm1.n_neurons + self.layer_rm1.n_bias, self.n_neurons])
+        # momentum
         self.V = np.zeros([self.layer_rm1.n_neurons + self.layer_rm1.n_bias, self.n_neurons])
+        # squared gradient
         self.A = np.zeros([self.layer_rm1.n_neurons + self.layer_rm1.n_bias, self.n_neurons])
+        # L2 regularization
         self.Lamb = np.ones([self.layer_rm1.n_neurons + self.layer_rm1.n_bias,
                              self.n_neurons]) * self.lamb
 
@@ -89,35 +154,21 @@ class Layer:
         if self.bias:
             self.Lamb[-1, :] = 0.0
 
-        if self.neuron_based_compute:
-            neurons = []
-
-            for j in range(self.n_neurons):
-                neurons.append(
-                    Neuron(
-                        self.activation,
-                        self.loss,
-                        self.layer_rm1,
-                        self,
-                        self.layer_rp1,
-                        j))
-
-            for j in range(self.n_neurons, self.n_neurons + self.n_bias):
-                neurons.append(Neuron('bias', self.loss, self.layer_rm1, self, self.layer_rp1, j))
-
-            self.neurons = neurons
-
-    # return the output of the current layer, computed locally at each neuron
-    def compute_output_local(self):
-        for i in range(self.n_neurons + self.n_bias):
-            self.neurons[i].compute_h()
-
-        # compute the gradient of the activation function,
-        self.compute_grad_Phi()
-
-    # compute the output of the current layer in one shot using matrix -
-    # vector/matrix multiplication
     def compute_output(self, batch_size):
+        """
+        Compute the output of the current layer in one shot using matrix -
+        vector/matrix multiplication.
+
+        Parameters
+        ----------
+        batch_size : int
+            The batch size.
+
+        Returns
+        -------
+        None.
+
+        """
 
         a = np.dot(self.W.T, self.layer_rm1.h)
 
@@ -152,7 +203,6 @@ class Layer:
 
         else:
             print('Unknown activation type')
-            import sys
             sys.exit()
 
         # add bias neuron output
@@ -163,8 +213,15 @@ class Layer:
         # compute the gradient of the activation function,
         self.compute_grad_Phi()
 
-    # compute the gradient in the activation function Phi wrt its input
     def compute_grad_Phi(self):
+        """
+        Compute the gradient in the activation function Phi wrt its input
+
+        Returns
+        -------
+        None.
+
+        """
 
         if self.activation == 'linear':
             self.grad_Phi = np.ones([self.n_neurons, self.batch_size])
@@ -189,10 +246,23 @@ class Layer:
             self.grad_Phi = np.zeros([self.n_neurons, self.batch_size])
             self.grad_Phi[idx[0], idx[1]] = 1.0
 
-    # compute the value of the loss function
     def compute_loss(self, h, y_i):
+        """
+        Compute the value of the loss function.
 
-        # h = self.h
+
+        Parameters
+        ----------
+        h : array
+            The activation of the output layer.
+        y_i : array
+            The target data.
+
+        Returns
+        -------
+        None.
+
+        """
 
         # only compute if in an output layer
         if self.layer_rp1 is None:
@@ -213,12 +283,6 @@ class Layer:
                 self.o_i = np.concatenate(o_i)
 
                 self.L_i = -np.sum(y_i * np.log(self.o_i))
-            # elif self.loss == 'kernel_mixture' and self.n_softmax == 0:
-            #     # NOTE: norm.pdf will not be on the GPU
-            #     self.kernels = norm.pdf(y_i, self.kernel_means, self.kernel_stds)
-            #     self.sum_kernels_w = np.sum(self.h * self.kernels, axis=0)
-            #     self.sum_w = np.sum(self.h, axis=0)
-            #     self.L_i = -np.log(self.sum_kernels_w) + np.log(self.sum_w)
             elif self.loss == 'kernel_mixture' and self.n_softmax > 0:
 
                 if y_i.ndim == 1:
@@ -245,11 +309,18 @@ class Layer:
 
             else:
                 print('Cannot compute loss: unknown loss and/or activation function')
-                import sys
                 sys.exit()
 
-    # compute the gradient of the output wrt the activation functions of this layer
     def compute_delta_hy(self):
+        """
+        Compute the gradient of the network output wrt the activation functions
+        of this layer.
+
+        Returns
+        -------
+        None.
+
+        """
 
         # if this layer is the output layer
         if self.layer_rp1 is None:
@@ -266,8 +337,21 @@ class Layer:
 
             self.delta_hy = np.dot(W_rp1, delta_hy_rp1 * grad_Phi_rp1)[0:self.n_neurons, :]
 
-    # initialize the value of delta_ho at the output layer
     def compute_delta_oo(self, y_i):
+        """
+        Initialize the value of delta_ho at the output layer. This is the gradient
+        of the loss function wrt the output of the neural network.
+
+        Parameters
+        ----------
+        y_i : array
+            The target data.
+
+        Returns
+        -------
+        None.
+
+        """
 
         # if the neuron is in the output layer, initialze delta_oo
         if self.layer_rp1 is None:
@@ -294,31 +378,24 @@ class Layer:
                 # (see eq. 3.22 of Aggarwal book)
                 self.delta_ho = self.o_i - y_i
 
-            elif self.loss == 'kernel_mixture' and self.n_softmax == 0:
-
-                self.delta_ho = -self.kernels / self.sum_kernels_w + 1.0 / self.sum_w
-
             elif self.loss == 'kernel_mixture' and self.n_softmax > 0:
 
-                #                self.delta_ho = self.o_i*(1.0 - self.kernels/self.sum_kernels_Pr)
                 self.delta_ho = self.o_i - self.p_i
-
-            elif self.loss == 'custom':
-
-                alpha = 0.95
-                self.delta_ho = -2.0 * (1.0 - alpha) * (y_i - h) + 2.0 * alpha * (h + self.udv)
-
-#                #Raissi's example
-#                dt = 0.01;
-#                self.delta_ho = -3.0*dt*(y_i - self.udh)
 
         else:
             print('Can only initialize delta_oo in output layer')
-            import sys
             sys.exit()
 
-    # compute the gradient of the loss function wrt the activation functions of this layer
     def compute_delta_ho(self):
+        """
+        Compute the gradient of the loss function wrt the activation functions
+        of this layer.
+
+        Returns
+        -------
+        None.
+
+        """
         # get the delta_ho values of the next layer (layer r+1)
         delta_ho_rp1 = self.layer_rp1.delta_ho
 
@@ -330,44 +407,50 @@ class Layer:
 
         self.delta_ho = np.dot(W_rp1, delta_ho_rp1 * grad_Phi_rp1)[0:self.n_neurons, :]
 
-    # compute the gradient of the output wrt the weights of this layer
     def compute_y_grad_W(self):
+        """
+        Compute the gradient of the network output wrt the weights of this layer.
+
+        Returns
+        -------
+        None.
+
+        """
         h_rm1 = self.layer_rm1.h
-
         delta_hy_grad_Phi = self.delta_hy * self.grad_Phi
-
         self.y_grad_W = np.dot(h_rm1, delta_hy_grad_Phi.T)
 
-    # compute the gradient of the loss function wrt the weights of this layer
     def compute_L_grad_W(self):
+        """
+        Compute the gradient of the loss function wrt the weights of this layer.
+
+        Returns
+        -------
+        None.
+
+        """
         h_rm1 = self.layer_rm1.h
-
         delta_ho_grad_Phi = self.delta_ho * self.grad_Phi
-
         self.L_grad_W = np.dot(h_rm1, delta_ho_grad_Phi.T)
 
-    # perform the backpropogation operations of the current layer
     def back_prop(self, y_i):
+        """
+        Perform the backpropogation operations of the current layer.
 
-        if not self.neuron_based_compute:
-            if self.r == self.n_layers:
-                self.compute_delta_oo(y_i)
-                self.compute_L_grad_W()
-            else:
-                self.compute_delta_ho()
-                self.compute_L_grad_W()
+        Parameters
+        ----------
+        y_i : array
+            The target data.
+
+        Returns
+        -------
+        None.
+
+        """
+
+        if self.r == self.n_layers:
+            self.compute_delta_oo(y_i)
+            self.compute_L_grad_W()
         else:
-            if self.r == self.n_layers:
-                # initialize delta_oo
-                for i in range(self.n_neurons):
-                    self.neurons[i].compute_delta_oo(y_i)
-                    self.neurons[i].compute_L_grad_W()
-            else:
-                for i in range(self.n_neurons):
-                    self.neurons[i].compute_delta_ho()
-                    self.neurons[i].compute_L_grad_W()
-
-    # set a user defined value. To be used in the
-    # output layer for custom loss functions and loss function gradients
-    def set_user_defined_value(self, val):
-        self.udv = val
+            self.compute_delta_ho()
+            self.compute_L_grad_W()

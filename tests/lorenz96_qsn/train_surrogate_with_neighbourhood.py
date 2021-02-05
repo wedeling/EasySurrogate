@@ -15,8 +15,8 @@ data_frame = campaign.load_hdf5_data()
 
 # supervised training data set
 I = 9
-features = data_frame['X_data'][:, I-1:I+2]
-target = data_frame['B_data'][:, I].reshape([-1,1])
+features = data_frame['X_data'][:, I - 1:I + 2]
+target = data_frame['B_data'][:, I].reshape([-1, 1])
 
 # create Quantized Softmax Network surrogate
 surrogate = es.methods.QSN_Surrogate()
