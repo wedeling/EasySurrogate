@@ -1,10 +1,3 @@
-import easysurrogate as es
-import easyvvuq as uq
-from custom import CustomEncoder
-import matplotlib.pyplot as plt
-import numpy as np
-
-
 def get_training_data(n_mc, D):
 
     theta = np.random.rand(n_mc, D)
@@ -18,52 +11,23 @@ def get_training_data(n_mc, D):
 
     return theta, f
 
+import easysurrogate as es
+import matplotlib.pyplot as plt
+import numpy as np
 
-# load campaign
-campaign = uq.Campaign(work_dir='~/VECMA/Campaigns', state_file='campaign3.json')
-sampler = campaign.get_active_sampler()
-sampler.load_state("sampler_campaign3.pickle")
+#active subspace and parameter space dimenions
+d = 2
+D = 5
 
-# load data frame, input and output names
-data_frame = campaign.get_collation_result()
-inputs = list(sampler.vary.get_keys())
-qoi_cols = ['cumDeath']
-samples = []
-for k in qoi_cols:
-    run_id_int = [int(run_id.split('Run_')[-1]) for run_id in data_frame[k].keys()]
-    for run_id in range(1, np.max(run_id_int) + 1):
-        samples.append(data_frame[k]['Run_' + str(run_id)])
-params = sampler.xi_d
-samples = np.array(samples)[:, -1]
-
-# qoi_cols = ['f']
-
-# #extract training data from EasyVVUQ data frame
-# params = []; samples = []
-# for run_id in data_frame[('run_id', 0)].unique():
-#     for k in qoi_cols:
-#         xi = data_frame.loc[data_frame[('run_id', 0)] == run_id][inputs].values
-#         values = data_frame.loc[data_frame[('run_id', 0)] == run_id][k].values
-#         params.append(xi.flatten())
-#         samples.append(values.flatten())
-
-# params = np.array(params)
-# samples = np.array(samples)
-
-# surrogate = es.methods.ANN_Surrogate()
-# n_iter = 20000
-# surrogate.train(params, samples, n_iter, bias=False)
-
-D = params.shape[1]
-d = 5
-# n_mc = 1000
-# #make only first variables important
+#make only first variables important
 # a = np.array([1/(2*(i+1)) for i in range(D)])
-# # a = np.zeros(D)
-# # a[0] = 1.0; a[1] = 1.0
+a = np.zeros(D)
+a[0] = 1.0; a[1] = 1.0
+n_mc = 1000
+params, samples = get_training_data(n_mc, D)
 
-# params, samples = get_training_data(n_mc, D)
-test_frac = 0.0
+#save part of the data for testing
+test_frac = 0.5
 I = np.int(samples.shape[0] * (1.0 - test_frac))
 
 surrogate = es.methods.DAS_network(params[0:I], samples[0:I], d, n_layers=4, n_neurons=50,
@@ -72,16 +36,17 @@ surrogate = es.methods.DAS_network(params[0:I], samples[0:I], d, n_layers=4, n_n
 n_iter = 10000
 surrogate.train(n_iter, store_loss=True)
 
+# run the trained model forward at training locations
 n_mc = samples.shape[0]
 pred = np.zeros(n_mc)
 y = np.zeros([n_mc, d])
-for i in range(n_mc):
+for i in range(I):
     feat_i = (params[i] - surrogate.X_mean) / surrogate.X_std
     pred[i] = surrogate.feed_forward(feat_i.reshape([1, -1]))[0][0]
     y[i] = surrogate.layers[1].h.flatten()
-
 data = (samples.flatten() - surrogate.y_mean) / surrogate.y_std
 
+#plot the active subspace
 plt.close('all')
 if d == 1:
     fig = plt.figure()
@@ -107,27 +72,29 @@ else:
 plt.tight_layout()
 
 # analytic mean and standard deviation
-# ref_mean = np.prod(a+1)/2**D
-# ref_std = np.sqrt(np.prod(9*a**2/5 + 2*a + 1)/2**(2*D) - ref_mean**2)
+ref_mean = np.prod(a+1)/2**D
+ref_std = np.sqrt(np.prod(9*a**2/5 + 2*a + 1)/2**(2*D) - ref_mean**2)
 
-pred = np.zeros(n_mc)
-# params_pred = np.random.rand(n_mc, D)
-params_pred = params
-for i in range(n_mc):
-    feat_i = (params_pred[i] - surrogate.X_mean) / surrogate.X_std
+#run the model forward at test locations
+pred = np.zeros(n_mc-I)
+idx = 0
+for i in range(I, n_mc):
+    feat_i = (params[i] - surrogate.X_mean) / surrogate.X_std
     pred_i = surrogate.feed_forward(feat_i.reshape([1, -1]))[0][0]
-    pred[i] = pred_i * surrogate.y_std + surrogate.y_mean
+    pred[idx] = pred_i * surrogate.y_std + surrogate.y_mean
+    idx += 1 
 
-# das_mean = np.mean(pred)
-# das_std = np.std(pred)
-# print("--------------------------------------")
-# print("Analytic mean = %.4e" % ref_mean)
-# print("Computed mean = %.4e" % das_mean)
-# print("--------------------------------------")
-# print("Analytic standard deviation = %.4e" % ref_std)
-# print("Computed standard deviation = %.4e" % das_std)
-# print("--------------------------------------")
+das_mean = np.mean(pred)
+das_std = np.std(pred)
+print("--------------------------------------")
+print("Analytic mean = %.4e" % ref_mean)
+print("Computed mean = %.4e" % das_mean)
+print("--------------------------------------")
+print("Analytic standard deviation = %.4e" % ref_std)
+print("Computed standard deviation = %.4e" % das_std)
+print("--------------------------------------")
 
+#perform some basic analysis
 analysis = es.analysis.BaseAnalysis()
 analysis.get_pdf(samples, 100)
 dom_ref, pdf_ref = analysis.get_pdf(samples, 100)
