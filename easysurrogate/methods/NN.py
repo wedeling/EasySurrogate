@@ -20,8 +20,6 @@ class ANN:
             beta1=0.9,
             beta2=0.999,
             lamb=0.0,
-            phi=0.0,
-            lamb_J=0.0,
             n_out=1,
             param_specific_learn_rate=True,
             loss='squared',
@@ -100,11 +98,6 @@ class ANN:
 
         # L2 regularization parameter
         self.lamb = lamb
-
-        # Jacobian regularization and finite difference parameter (phi)
-        self.lamb_J = lamb_J
-        self.phi = phi
-        self.test = []
 
         # the rate of decay and decay step for alpha
         self.decay_rate = decay_rate
@@ -289,18 +282,12 @@ class ANN:
 
         self.back_prop(y_i)
 
-        # if Jacobian regularization is used
-        if self.phi > 0.0:
-            self.jacobian(X_i, batch_size=self.batch_size)
-            # self.test.append(np.linalg.norm(self.layers[0].delta_hy)**2)
-
         for r in range(1, self.n_layers + 1):
 
             layer_r = self.layers[r]
 
             # momentum
             layer_r.V = beta1 * layer_r.V + (1.0 - beta1) * layer_r.L_grad_W
-
             # moving average of squared gradient magnitude
             layer_r.A = beta2 * layer_r.A + (1.0 - beta2) * layer_r.L_grad_W**2
 
@@ -317,41 +304,11 @@ class ANN:
                 #alpha_t = alpha*np.sqrt(1.0 - beta2**t)/(1.0 - beta1**t)
                 #alpha_i = alpha_t/(np.sqrt(layer_r.A + 1e-8))
 
-            # gradient descent update step
+            # gradient descent update step with L2 regularization
             if self.lamb > 0.0:
-                # with L2 regularization
                 layer_r.W = (1.0 - layer_r.Lamb * alpha_i) * layer_r.W - alpha_i * layer_r.V
-            elif self.phi > 0.0:
-
-                # dydx, the Jacobian of the output y
-                dydX = self.layers[0].delta_hy
-
-                # dydW
-                dydW = layer_r.y_grad_W
-
-                # regularize wrt squared Frobenius norm R ==> dRda = 2a, a = dydx
-                # This is the 'adversarial direction', direc of max. change
-                X_hat = X_i + self.phi * 2.0 * dydX.T
-
-                # double back prop
-                self.feed_forward(X_hat, batch_size=self.batch_size)
-                self.jacobian(X_i, batch_size=self.batch_size)
-
-                # output gradient wrt weights of the adversarial example
-                # CHECK THIS TERM AS FUNCTION OF PHI
-                dydW_hat = layer_r.y_grad_W
-
-                # FD approximation of the mixed partial derivative of y wrt W and X
-                # CHECK THIS TERM
-                d2y_dWdx = (dydW_hat - dydW) / self.phi
-
-                # weight update with Jacobian regularization (NO MOMENTUM TO MIXED TERM - OK??)
-                # PLOT MIXED DERIVATIVE, SEE IF NOISY, AND IF IT COULD BENEFIT FROM
-                # MOMENTUM SMOOTHING
-                layer_r.W = layer_r.W - alpha_i * layer_r.V - alpha_i * self.lamb_J * d2y_dWdx
-
+            # without regularization
             else:
-                # without regularization
                 layer_r.W = layer_r.W - alpha_i * layer_r.V
 
                 # Nesterov momentum
