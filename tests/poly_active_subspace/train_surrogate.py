@@ -66,8 +66,8 @@ d = 5
 test_frac = 0.0
 I = np.int(samples.shape[0] * (1.0 - test_frac))
 
-surrogate = es.methods.DAS_surrogate(params[0:I], samples[0:I], d, n_layers=4, n_neurons=50,
-                                     save=False, bias=True, alpha=0.001, batch_size=128)
+surrogate = es.methods.DAS_network(params[0:I], samples[0:I], d, n_layers=4, n_neurons=50,
+                                   save=False, bias=True, alpha=0.001, batch_size=128)
 # train the surrogate on the data
 n_iter = 10000
 surrogate.train(n_iter, store_loss=True)

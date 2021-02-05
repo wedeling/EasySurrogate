@@ -126,7 +126,7 @@ class Layer:
 
         # fill the layer with neurons
         if self.r != 0:
-            self.init_weihjts
+            self.init_weights()
 
     def init_weights(self):
         """

@@ -9,7 +9,7 @@ from .Layer import Layer
 from .NN import ANN
 
 
-class DAS_surrogate(ANN):
+class DAS_network(ANN):
     """
     Deep active subspace surrogate.
 
