@@ -1,0 +1,28 @@
+{
+    "db_location": "sqlite:////home/wouter/CWI/EasySurrogate/tests/poly_active_subspace/EasyVVUQ_campaigns/qmckt0veddl/campaign.db",
+    "db_type": "sql",
+    "active_app": "sc",
+    "campaign_name": "qmc",
+    "campaign_dir": "qmckt0veddl",
+    "log": [
+        {
+            "element": {
+                "name": "mc_sampler",
+                "version": "0.1",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 2200,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "QMC_Analysis",
+                "version": "0.2",
+                "category": "analysis"
+            },
+            "info": null
+        }
+    ]
+}

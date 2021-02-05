@@ -19,6 +19,7 @@ class Layer:
         self.batch_size = batch_size
         self.lamb = lamb
         self.n_softmax = n_softmax
+        self.name = 'standard_layer'
 
         # #use either numpy or cupy via xp based on the on_gpu flag
         # global xp
@@ -264,9 +265,6 @@ class Layer:
             W_rp1 = self.layer_rp1.W
 
             self.delta_hy = np.dot(W_rp1, delta_hy_rp1 * grad_Phi_rp1)[0:self.n_neurons, :]
-
-    def test(self, h, y_i):
-        return (y_i - h)**2
 
     # initialize the value of delta_ho at the output layer
     def compute_delta_oo(self, y_i):

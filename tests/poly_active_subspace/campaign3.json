@@ -1,0 +1,4259 @@
+{
+    "db_location": "sqlite:////home/wouter/VECMA/Campaigns/covidljenjj66/campaign.db",
+    "db_type": "sql",
+    "active_app": "PC_CI_HQ_SD_suppress_campaign_full1_19param_4",
+    "campaign_name": "covid",
+    "campaign_dir": "covidljenjj66",
+    "log": [
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 1,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 1
+            }
+        },
+        {
+            "element": {
+                "name": "SC_Analysis",
+                "version": "0.6",
+                "category": "analysis"
+            },
+            "info": null
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 38,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 38
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 2,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 2
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 6,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 6
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 10,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 10
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 12,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 12
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 18,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 18
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 8,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 8
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 8,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 8
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 22,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 22
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 8,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 8
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 16,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 16
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 16,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 16
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 8,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 8
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 16,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 16
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 26,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 26
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 8,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 8
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 28,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 28
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 8,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 8
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 16,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 16
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 16,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 16
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 8,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 8
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 16,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 16
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 16,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 16
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 16,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 16
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 34,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 34
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 8,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 8
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 16,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 16
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 16,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 16
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 24,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 24
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 16,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 16
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 32,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 32
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 32,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 32
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 32,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 32
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 16,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 16
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 16,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 16
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 32,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 32
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 32,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 32
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 24,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 24
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 16,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 16
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 32,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 32
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 32,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 32
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 24,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 24
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 16,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 16
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 32,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 32
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 32,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 32
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 32,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 32
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 16,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 16
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 32,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 32
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 32,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 32
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 48,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 48
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 32,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 32
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 64,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 64
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 64,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 64
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 24,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 24
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 16,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 16
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 32,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 32
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 32,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 32
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 32,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 32
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 16,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 16
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 32,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 32
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 32,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 32
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 48,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 48
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 32,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 32
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 64,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 64
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 64,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 64
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 38,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 38
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 8,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 8
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 16,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 16
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 16,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 16
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 24,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 24
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 16,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 16
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 32,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 32
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 32,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 32
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 32,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 32
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 16,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 16
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 32,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 32
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 32,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 32
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 48,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 48
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 32,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 32
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 64,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 64
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 64,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 64
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 32,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 32
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 16,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 16
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 32,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 32
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 32,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 32
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 48,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 48
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 32,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 32
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 64,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 64
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 64,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 64
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 40,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 40
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 16,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 16
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 32,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 32
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 32,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 32
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 48,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 48
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 32,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 32
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 64,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 64
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 64,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 64
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 64,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 64
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 32,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 32
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 64,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 64
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 64,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 64
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 0,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 0
+            }
+        },
+        {
+            "element": {
+                "name": "sc_sampler",
+                "version": "0.5",
+                "category": "sampling"
+            },
+            "info": {
+                "num_added": 96,
+                "replicas": 1
+            }
+        },
+        {
+            "element": {
+                "name": "aggregate_hdf5",
+                "version": "0.1",
+                "category": "collation"
+            },
+            "info": {
+                "num_collated": 96
+            }
+        }
+    ]
+}
