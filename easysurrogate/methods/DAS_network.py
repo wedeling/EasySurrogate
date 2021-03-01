@@ -109,7 +109,8 @@ class DAS_network(ANN):
                          batch_size=batch_size,
                          param_specific_learn_rate=param_specific_learn_rate,
                          save=save, on_gpu=on_gpu, name=name,
-                         standardize_X=standardize_X, standardize_y=standardize_y)
+                         standardize_X=standardize_X, standardize_y=standardize_y,
+                         **kwargs)
 
     def init_network(self, **kwargs):
         """
@@ -124,6 +125,10 @@ class DAS_network(ANN):
         """
 
         self.layers = []
+        
+        n_hidden = self.n_layers
+        if 'cumsum' in kwargs and kwargs['cumsum'] == True:
+            self.n_layers += 1
 
         # add the input layer
         self.layers.append(Layer(self.n_in, 0, self.n_layers, 'linear',
@@ -131,11 +136,11 @@ class DAS_network(ANN):
                                  lamb=self.lamb, on_gpu=self.on_gpu))
 
         # add the deep active subspace layer
-        self.layers.append(DAS_Layer(self.d, self.n_layers,
+        self.layers.append(DAS_Layer(self.d, self.n_layers, True,
                                      batch_size=self.batch_size))
 
         # add the hidden layers
-        for r in range(2, self.n_layers):
+        for r in range(2, n_hidden):
             self.layers.append(Layer(self.n_neurons, r, self.n_layers, self.activation,
                                      self.loss, self.bias, batch_size=self.batch_size,
                                      lamb=self.lamb, on_gpu=self.on_gpu))
@@ -144,7 +149,7 @@ class DAS_network(ANN):
         self.layers.append(
             Layer(
                 self.n_out,
-                self.n_layers,
+                r+1,
                 self.n_layers,
                 self.activation_out,
                 self.loss,
@@ -153,6 +158,10 @@ class DAS_network(ANN):
                 n_softmax=self.n_softmax,
                 on_gpu=self.on_gpu,
                 **kwargs))
+
+        if 'cumsum' in kwargs and kwargs['cumsum'] == True:
+            self.layers.append(CumSum_Layer(self.n_out, r+2, self.n_layers,
+                                            self.loss, self.batch_size))
 
         super().connect_layers()
         super().print_network_info()
@@ -210,7 +219,9 @@ class DAS_network(ANN):
         """
 
         self.feed_forward(X_i, self.batch_size)
-        self.back_prop(y_i)
+        # if jacobian = True, the Q weights will be optimized using y_grad_Q,
+        # instead of L_grad_Q. Is harder to train, maybe remove this option later.
+        self.back_prop(y_i, jacobian=False)
 
         for r in range(1, self.n_layers + 1):
 

@@ -10,3 +10,4 @@ from .kmn_surrogate import KMN_Surrogate
 from .reduced_surrogate import Reduced_Surrogate
 from .ann_surrogate import ANN_Surrogate
 from .DAS_network import DAS_network
+from .CumSum_Layer import CumSum_Layer
