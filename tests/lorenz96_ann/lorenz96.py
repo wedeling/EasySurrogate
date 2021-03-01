@@ -172,8 +172,8 @@ t = np.arange(0.0, t_end, dt)
 ###################
 # Simulation flags
 ###################
-make_movie = False  # make a movie
-store = True  # store the prediction results
+make_movie =  True # make a movie
+store = False  # store the prediction results
 
 # equilibrium initial condition for X, zero IC for Y
 X_n = np.ones(K) * F
@@ -265,7 +265,7 @@ if make_movie:
     # make a movie of all frame in 'ims'
     im_ani = animation.ArtistAnimation(fig, ims, interval=80,
                                        repeat_delay=2000, blit=True)
-    im_ani.save('.l96.mp4')
+    im_ani.save('./l96.gif')
 
     print('done')
 else:

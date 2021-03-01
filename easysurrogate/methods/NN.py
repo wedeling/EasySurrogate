@@ -315,7 +315,7 @@ class ANN:
         # return values and index of highest probability and random samples from pmf
         return probs, idx_max, None
 
-    def jacobian(self, X_i, batch_size=1):
+    def jacobian(self, X_i, batch_size=1, feed_forward=True):
         """
         Compute the Jacobian of the neural net via back propagation.
 
@@ -332,7 +332,8 @@ class ANN:
             The Jacobian.
 
         """
-        self.feed_forward(X_i, batch_size=batch_size)
+        if feed_forward:
+            self.feed_forward(X_i, batch_size=batch_size)
 
         for i in range(self.n_layers, -1, -1):
             self.layers[i].compute_delta_hy()
@@ -343,7 +344,7 @@ class ANN:
         # delta_hy of the input layer = the Jacobian of the neural net
         return self.layers[0].delta_hy
 
-    def back_prop(self, y_i):
+    def back_prop(self, y_i, jacobian=False):
         """
         Back-propagation algorithm to find gradient of the loss function with respect
         to the weights of the neural network.
@@ -361,7 +362,7 @@ class ANN:
 
         # start back propagation over hidden layers, starting with output layer
         for i in range(self.n_layers, 0, -1):
-            self.layers[i].back_prop(y_i)
+            self.layers[i].back_prop(y_i, jacobian=jacobian)
 
     def batch(self, X_i, y_i, alpha=0.001, beta1=0.9, beta2=0.999):
         """
@@ -476,9 +477,11 @@ class ANN:
 
             # store the loss value
             if store_loss:
-                l = 0.0
-                for k in range(self.n_out):
-                    l += self.layers[-1].L_i
+                # l = 0.0
+                # for k in range(self.n_out):
+                    # l += self.layers[-1].L_i
+                
+                l = self.layers[-1].L_i
 
                 if np.mod(i, 1000) == 0:
                     loss_i = np.mean(l)

@@ -20,7 +20,7 @@ class DAS_Layer(Layer):
         American Society of Mechanical Engineers Digital Collection, 2019.
     """
 
-    def __init__(self, d, n_layers, bias=False, batch_size=1):
+    def __init__(self, d, n_layers, bias, batch_size=1):
         """
         Initialize the DAS_layer oject.
 
@@ -40,7 +40,7 @@ class DAS_Layer(Layer):
 
         """
         super().__init__(d, 1, n_layers, 'linear', 'none',
-                         bias=False, batch_size=batch_size)
+                         bias=bias, batch_size=batch_size)
         self.d = d
         self.grad_Phi = np.ones([self.n_neurons, self.batch_size])
         self.name = 'DAS_layer'
@@ -136,6 +136,26 @@ class DAS_Layer(Layer):
         self.L_grad_Q = np.sum(self.W_grad_q_ij * self.L_grad_W,
                                axis=(1, 2)).reshape([self.D, self.d])
 
+    def compute_y_grad_Q(self):
+        """
+        Compute the gradient of the output wrt the weights of this layer.
+        Unlike standard layer, the weights are parameterized by Q, and so we
+        must compute the gradient of the loss function with respect to Q here.
+
+        Returns
+        -------
+        None.
+
+        """
+        # here we compute W_grad_q_ij, the gardient of Q wrt each entry in Q
+        # The results are stored in a 3D array of shape (Dd, D, d), which contains
+        # the Dd matrices dW / dq_ij, i=1,...,D, j=1,...,d.
+        self.W_grad_q_ij = self.compute_W_grad_q_ij()
+        # This computes the gradient of loss function wrt the matrix Q via the
+        # chain rule: dL / dQ = dL / dW * dW / dq_11 + ... + dl / dW * dW / dq_Dd
+        self.y_grad_Q = np.sum(self.W_grad_q_ij * self.y_grad_W,
+                               axis=(1, 2)).reshape([self.D, self.d])
+
     def compute_W_grad_q_ij(self):
         """
         Compute the gradient of the weights W (the normalized Gram-Schmidt vectors)
@@ -222,7 +242,7 @@ class DAS_Layer(Layer):
 
         return dWdq_ij
 
-    def back_prop(self, y_i=None):
+    def back_prop(self, y_i=None, jacobian=False):
         """
         Perform the backpropogation operations of the current layer. Unlike in the
         standard Layer, we compute the gradient with respect to the matrix Q, since
@@ -238,6 +258,12 @@ class DAS_Layer(Layer):
         self.compute_delta_ho()
         # compute the loss gradient wrt Q, since we must update Q
         self.compute_L_grad_Q()
+
+        if jacobian:
+            self.compute_delta_hy()
+            self.compute_y_grad_W()
+            self.compute_y_grad_Q()
+            self.L_grad_Q = -self.y_grad_Q
 
 
 def compute_D_ij(w_j, q_i):
