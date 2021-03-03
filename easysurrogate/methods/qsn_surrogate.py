@@ -55,6 +55,10 @@ class QSN_Surrogate(Campaign):
         None.
 
         """
+        
+        #is a single array is provided, also put it in a list
+        if type(feats) == np.ndarray:
+            feats = [feats]
 
         # time lags
         self.lags = lags
