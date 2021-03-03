@@ -5,10 +5,16 @@ import easysurrogate as es
 
 
 def draw():
+    plt.clf()
+    ax1 = fig.add_subplot(121)
+    ax2 = fig.add_subplot(122)
+    
     ax1.contourf(Q1, 50)
     # ax2.contourf(Q2, 50)
-    ax2.plot(vort_solver_LR.bins, E_spec_LR)
-    ax2.plot(vort_solver_HR.bins, E_spec_HR)
+    # ax2.plot(vort_solver_LR.bins, E_spec_LR)
+    # ax2.plot(vort_solver_HR.bins, E_spec_HR)
+    ax2.plot(campaign.accum_data['Q_LR'])
+    ax2.plot(campaign.accum_data['Q_HR'], 'o')
     plt.pause(0.1)
     plt.tight_layout()
     
@@ -51,8 +57,6 @@ store_frame_rate = np.floor(day / dt).astype('int')
 
 if plot:
     fig = plt.figure(figsize=[8, 4])
-    ax1 = fig.add_subplot(121)
-    ax2 = fig.add_subplot(122, yscale='log')
 
 w_hat_n_HR, w_hat_nm1_HR, VgradW_hat_nm1_HR = vort_solver_HR.inital_cond()
 w_hat_n_LR, w_hat_nm1_LR, VgradW_hat_nm1_LR = vort_solver_LR.inital_cond()
@@ -65,10 +69,12 @@ for n in range(n_steps):
                                                         VgradW_hat_nm1_HR)
 
     # exact sgs term
-    sgs_hat = vort_solver_HR.down_scale(VgradW_hat_nm1_HR, N_LR) - VgradW_hat_nm1_LR
+    sgs_hat_exact = vort_solver_HR.down_scale(VgradW_hat_nm1_HR, N_LR) - VgradW_hat_nm1_LR
     
     w_hat_n_HR_projected = vort_solver_HR.down_scale(w_hat_n_HR, N_LR)
-    psi_hat_n_HR_projected = vort_solver_LR.compute_stream_function(w_hat_n_HR_projected)
+    psi_hat_n_HR = vort_solver_HR.compute_stream_function(w_hat_n_HR)
+    psi_hat_n_HR_projected = vort_solver_HR.down_scale(psi_hat_n_HR, N_LR)
+    
     Q_HR = np.zeros(N_Q)
     Q_HR[0] = -0.5 * compute_int(psi_hat_n_HR_projected, w_hat_n_HR_projected, N_LR)
     Q_HR[1] = 0.5 * compute_int(w_hat_n_HR_projected, w_hat_n_HR_projected, N_LR)
@@ -78,15 +84,14 @@ for n in range(n_steps):
     Q_LR[0] = -0.5 * compute_int(psi_hat_n_LR, w_hat_n_LR, N_LR)
     Q_LR[1] = 0.5 * compute_int(w_hat_n_LR, w_hat_n_LR, N_LR)
 
-    print(Q_LR)
-    print(Q_HR)
-    print('--------')
+    campaign.accumulate_data({'Q_LR': Q_LR, 'Q_HR': Q_HR})
 
-    reduced_dict_u = surrogate.train([psi_hat_n_LR, w_hat_n_LR], Q_HR - Q_LR)
+    reduced_dict_u = surrogate.train([-psi_hat_n_LR, w_hat_n_LR], Q_HR - Q_LR)
+    sgs_hat_reduced = reduced_dict_u['sgs_hat']
 
     w_hat_np1_LR, VgradW_hat_n_LR = vort_solver_LR.step(w_hat_n_LR, w_hat_nm1_LR,
                                                         VgradW_hat_nm1_LR,
-                                                        sgs_hat=sgs_hat)
+                                                        sgs_hat=sgs_hat_reduced)
 
     # update vars
     w_hat_nm1_HR = np.copy(w_hat_n_HR)
@@ -102,6 +107,7 @@ for n in range(n_steps):
     if np.mod(j, store_frame_rate) == 0:
         Q1 = np.fft.ifft2(w_hat_np1_HR).real
         Q2 = np.fft.ifft2(w_hat_np1_LR).real
+        sgs = np.fft.ifft2(sgs_hat_reduced).real
         E_spec_LR, Z_spec_LR = vort_solver_LR.spectrum(w_hat_np1_LR) 
         E_spec_HR, Z_spec_HR = vort_solver_HR.spectrum(w_hat_np1_HR) 
         draw()
