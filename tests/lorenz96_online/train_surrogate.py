@@ -19,11 +19,9 @@ target = data_frame['B_data'][0:-1:N, :]
 
 # create a (time-lagged) ANN surrogate
 surrogate = es.methods.ANN_Surrogate()
-# surrogate = es.methods.QSN_Surrogate()
 
 # create time-lagged features
 lags = [range(10)]
-# lags = None
 
 # train the surrogate on the data
 n_iter = 10000
