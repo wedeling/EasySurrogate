@@ -146,7 +146,7 @@ class Campaign:
         if 'names' in kwargs:
             names = kwargs['names']
         else:
-            names = data.keys()
+            names = list(data.keys())
         idx = 0
         for key in data.keys():
             if not names[idx] in self.accum_data:
