@@ -134,7 +134,7 @@ class Reduced_Surrogate(Campaign):
         # loop over all states
         for i in range(len(LR_before)):
 
-            # project the hoigh-res model to the low-res grid
+            # project the low-res model to the high-res grid
             LR_before_projected = self.up_scale(LR_before[i], n_HR)
 
             # the difference between the low res and high res model (projected to low-res grid)
