@@ -285,8 +285,8 @@ for n in range(n_steps):
     # Solve the HR equation with nudging
     for i in range(dt_multiplier):
         u_hat_HR, v_hat_HR = gray_scott_HR.rk4(u_hat_HR, v_hat_HR,
-                                                nudge_u_hat=Delta_u_hat / tau_nudge,
-                                                nudge_v_hat=Delta_v_hat / tau_nudge)
+                                               nudge_u_hat=Delta_u_hat / tau_nudge,
+                                               nudge_v_hat=Delta_v_hat / tau_nudge)
 
     # compute LR and HR QoIs
     Q_HR = np.zeros(2 * N_Q)
@@ -321,17 +321,17 @@ for n in range(n_steps):
 
     # solve the LR equations
     u_hat_LR, v_hat_LR = gray_scott_LR.rk4(u_hat_LR, v_hat_LR,
-                                            reduced_sgs_u=reduced_sgs_u,
-                                            reduced_sgs_v=reduced_sgs_v)
+                                           reduced_sgs_u=reduced_sgs_u,
+                                           reduced_sgs_v=reduced_sgs_v)
 
     # Generate the training data for the online learning back prop step
     campaign.surrogate.generate_online_training_data(Q_LR,
-                                                      [u_hat_LR_before, v_hat_LR_before],
-                                                      [u_hat_LR, v_hat_LR],
-                                                      [u_hat_HR_before, v_hat_HR_before],
-                                                      [u_hat_HR, v_hat_HR],
-                                                      qoi_func,
-                                                      V_hat_1_LR=V_hat_1_LR, V_hat_1_HR=V_hat_1_HR)
+                                                     [u_hat_LR_before, v_hat_LR_before],
+                                                     [u_hat_LR, v_hat_LR],
+                                                     [u_hat_HR_before, v_hat_HR_before],
+                                                     [u_hat_HR, v_hat_HR],
+                                                     qoi_func,
+                                                     V_hat_1_LR=V_hat_1_LR, V_hat_1_HR=V_hat_1_HR)
 
     # # update the LR state with the sgs terms in a post-processing step
     # u_hat_LR += reduced_sgs_u * dt_LR

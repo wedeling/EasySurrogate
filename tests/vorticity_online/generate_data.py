@@ -1,14 +1,26 @@
-import numpy as np
-import Vorticity_2D as vort
+"""
+Generate training data for a reduced subgrid-scale term, applied to 2D Navier Stokes
+"""
+
 import matplotlib.pyplot as plt
 import easysurrogate as es
+import numpy as np
+import Vorticity_2D as vort
 
 
 def draw():
+    """
+    Draws solution to screen while running the simulation.
+
+    Returns
+    -------
+    None.
+
+    """
     plt.clf()
     ax1 = fig.add_subplot(121)
     ax2 = fig.add_subplot(122)
-    
+
     ax1.contourf(Q1, 50)
     # ax2.contourf(Q2, 50)
     # ax2.plot(vort_solver_LR.bins, E_spec_LR)
@@ -17,81 +29,119 @@ def draw():
     ax2.plot(campaign.accum_data['Q_HR'], 'o')
     plt.pause(0.1)
     plt.tight_layout()
-    
-def compute_int(X1_hat, X2_hat, N):
+
+
+def compute_int(x1_hat, x2_hat, n_points_1d):
     """
     Compute the integral of X1*X2 using the Fourier expansion
     """
-    integral = np.dot(X1_hat.flatten(), np.conjugate(X2_hat.flatten())) / N**4
+    integral = np.dot(x1_hat.flatten(), np.conjugate(x2_hat.flatten())) / n_points_1d**4
     return integral.real
 
 
 plt.close('all')
 plt.rcParams['image.cmap'] = 'seismic'
 
+# spatial resolution low-res model
 N_LR = 2**6
+# spatial resolution high-res model
 N_HR = 2**7
-decay_time_nu = 5.0
-decay_time_mu = 90.0
-dt = 0.01
+# decay time Fourier mode of viscosity term, at cutoff scale
+DECAY_TIME_NU = 5.0
+# decay time Fourier mode of  term, at cutoff scale
+DECAY_TIME_MU = 90.0
+# time step
+DT = 0.01
 
-vort_solver_LR = vort.Vorticity_2D(N_LR, dt, decay_time_nu, decay_time_mu)
-vort_solver_HR = vort.Vorticity_2D(N_HR, dt, decay_time_nu, decay_time_mu)
+# low-res 2D Navier Stokes solver (in vorticity-stream function formulation)
+vort_solver_LR = vort.Vorticity_2D(N_LR, DT, DECAY_TIME_NU, DECAY_TIME_MU)
+# high-res 2D Navier Stokes solver
+vort_solver_HR = vort.Vorticity_2D(N_HR, DT, DECAY_TIME_NU, DECAY_TIME_MU)
 
+# create an EasySurrogate campaign
 campaign = es.Campaign()
-#
+# the number of QoI to track
 N_Q = 2
 # create a reduced SGS surrogate object
 surrogate = es.methods.Reduced_Surrogate(N_Q, N_LR)
+# add the surrogate to the campaign
 campaign.add_app('reduced_vort', surrogate)
 
-# start, end time (in days) + time step
-day = vort_solver_LR.day
-t_burn = 365 * day
-t = 0 * day
-t_end = t + 50 * day
-n_steps = np.ceil((t_end - t) / dt).astype('int')
+# start, end time (in days)
+DAY = vort_solver_LR.day
+T = 500 * DAY
+t_end = T + 10 * 365 * DAY
+n_steps = np.ceil((t_end - T) / DT).astype('int')
 
-plot = True
-store_frame_rate = np.floor(day / dt).astype('int')
+# PLOT the solution while running
+PLOT = False
+plot_frame_rate = np.floor(DAY / DT).astype('int')
+# RESTART from a previous stored state
+RESTART = True
 
-if plot:
+if PLOT:
     fig = plt.figure(figsize=[8, 4])
 
-w_hat_n_HR, w_hat_nm1_HR, VgradW_hat_nm1_HR = vort_solver_HR.inital_cond()
-w_hat_n_LR, w_hat_nm1_LR, VgradW_hat_nm1_LR = vort_solver_LR.inital_cond()
-
-j = 0
+if RESTART:
+    # load the HR state from a HDF5 file
+    IC_HR = campaign.load_hdf5_data(file_path='./restart/state_HR_t%d.hdf5' % (T / DAY))
+    w_hat_n_HR = IC_HR['w_hat_n_HR']
+    w_hat_nm1_HR = IC_HR['w_hat_nm1_HR']
+    VgradW_hat_nm1_HR = IC_HR['VgradW_hat_nm1_HR']
+    # load the LR state from a HDF5 file
+    IC_LR = campaign.load_hdf5_data(file_path='./restart/state_LR_t%d.hdf5' % (T / DAY))
+    w_hat_n_LR = IC_LR['w_hat_n_LR']
+    w_hat_nm1_LR = IC_LR['w_hat_nm1_LR']
+    VgradW_hat_nm1_LR = IC_LR['VgradW_hat_nm1_LR']
+else:
+    # compute the initial condition
+    w_hat_n_HR, w_hat_nm1_HR, VgradW_hat_nm1_HR = vort_solver_HR.inital_cond()
+    w_hat_n_LR, w_hat_nm1_LR, VgradW_hat_nm1_LR = vort_solver_LR.inital_cond()
 
 # time loop
 for n in range(n_steps):
+  
+    if np.mod(n, int(10 * DAY / DT)) == 0:
+        print('%.1f percent complete' % (n / n_steps * 100))
+    
+    # integrate the HR solver
     w_hat_np1_HR, VgradW_hat_n_HR = vort_solver_HR.step(w_hat_n_HR, w_hat_nm1_HR,
                                                         VgradW_hat_nm1_HR)
 
     # exact sgs term
-    sgs_hat_exact = vort_solver_HR.down_scale(VgradW_hat_nm1_HR, N_LR) - VgradW_hat_nm1_LR
-    
+    # sgs_hat_exact = vort_solver_HR.down_scale(VgradW_hat_nm1_HR, N_LR) - VgradW_hat_nm1_LR
+
+    # project the HR vorticity and stream function to the LR grid
     w_hat_n_HR_projected = vort_solver_HR.down_scale(w_hat_n_HR, N_LR)
     psi_hat_n_HR = vort_solver_HR.compute_stream_function(w_hat_n_HR)
     psi_hat_n_HR_projected = vort_solver_HR.down_scale(psi_hat_n_HR, N_LR)
-    
+
+    # compute the LR stream function
+    psi_hat_n_LR = vort_solver_LR.compute_stream_function(w_hat_n_LR)
+
+    # compute the QoI using the HR state
     Q_HR = np.zeros(N_Q)
     Q_HR[0] = -0.5 * compute_int(psi_hat_n_HR_projected, w_hat_n_HR_projected, N_LR)
     Q_HR[1] = 0.5 * compute_int(w_hat_n_HR_projected, w_hat_n_HR_projected, N_LR)
-    
-    psi_hat_n_LR = vort_solver_LR.compute_stream_function(w_hat_n_LR)
+
+    # compute the QoI using the LR state
     Q_LR = np.zeros(N_Q)
     Q_LR[0] = -0.5 * compute_int(psi_hat_n_LR, w_hat_n_LR, N_LR)
     Q_LR[1] = 0.5 * compute_int(w_hat_n_LR, w_hat_n_LR, N_LR)
 
-    campaign.accumulate_data({'Q_LR': Q_LR, 'Q_HR': Q_HR})
+    # compute the reduced subgrid-scale term
+    reduced_dict = surrogate.train([-psi_hat_n_LR, w_hat_n_LR], Q_HR - Q_LR)
+    sgs_hat_reduced = reduced_dict['sgs_hat']
 
-    reduced_dict_u = surrogate.train([-psi_hat_n_LR, w_hat_n_LR], Q_HR - Q_LR)
-    sgs_hat_reduced = reduced_dict_u['sgs_hat']
-
+    # integrate the LR solver with reduced sgs term
     w_hat_np1_LR, VgradW_hat_n_LR = vort_solver_LR.step(w_hat_n_LR, w_hat_nm1_LR,
                                                         VgradW_hat_nm1_LR,
                                                         sgs_hat=sgs_hat_reduced)
+
+    # accumulate QoI data inside the EasySurrogate campaign
+    campaign.accumulate_data({'Q_LR': Q_LR, 'Q_HR': Q_HR})
+    del reduced_dict['sgs_hat']
+    campaign.accumulate_data(reduced_dict)
 
     # update vars
     w_hat_nm1_HR = np.copy(w_hat_n_HR)
@@ -102,13 +152,24 @@ for n in range(n_steps):
     w_hat_n_LR = np.copy(w_hat_np1_LR)
     VgradW_hat_nm1_LR = np.copy(VgradW_hat_n_LR)
 
-    j += 1
+    T += DT
 
-    if np.mod(j, store_frame_rate) == 0:
+    # PLOT solution while running
+    if np.mod(n, plot_frame_rate) == 0 and PLOT:
         Q1 = np.fft.ifft2(w_hat_np1_HR).real
-        Q2 = np.fft.ifft2(w_hat_np1_LR).real
-        sgs = np.fft.ifft2(sgs_hat_reduced).real
-        E_spec_LR, Z_spec_LR = vort_solver_LR.spectrum(w_hat_np1_LR) 
-        E_spec_HR, Z_spec_HR = vort_solver_HR.spectrum(w_hat_np1_HR) 
+        # Q2 = np.fft.ifft2(w_hat_np1_LR).real
+        # sgs = np.fft.ifft2(sgs_hat_reduced).real
+        # E_spec_LR, Z_spec_LR = vort_solver_LR.spectrum(w_hat_np1_LR)
+        # E_spec_HR, Z_spec_HR = vort_solver_HR.spectrum(w_hat_np1_HR)
         draw()
-        j = 0
+
+# store the state of the LR and HR models
+campaign.store_data_to_hdf5({'w_hat_n_HR': w_hat_n_HR, 'w_hat_nm1_HR': w_hat_nm1_HR,
+                             'VgradW_hat_nm1_HR': VgradW_hat_nm1_HR},
+                            file_path='./restart/state_HR_t%d.hdf5' % (T / DAY))
+campaign.store_data_to_hdf5({'w_hat_n_LR': w_hat_n_LR, 'w_hat_nm1_LR': w_hat_nm1_LR,
+                             'VgradW_hat_nm1_LR': VgradW_hat_nm1_LR},
+                            file_path='./restart/state_LR_t%d.hdf5' % (T / DAY))
+
+# store the accumulated data
+campaign.store_accumulated_data(file_path='../samples/reduced_vorticity_training.hdf5')
