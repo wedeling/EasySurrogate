@@ -75,10 +75,10 @@ class QSN_Surrogate(Campaign):
         self.max_lag = self.feat_eng.max_lag
 
         # number of softmax layers (one per output)
-        n_softmax = y_train.shape[1]
+        self.n_softmax = y_train.shape[1]
 
         # number of output neurons
-        n_out = n_bins * n_softmax
+        n_out = n_bins * self.n_softmax
 
         # one-hot encoded y data e.g. [0, 0, 1, 0, ..., 0] if the y sample
         # falls in the 3rd bin
@@ -90,7 +90,7 @@ class QSN_Surrogate(Campaign):
         # create the feed-forward QSN
         self.neural_net = es.methods.ANN(X=X_train, y=one_hot_encoded_data,
                                          n_layers=n_layers, n_neurons=n_neurons,
-                                         n_softmax=n_softmax, n_out=n_out,
+                                         n_softmax=self.n_softmax, n_out=n_out,
                                          loss='cross_entropy',
                                          activation=activation, batch_size=batch_size,
                                          lamb=lamb, decay_step=10**4, decay_rate=0.9,
