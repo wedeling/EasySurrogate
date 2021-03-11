@@ -1,7 +1,75 @@
+
+def make_movie(qsn_surrogate, n_frames=500):
+    """
+    Makes a move using the training data. Left subplot shows the evolution of the
+    kernel-density estimate, and the right subplot show the time series of the data
+    and the random samples drawm from the kernel-density estimate. Saves the movie
+    to a .gif file.
+
+    Parameters
+
+    n_frames (int): default is 500
+        The number of frames to use in the movie.
+
+    Returns: None
+    """
+
+    # get the (normalized, time-lagged) training data from the neural network
+    X = qsn_surrogate.neural_net.X
+    y = qsn_surrogate.neural_net.y
+
+    print('===============================')
+    print('Making movie...')
+
+    # list to store the movie frames in
+    ims = []
+    fig = plt.figure(figsize=[8, 4])
+    ax1 = fig.add_subplot(121, xlabel=r'$B_k$', ylabel=r'', yticks=[])
+    ax2 = fig.add_subplot(122, xlabel=r'time', ylabel=r'$B_k$')
+    plt.tight_layout()
+
+    # number of features
+    n_feat = X.shape[1]
+    # number of softmax layers
+    n_softmax = qsn_surrogate.n_softmax
+
+    # allocate memory
+    samples = np.zeros([n_frames])
+
+    # make movie by evaluating the network at TRAINING inputs
+    for i in range(n_frames):
+
+        # draw a random sample from the network
+        o_i, idx_max, _ = qsn_surrogate.neural_net.get_softmax(X[i].reshape([1, n_feat]))
+        samples[i] = qsn_surrogate.sampler.resample(idx_max)[0]
+        if np.mod(i, 100) == 0:
+            print('i =', i, 'of', n_frames)
+
+        # create a single frame, store in 'ims'
+        plt2 = ax1.plot(range(qsn_surrogate.n_bins), 
+                        np.zeros(qsn_surrogate.n_bins),
+                        o_i[0], 'b', label=r'conditional pmf')
+        plt3 = ax1.plot(y[i][0], 0.0, 'ro', label=r'data')
+        plt4 = ax2.plot(y[0:i, 0], 'ro', label=r'data')
+        plt5 = ax2.plot(samples[0:i, 0], 'g', label='random sample')
+
+        if i == 0:
+            ax1.legend(loc=1, fontsize=9)
+            ax2.legend(loc=1, fontsize=9)
+
+        ims.append((plt2[0], plt3[0], plt4[0], plt5[0],))
+
+    # make a movie of all frame in 'ims'
+    im_ani = animation.ArtistAnimation(fig, ims, interval=20,
+                                       repeat_delay=2000, blit=True)
+    im_ani.save('kvm.gif')
+    print('done. Saved movie to qsn.gif')
+
 import os
 import numpy as np
 import matplotlib.pyplot as plt
 import easysurrogate as es
+from matplotlib import animation
 
 home = os.path.abspath(os.path.dirname(__file__))
 
@@ -48,6 +116,9 @@ plt.yticks([])
 plt.legend(loc=0)
 
 plt.tight_layout()
+
+campaign.surrogate.n_softmax = 10
+make_movie(campaign.surrogate)
 
 # #############
 # # Plot ACFs #
