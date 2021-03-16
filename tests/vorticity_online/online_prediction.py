@@ -25,38 +25,34 @@ def draw():
     # ax2.contourf(Q2, 50)
     # ax2.plot(vort_solver_LR.bins, E_spec_LR)
     # ax2.plot(vort_solver_HR.bins, E_spec_HR)
-    ax2.plot(campaign.accum_data['Q_LR'])
-    ax2.plot(campaign.accum_data['Q_HR'], 'o')
+    # ax2.plot(campaign.accum_data['Q_LR'])
+    # ax2.plot(campaign.accum_data['Q_HR'], 'o')
+    ax2.plot(np.array(plot1))
+    ax2.plot(np.array(plot2))
     plt.pause(0.1)
     plt.tight_layout()
 
 
+def compute_int(x1_hat, x2_hat, n_points_1d):
+    """
+    Compute the integral of X1*X2 using the Fourier expansion
+    """
+    integral = np.dot(x1_hat.flatten(), np.conjugate(x2_hat.flatten())) / n_points_1d**4
+    return integral.real
+
 def qoi_func(w_hat_n, **kwargs):
-    """
-    Function which computes the spatially integrated quantities of interest.
 
-    Parameters
-    ----------
-    w_hat_n : array (complex)
-        Vorticity Fourier coefficients.
-    **kwargs : array (complex)
-        Vorticity Fourier coefficients, passed as a keyowrd argument.
+    N = w_hat_n.shape[0]
+    if N == N_LR:
+        psi_hat_n = kwargs['psi_hat_n_LR']
+    else:
+        psi_hat_n = kwargs['psi_hat_n_HR']
 
-    Returns
-    -------
-    qoi : array (real)
-        The spatiallt-integrated energy and enstrophy.
+    Q = np.zeros(N)
+    Q[0] = -0.5 * np.dot(psi_hat_n.flatten(), np.conjugate(w_hat_n.flatten())) / N ** 4
+    Q[0] = 0.5 * np.dot(w_hat_n.flatten(), np.conjugate(w_hat_n.flatten())) / N ** 4
 
-    """
-
-    n_1d = w_hat_n.shape[0]
-    psi_hat_n = kwargs['psi_hat']
-
-    qoi = np.zeros(2)
-    qoi[0] = -0.5 * np.dot(psi_hat_n.flatten(), np.conjugate(w_hat_n.flatten())).real / n_1d ** 4
-    qoi[1] = 0.5 * np.dot(w_hat_n.flatten(), np.conjugate(w_hat_n.flatten())).real / n_1d ** 4
-
-    return qoi
+    return Q
 
 plt.close('all')
 plt.rcParams['image.cmap'] = 'seismic'
@@ -86,22 +82,49 @@ surrogate = es.methods.Reduced_Surrogate(N_Q, N_LR)
 # add the surrogate to the campaign
 campaign.add_app('reduced_vort', surrogate)
 
+# load the dQ surrogate
+dQ_campaign = es.Campaign(load_state=True)
+ann = dQ_campaign.surrogate
+
+# store the surrogate used to predict dQ
+campaign.surrogate.set_dQ_surr(ann)
+# online learning nudging time scale
+TAU_NUDGE = 1.0
+# length of the moving window (in time steps) in which the online training data is stored
+WINDOW_LENGTH = 1
+# batch size used in inline learning
+BATCH_SIZE = WINDOW_LENGTH
+# number of time steps to wait before predicting dQ with the surrogate
+SETTLING_PERIOD = 1
+# set the online learning parameters
+campaign.surrogate.set_online_training_parameters(TAU_NUDGE, DT, WINDOW_LENGTH)
+
+#the indices of a upper triangular N_Q x N_Q array
+idx1, idx2 = np.triu_indices(N_Q)
+
+# the reference data frame used to train the ANN
+data_frame_ref = campaign.load_hdf5_data(file_path='../samples/reduced_vorticity_training.hdf5')
+dQ_ref = data_frame_ref['Q_HR'] - data_frame_ref['Q_LR']
+inner_prods = data_frame_ref['inner_prods'][0][idx1, idx2]
+c_ij = data_frame_ref['c_ij'][0].flatten()
+src_Q = data_frame_ref['src_Q'][0]
+
 # start, end time (in days)
 DAY = vort_solver_LR.day
 T = 500 * DAY
 T_END = T + 10 * 365 * DAY
 n_steps = np.ceil((T_END - T) / DT).astype('int')
 
-# plot the solution while running
-PLOT = False
+# PLOT the solution while running
+PLOT = True
 plot_frame_rate = np.floor(DAY / DT).astype('int')
-# restart from a previous stored state
+# RESTART from a previous stored state
 RESTART = True
-# store accumulated data at the end
-STORE_DATA = True
 
 if PLOT:
     fig = plt.figure(figsize=[8, 4])
+    plot1 = []
+    plot2 = []
 
 if RESTART:
     # load the HR state from a HDF5 file
@@ -125,28 +148,63 @@ for n in range(n_steps):
     if np.mod(n, int(10 * DAY / DT)) == 0:
         print('%.1f percent complete' % (n / n_steps * 100))
 
+    # compute the difference between the LR and the HR states. To do so,
+    # the LR state muts be upscaled to the HR grid.
+    Delta_w_hat = campaign.surrogate.up_scale(VgradW_hat_nm1_LR, N_HR) - VgradW_hat_nm1_HR
+    
     # integrate the HR solver
     w_hat_np1_HR, VgradW_hat_n_HR = vort_solver_HR.step(w_hat_n_HR, w_hat_nm1_HR,
-                                                        VgradW_hat_nm1_HR)
+                                                        VgradW_hat_nm1_HR)#,
+                                                        # sgs_hat = Delta_w_hat / TAU_NUDGE)
 
     # exact sgs term
     # sgs_hat_exact = vort_solver_HR.down_scale(VgradW_hat_nm1_HR, N_LR) - VgradW_hat_nm1_LR
 
-    # compute the HR stream function
+    # project the HR vorticity and stream function to the LR grid
+    w_hat_n_HR_projected = vort_solver_HR.down_scale(w_hat_n_HR, N_LR)
     psi_hat_n_HR = vort_solver_HR.compute_stream_function(w_hat_n_HR)
+    psi_hat_n_HR_projected = vort_solver_HR.down_scale(psi_hat_n_HR, N_LR)
 
     # compute the LR stream function
     psi_hat_n_LR = vort_solver_LR.compute_stream_function(w_hat_n_LR)
 
     # compute the QoI using the HR state
-    Q_HR = qoi_func(w_hat_n_HR, psi_hat = psi_hat_n_HR)
+    Q_HR = np.zeros(N_Q)
+    Q_HR[0] = -0.5 * compute_int(psi_hat_n_HR_projected, w_hat_n_HR_projected, N_LR)
+    Q_HR[1] = 0.5 * compute_int(w_hat_n_HR_projected, w_hat_n_HR_projected, N_LR)
 
     # compute the QoI using the LR state
-    Q_LR = qoi_func(w_hat_n_LR, psi_hat = psi_hat_n_LR)
+    Q_LR = np.zeros(N_Q)
+    Q_LR[0] = -0.5 * compute_int(psi_hat_n_LR, w_hat_n_LR, N_LR)
+    Q_LR[1] = 0.5 * compute_int(w_hat_n_LR, w_hat_n_LR, N_LR)
+
+    plot1.append(Q_HR)
+    plot2.append(Q_LR)
+    
+    # make a prediction for the reduced sgs terms
+    if n > SETTLING_PERIOD:
+        # predict dQ using the surrogate model
+        dQ_pred = ann.predict([inner_prods, c_ij, src_Q])
+    else:
+        # just the reference data in the settling period
+        dQ_pred = dQ_ref[n]
 
     # compute the reduced subgrid-scale term
-    reduced_dict = surrogate.train([-psi_hat_n_LR, w_hat_n_LR], Q_HR - Q_LR)
+    reduced_dict = surrogate.train([-psi_hat_n_LR, w_hat_n_LR], dQ_pred)
     sgs_hat_reduced = reduced_dict['sgs_hat']
+
+    # collect features
+    inner_prods = reduced_dict['inner_prods'][idx1, idx2]
+    c_ij = reduced_dict['c_ij'].flatten()
+    src_Q = reduced_dict['src_Q']
+    
+    # features
+    feats = [inner_prods, c_ij, src_Q]
+    
+    # Generate the training data for the online learning back prop step
+    campaign.surrogate.generate_online_training_data(feats, w_hat_nm1_LR, w_hat_n_LR,
+                                                     w_hat_nm1_HR, w_hat_n_HR,
+                                                     qoi_func)
 
     # integrate the LR solver with reduced sgs term
     w_hat_np1_LR, VgradW_hat_n_LR = vort_solver_LR.step(w_hat_n_LR, w_hat_nm1_LR,
@@ -169,10 +227,11 @@ for n in range(n_steps):
 
     T += DT
 
-    # PLOT solution while running
+    # plot solution while running
     if np.mod(n, plot_frame_rate) == 0 and PLOT:
         Q1 = np.fft.ifft2(w_hat_np1_HR).real
-        # Q2 = np.fft.ifft2(w_hat_np1_LR).real
+        # Delta_w = np.fft.ifft2(Delta_w_hat).real
+        Q2 = np.fft.ifft2(w_hat_np1_LR).real
         # sgs = np.fft.ifft2(sgs_hat_reduced).real
         # E_spec_LR, Z_spec_LR = vort_solver_LR.spectrum(w_hat_np1_LR)
         # E_spec_HR, Z_spec_HR = vort_solver_HR.spectrum(w_hat_np1_HR)
@@ -187,5 +246,4 @@ campaign.store_data_to_hdf5({'w_hat_n_LR': w_hat_n_LR, 'w_hat_nm1_LR': w_hat_nm1
                             file_path='./restart/state_LR_t%d.hdf5' % (T / DAY))
 
 # store the accumulated data
-if STORE_DATA:
-    campaign.store_accumulated_data(file_path='../samples/reduced_vorticity_training2.hdf5')
+campaign.store_accumulated_data(file_path='../samples/reduced_vorticity_offline.hdf5')

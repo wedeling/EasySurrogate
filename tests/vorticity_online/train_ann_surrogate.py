@@ -14,15 +14,18 @@ Q_LR = data_frame['Q_LR']
 c_ij = data_frame['c_ij']
 c_ij = c_ij.reshape([c_ij.shape[0], c_ij.shape[1]])
 src_Q = data_frame['src_Q']
+inner_prods = data_frame['inner_prods']
+idx1, idx2 = np.triu_indices(inner_prods.shape[1])
+inner_prods = inner_prods[:, idx1, idx2]
 
-features = [Q_LR, c_ij, src_Q]
+features = [inner_prods, c_ij, src_Q]
 target = data_frame['Q_HR'] - data_frame['Q_LR']
 
 # create a (time-lagged) ANN surrogate
 surrogate = es.methods.ANN_Surrogate()
 
 # create time-lagged features
-lags = [range(1, 20), range(1, 20), range(1, 20)]
+lags = [[1], [1], [1]]
 # lags = None
 
 # train the surrogate on the data
