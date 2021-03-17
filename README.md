@@ -2,6 +2,8 @@
 
 This is a first beta release of EasySurrogate, a toolkit designed to facilitate the creation of surrogate models for multiscale simulations. The development of this software is funded by the EU Horizon 2020 Verified Exascale Computing for Multiscale Applications ([VECMA](www.vecma.eu)) project.
 
+To run jupyter notebook tutorials, click the [Binder link.](https://mybinder.org/v2/gh/wedeling/EasySurrogate/daf46f3c8062fa5b6ddb7594d521f34d2f26290f)
+
 ## Requirements
 
 + Numpy
