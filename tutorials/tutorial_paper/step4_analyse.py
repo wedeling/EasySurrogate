@@ -117,45 +117,42 @@ plt.legend(loc=0)
 
 plt.tight_layout()
 
-campaign.surrogate.n_softmax = 10
-make_movie(campaign.surrogate)
+#############
+# Plot ACFs #
+#############
 
-# #############
-# # Plot ACFs #
-# #############
+acf_lag = 1000
 
-# acf_lag = 1000
+fig = plt.figure(figsize=[8, 4])
+ax1 = fig.add_subplot(121, ylabel=r'$\mathrm{ACF}\;X_n$', xlabel='time')
+ax2 = fig.add_subplot(122, ylabel=r'$\mathrm{ACF}\;r_n$', xlabel='time')
 
-# fig = plt.figure(figsize=[8, 4])
-# ax1 = fig.add_subplot(121, ylabel=r'$\mathrm{ACF}\;X_n$', xlabel='time')
-# ax2 = fig.add_subplot(122, ylabel=r'$\mathrm{ACF}\;r_n$', xlabel='time')
+acf_X_ref = np.zeros(acf_lag - 1)
+acf_X_sol = np.zeros(acf_lag - 1)
+acf_r_ref = np.zeros(acf_lag - 1)
+acf_r_sol = np.zeros(acf_lag - 1)
 
-# acf_X_ref = np.zeros(acf_lag - 1)
-# acf_X_sol = np.zeros(acf_lag - 1)
-# acf_B_ref = np.zeros(acf_lag - 1)
-# acf_B_sol = np.zeros(acf_lag - 1)
+# average over all spatial points
+K = 18
+dt = 0.01
+for k in range(K):
+    print('k=%d' % k)
+    acf_X_ref += 1 / K * analysis.auto_correlation_function(X_ref[burn:, k], max_lag=acf_lag)
+    acf_X_sol += 1 / K * analysis.auto_correlation_function(X_qsn[burn:, k], max_lag=acf_lag)
 
-# # average over all spatial points
-# K = 18
-# dt = 0.01
-# for k in range(K):
-#     print('k=%d' % k)
-#     acf_X_ref += 1 / K * analysis.auto_correlation_function(X_ref[start_idx:, k], max_lag=acf_lag)
-#     acf_X_sol += 1 / K * analysis.auto_correlation_function(X_qsn[start_idx:, k], max_lag=acf_lag)
+    acf_r_ref += 1 / K * analysis.auto_correlation_function(r_ref[burn:, k], max_lag=acf_lag)
+    acf_r_sol += 1 / K * analysis.auto_correlation_function(r_qsn[burn:, k], max_lag=acf_lag)
 
-#     acf_B_ref += 1 / K * analysis.auto_correlation_function(B_ref[start_idx:, k], max_lag=acf_lag)
-#     acf_B_sol += 1 / K * analysis.auto_correlation_function(B_qsn[start_idx:, k], max_lag=acf_lag)
+dom_acf = np.arange(acf_lag - 1) * dt
+ax1.plot(dom_acf, acf_X_ref, 'k+', label='L96')
+ax1.plot(dom_acf, acf_X_sol, label='QSN')
+leg = plt.legend(loc=0)
 
-# dom_acf = np.arange(acf_lag - 1) * dt
-# ax1.plot(dom_acf, acf_X_ref, 'k+', label='L96')
-# ax1.plot(dom_acf, acf_X_sol, label='QSN')
-# leg = plt.legend(loc=0)
+ax2.plot(dom_acf, acf_r_ref, 'k+', label='L96')
+ax2.plot(dom_acf, acf_r_sol, label='QSN')
+leg = plt.legend(loc=0)
 
-# ax2.plot(dom_acf, acf_B_ref, 'k+', label='L96')
-# ax2.plot(dom_acf, acf_B_sol, label='QSN')
-# leg = plt.legend(loc=0)
-
-# plt.tight_layout()
+plt.tight_layout()
 
 # #############
 # # Plot CCFs #
