@@ -121,6 +121,7 @@ plt.tight_layout()
 # Plot ACFs #
 #############
 
+# the number of time steps to compute the acf over
 acf_lag = 1000
 
 fig = plt.figure(figsize=[8, 4])
