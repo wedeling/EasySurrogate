@@ -149,7 +149,7 @@ class Feature_Engineering:
         self.n_points = feats[0].shape[1]
         # compute the size of the training set based on value of test_frac
         self.n_train = np.int(self.n_samples * (1.0 - test_frac))
-        print('Using first %d/%d samples to train ANN' % (self.n_train, self.n_samples))
+        print('Using first %d/%d samples for training' % (self.n_train, self.n_samples))
 
         X = {}
         y = {}

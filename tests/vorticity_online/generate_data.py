@@ -11,7 +11,8 @@ def draw():
     ax2.plot(vort_solver_HR.bins, E_spec_HR)
     plt.pause(0.1)
     plt.tight_layout()
-    
+
+
 def compute_int(X1_hat, X2_hat, N):
     """
     Compute the integral of X1*X2 using the Fourier expansion
@@ -66,13 +67,13 @@ for n in range(n_steps):
 
     # exact sgs term
     sgs_hat = vort_solver_HR.down_scale(VgradW_hat_nm1_HR, N_LR) - VgradW_hat_nm1_LR
-    
+
     w_hat_n_HR_projected = vort_solver_HR.down_scale(w_hat_n_HR, N_LR)
     psi_hat_n_HR_projected = vort_solver_LR.compute_stream_function(w_hat_n_HR_projected)
     Q_HR = np.zeros(N_Q)
     Q_HR[0] = -0.5 * compute_int(psi_hat_n_HR_projected, w_hat_n_HR_projected, N_LR)
     Q_HR[1] = 0.5 * compute_int(w_hat_n_HR_projected, w_hat_n_HR_projected, N_LR)
-    
+
     psi_hat_n_LR = vort_solver_LR.compute_stream_function(w_hat_n_LR)
     Q_LR = np.zeros(N_Q)
     Q_LR[0] = -0.5 * compute_int(psi_hat_n_LR, w_hat_n_LR, N_LR)
@@ -102,7 +103,7 @@ for n in range(n_steps):
     if np.mod(j, store_frame_rate) == 0:
         Q1 = np.fft.ifft2(w_hat_np1_HR).real
         Q2 = np.fft.ifft2(w_hat_np1_LR).real
-        E_spec_LR, Z_spec_LR = vort_solver_LR.spectrum(w_hat_np1_LR) 
-        E_spec_HR, Z_spec_HR = vort_solver_HR.spectrum(w_hat_np1_HR) 
+        E_spec_LR, Z_spec_LR = vort_solver_LR.spectrum(w_hat_np1_LR)
+        E_spec_HR, Z_spec_HR = vort_solver_HR.spectrum(w_hat_np1_HR)
         draw()
         j = 0
