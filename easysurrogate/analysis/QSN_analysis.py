@@ -41,7 +41,7 @@ class QSN_analysis(BaseAnalysis):
             y = self.qsn_surrogate.neural_net.y
 
         self.qsn_surrogate.neural_net.compute_misclass_softmax(X=X, y=y)
-        
+
     # def make_movie(self, n_frames=500):
     #     """
     #     Makes a move using the training data. Left subplot shows the evolution of the
@@ -89,7 +89,7 @@ class QSN_analysis(BaseAnalysis):
     #             print('i =', i, 'of', n_frames)
 
     #         # create a single frame, store in 'ims'
-    #         plt2 = ax1.plot(range(self.qsn_surrogate.n_bins), 
+    #         plt2 = ax1.plot(range(self.qsn_surrogate.n_bins),
     #                         np.zeros(self.qsn_surrogate.n_bins),
     #                         o_i[0], 'b', label=r'conditional pmf')
     #         plt3 = ax1.plot(y[i][0], 0.0, 'ro', label=r'data')
@@ -107,4 +107,3 @@ class QSN_analysis(BaseAnalysis):
     #                                        repeat_delay=2000, blit=True)
     #     im_ani.save('kvm.gif')
     #     print('done. Saved movie to qsn.gif')
-
