@@ -285,8 +285,13 @@ class Layer:
                 [o_i.append(np.exp(h_i) / np.sum(np.exp(h_i), axis=0))
                  for h_i in np.split(h, self.n_softmax)]
                 self.o_i = np.concatenate(o_i)
-
-                self.L_i = -np.sum(y_i * np.log(self.o_i))
+                # cross entropy loss with a softmax layer
+                try:
+                    self.L_i = -np.sum(y_i * np.log(self.o_i))
+                except RuntimeWarning:
+                    # if a neuron does not fire, e.g. in the case of RelU activation,
+                    # we get a RuntimeWarning. Just add a small constant in this case.
+                    self.L_i = -np.sum(y_i * np.log(self.o_i + 1e-20))
             elif self.loss == 'kernel_mixture' and self.n_softmax > 0:
 
                 if y_i.ndim == 1:

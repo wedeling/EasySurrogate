@@ -686,6 +686,6 @@ class ANN:
         print('Number of output neurons =', self.n_out)
         print('Activation hidden layers =', self.activation)
         print('Activation output layer =', self.activation_out)
-        print('On GPU =', self.on_gpu)
+        # print('On GPU =', self.on_gpu)
         self.get_n_weights()
         print('===============================')

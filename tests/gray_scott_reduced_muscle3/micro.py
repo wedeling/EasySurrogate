@@ -50,8 +50,8 @@ def reduced_sgs():
         t_cur = msg.timestamp
 
         # train the two reduced sgs source terms using the recieved reference data Q_ref
-        reduced_dict_u = surrogate.train([V_hat_1, u_hat], Q_ref[0:N_Q], Q_model[0:N_Q])
-        reduced_dict_v = surrogate.train([V_hat_1, v_hat], Q_ref[N_Q:], Q_model[N_Q:])
+        reduced_dict_u = surrogate.train([V_hat_1, u_hat], Q_ref[0:N_Q] - Q_model[0:N_Q])
+        reduced_dict_v = surrogate.train([V_hat_1, v_hat], Q_ref[N_Q:] - Q_model[N_Q:])
 
         # get the two reduced sgs terms from the dict
         reduced_sgs_u = np.fft.ifft2(reduced_dict_u['sgs_hat'])
