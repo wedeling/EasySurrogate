@@ -26,7 +26,7 @@ lags = [range(10)]
 
 # train the surrogate on the data
 n_iter = 10000
-local = True
+local = False
 surrogate.train([features], target, n_iter, lags=lags, n_layers=3, n_neurons=50,
                 batch_size=512, local=local)
 
