@@ -126,3 +126,33 @@ class BaseAnalysis:
         print('done')
 
         return domain, np.exp(log_dens)
+
+    def recursive_moments(self, X_np1, mu_n, sigma2_n, N):
+        """
+        Update the mean and variance using a new data sample X_np1.
+
+        Parameters
+        ----------
+        X_np1 : aray
+            A new data point, iteration n+1
+        mu_n : array
+            The mean compute using all samples up to iteration n
+        sigma2_n : array
+            The variance compute using all samples up to iteration n.
+        N : int
+            The number of samples.
+
+        Returns
+        -------
+        mu_np1 : array
+            The new mean, updated with the latest data point.
+        sigma2_np1 : TYPE
+            The new variance, updated with the latest data point..
+
+        """
+    
+        mu_np1 = mu_n + (X_np1 - mu_n)/(N+1)
+    
+        sigma2_np1 = sigma2_n + mu_n**2 - mu_np1**2 + (X_np1**2 - sigma2_n - mu_n**2)/(N+1)
+    
+        return mu_np1, sigma2_np1

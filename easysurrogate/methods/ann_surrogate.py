@@ -29,7 +29,7 @@ class ANN_Surrogate(Campaign):
               test_frac=0.0,
               n_layers=2, n_neurons=100,
               activation='tanh',
-              batch_size=64, lamb=0.0):
+              batch_size=64, lamb=0.0, **kwargs):
         """
         Perform back propagation to train the ANN
 
@@ -76,7 +76,7 @@ class ANN_Surrogate(Campaign):
                                          activation=activation, batch_size=batch_size,
                                          lamb=lamb, decay_step=10**4, decay_rate=0.9,
                                          standardize_X=True, standardize_y=True,
-                                         save=False)
+                                         save=False, **kwargs)
 
         print('===============================')
         print('Training Artificial Neural Network...')
