@@ -41,18 +41,34 @@ def compute_int(x1_hat, x2_hat, n_points_1d):
     return integral.real
 
 def qoi_func(w_hat_n, **kwargs):
+    """
+    Function which computes the spatially integrated quantities of interest.
 
-    N = w_hat_n.shape[0]
-    if N == N_LR:
+    Parameters
+    ----------
+    w_hat_n : array (complex)
+        Vorticity Fourier coefficients.
+    **kwargs : array (complex)
+        Vorticity Fourier coefficients, passed as a keyowrd argument.
+
+    Returns
+    -------
+    qoi : array (real)
+        The spatially-integrated energy and enstrophy.
+
+    """
+    
+    n_1d = w_hat_n.shape[0]
+    if n_1d == N_LR:
         psi_hat_n = kwargs['psi_hat_n_LR']
     else:
         psi_hat_n = kwargs['psi_hat_n_HR']
 
-    Q = np.zeros(N)
-    Q[0] = -0.5 * np.dot(psi_hat_n.flatten(), np.conjugate(w_hat_n.flatten())) / N ** 4
-    Q[0] = 0.5 * np.dot(w_hat_n.flatten(), np.conjugate(w_hat_n.flatten())) / N ** 4
+    qoi = np.zeros(2)
+    qoi[0] = -0.5 * np.dot(psi_hat_n.flatten(), np.conjugate(w_hat_n.flatten())).real / n_1d ** 4
+    qoi[1] = 0.5 * np.dot(w_hat_n.flatten(), np.conjugate(w_hat_n.flatten())).real / n_1d ** 4
 
-    return Q
+    return qoi
 
 plt.close('all')
 plt.rcParams['image.cmap'] = 'seismic'
@@ -91,11 +107,13 @@ campaign.surrogate.set_dQ_surr(ann)
 # online learning nudging time scale
 TAU_NUDGE = 1.0
 # length of the moving window (in time steps) in which the online training data is stored
-WINDOW_LENGTH = 1
+WINDOW_LENGTH = 2
 # batch size used in inline learning
-BATCH_SIZE = WINDOW_LENGTH
+BATCH_SIZE = 1
 # number of time steps to wait before predicting dQ with the surrogate
 SETTLING_PERIOD = 1
+#
+M = 10
 # set the online learning parameters
 campaign.surrogate.set_online_training_parameters(TAU_NUDGE, DT, WINDOW_LENGTH)
 
@@ -103,7 +121,7 @@ campaign.surrogate.set_online_training_parameters(TAU_NUDGE, DT, WINDOW_LENGTH)
 idx1, idx2 = np.triu_indices(N_Q)
 
 # the reference data frame used to train the ANN
-data_frame_ref = campaign.load_hdf5_data(file_path='../samples/reduced_vorticity_training.hdf5')
+data_frame_ref = campaign.load_hdf5_data(file_path='../samples/reduced_vorticity_training2.hdf5')
 dQ_ref = data_frame_ref['Q_HR'] - data_frame_ref['Q_LR']
 inner_prods = data_frame_ref['inner_prods'][0][idx1, idx2]
 c_ij = data_frame_ref['c_ij'][0].flatten()
@@ -120,6 +138,8 @@ PLOT = True
 plot_frame_rate = np.floor(DAY / DT).astype('int')
 # RESTART from a previous stored state
 RESTART = True
+# store the data at the end
+STORE = True
 
 if PLOT:
     fig = plt.figure(figsize=[8, 4])
@@ -160,23 +180,17 @@ for n in range(n_steps):
     # exact sgs term
     # sgs_hat_exact = vort_solver_HR.down_scale(VgradW_hat_nm1_HR, N_LR) - VgradW_hat_nm1_LR
 
-    # project the HR vorticity and stream function to the LR grid
-    w_hat_n_HR_projected = vort_solver_HR.down_scale(w_hat_n_HR, N_LR)
+    # compute the HR stream function
     psi_hat_n_HR = vort_solver_HR.compute_stream_function(w_hat_n_HR)
-    psi_hat_n_HR_projected = vort_solver_HR.down_scale(psi_hat_n_HR, N_LR)
 
     # compute the LR stream function
     psi_hat_n_LR = vort_solver_LR.compute_stream_function(w_hat_n_LR)
 
     # compute the QoI using the HR state
-    Q_HR = np.zeros(N_Q)
-    Q_HR[0] = -0.5 * compute_int(psi_hat_n_HR_projected, w_hat_n_HR_projected, N_LR)
-    Q_HR[1] = 0.5 * compute_int(w_hat_n_HR_projected, w_hat_n_HR_projected, N_LR)
+    Q_HR = qoi_func(w_hat_n_HR, psi_hat_n_HR = psi_hat_n_HR)
 
     # compute the QoI using the LR state
-    Q_LR = np.zeros(N_Q)
-    Q_LR[0] = -0.5 * compute_int(psi_hat_n_LR, w_hat_n_LR, N_LR)
-    Q_LR[1] = 0.5 * compute_int(w_hat_n_LR, w_hat_n_LR, N_LR)
+    Q_LR = qoi_func(w_hat_n_LR, psi_hat_n_LR = psi_hat_n_LR)
 
     plot1.append(Q_HR)
     plot2.append(Q_LR)
@@ -197,14 +211,21 @@ for n in range(n_steps):
     inner_prods = reduced_dict['inner_prods'][idx1, idx2]
     c_ij = reduced_dict['c_ij'].flatten()
     src_Q = reduced_dict['src_Q']
-    
+
     # features
     feats = [inner_prods, c_ij, src_Q]
-    
+
     # Generate the training data for the online learning back prop step
     campaign.surrogate.generate_online_training_data(feats, w_hat_nm1_LR, w_hat_n_LR,
                                                      w_hat_nm1_HR, w_hat_n_HR,
-                                                     qoi_func)
+                                                     qoi_func,
+                                                     #these are the kwargs needed in qoi_func
+                                                     psi_hat_n_LR = psi_hat_n_LR,
+                                                     psi_hat_n_HR = psi_hat_n_HR)
+
+    # update the neural network for dQ every M time steps
+    if np.mod(n, M) == 0 and n > SETTLING_PERIOD and n > WINDOW_LENGTH:
+        ann.train_online(batch_size=BATCH_SIZE, verbose=True)
 
     # integrate the LR solver with reduced sgs term
     w_hat_np1_LR, VgradW_hat_n_LR = vort_solver_LR.step(w_hat_n_LR, w_hat_nm1_LR,
@@ -246,4 +267,5 @@ campaign.store_data_to_hdf5({'w_hat_n_LR': w_hat_n_LR, 'w_hat_nm1_LR': w_hat_nm1
                             file_path='./restart/state_LR_t%d.hdf5' % (T / DAY))
 
 # store the accumulated data
-campaign.store_accumulated_data(file_path='../samples/reduced_vorticity_offline.hdf5')
+if STORE:
+    campaign.store_accumulated_data(file_path='../samples/reduced_vorticity_online2.hdf5')

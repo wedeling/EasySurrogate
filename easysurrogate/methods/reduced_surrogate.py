@@ -135,14 +135,14 @@ class Reduced_Surrogate(Campaign):
         for i in range(len(LR_before)):
 
             # project the low-res model to the high-res grid
-            LR_before_projected = self.up_scale(LR_before[i], n_HR)
+            # LR_before_projected = self.up_scale(LR_before[i], n_HR)
 
             # the difference between the low res and high res model (projected to low-res grid)
             # at time n
-            delta_nudge = LR_before_projected - HR_before[i]
+            # delta_nudge = LR_before_projected - HR_before[i]
 
             # the estimated state of the (projected) HR model would there have been no nudging
-            HR_no_nudge = HR_after[i] - delta_nudge / self.tau_nudge * self.dt_LR
+            HR_no_nudge = HR_after[i] #- delta_nudge / self.tau_nudge * self.dt_LR
 
             # compute the HR QoI
             Q_HR = qoi_func(HR_no_nudge, **kwargs)
