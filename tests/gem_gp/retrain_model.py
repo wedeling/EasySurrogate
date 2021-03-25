@@ -15,5 +15,5 @@ target = np.concatenate([data_frame[k] for k in target_names if k in data_frame]
 
 campaign.surrogate.train(features, target, test_frac=0.0, postrain=True)  # try to retrain on max uncertain samples of full feature dataset
 #campaign.save_state()
-m, v = campaign.surrogate.predict(campaign.surrogate.X_test[100,:])
+m, v = campaign.surrogate.predict(campaign.surrogate.X_test[100,:]) # just a test on single sample
 print(m, v)

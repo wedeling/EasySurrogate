@@ -9,13 +9,16 @@ import numpy as np
 from ..campaign import Campaign
 import easysurrogate as es
 
+from sklearn.preprocessing import StandardScaler
+
 class GP_Surrogate(Campaign):
 
     def __init__(self, **kwargs):
         print('Creating Gaussain Process Object')
         self.name = 'GP Surrogate'
         self.feat_eng = es.methods.Feature_Engineering()
-
+        self.x_scaler = StandardScaler()
+        self.y_scaler = StandardScaler()
 
     ############################
     # START COMMON SUBROUTINES #
@@ -23,7 +26,7 @@ class GP_Surrogate(Campaign):
 
     def train(self, feats, target, n_iter=0,
               test_frac=0.0,
-              kernel=['Matern'], postrain=False):
+              kernel=['RBF'], postrain=False):
         """
 
         Args:
@@ -37,29 +40,35 @@ class GP_Surrogate(Campaign):
         -------
         None.
         """
-        # save all the data
-        self.X = feats
-        self.y = target
 
         # prepare the training data
         if postrain == False:
-            X_train, y_train, self.X_test, self.y_test = \
+            X_train, y_train, X_test, y_test = \
                                 self.feat_eng.get_training_data(feats, target, local=False, test_frac=test_frac)
 
+            # scale the training data
+            X_train = self.x_scaler.fit_transform(X_train)
+            y_train = self.y_scaler.fit_transform(y_train)
+            X_test = self.x_scaler.transform(X_test)
+            y_test = self.y_scaler.transform(y_test)
+
             # create a GP process
-            self.model = es.methods.GP(X_train, y_train, kernel=kernel[0])
+            self.model = es.methods.GP(X_train, y_train, kernel=kernel[0], bias=True, noize=True)
 
         else:
             X_train, y_train, X_test, y_test = \
                                 self.feat_eng.get_training_data(feats, target, local=False, test_frac=test_frac,
                                         train_sample_choice=lambda x: self.acquisition_function(x))  # case with acquisition
 
-            self.model.X = np.concatenate([self.model.X, X_train])
-            self.model.y = np.concatenate([self.model.y, y_train])
-            self.model.train()
+            X = feats[self.feat_eng.train_indices]
+            y = target[self.feat_eng.train_indices]
+
+            X = np.concatenate([X, X_train])
+            y = np.concatenate([y, y_train])
+            self.model.train(X, y)
 
         # get dimensionality of the output
-        n_out = y_train.shape[1]
+        self.n_out = y_train.shape[1]
 
         print('===============================')
         print('Fitting Gaussian Process...')
@@ -85,7 +94,7 @@ class GP_Surrogate(Campaign):
         Save the state of GP surrogate as a pickle file
         """
         state = self.__dict__
-        super().save_state(state=state, name=self.name)
+        save_state = super().save_state(state=state, name=self.name)
 
     def load_state(self):
         """

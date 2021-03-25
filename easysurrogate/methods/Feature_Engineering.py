@@ -109,7 +109,7 @@ class Feature_Engineering:
 
         """
 
-    def get_training_data(self, feats, target, lags=None, local=False, test_frac=0.0, train_sample_choice=None):
+    def get_training_data(self, feats, target, lags=None, local=False, test_frac=0.0, train_sample_choice=None, index=None):
         """
         Generate trainig data. Training data can be made (time) lagged and/or local.
 
@@ -202,6 +202,12 @@ class Feature_Engineering:
 
             print('Using  %d/%d samples to train the ML model' % (self.n_train, self.n_samples))
 
+        if index is not None:
+            self.n_train = len(index)
+            self.n_test = self.n_samples - self.n_train
+            self.train_indices = index
+            self.test_indices = np.array([el for el in list(range(0, self.n_samples)) if el not in self.train_indices]) # chose train fraction randomly
+
         X = {}
         y = {}
         X_r = {}
@@ -252,7 +258,7 @@ class Feature_Engineering:
                 y_train.append(y[i])
                 # Testing data
                 X_test.append(np.moveaxis(np.array(X_r[i]), 0, -1).reshape([self.n_test, -1]))  # appends same feature values in a single 4-long array
-                y_test.append(y[i])
+                y_test.append(y_r[i])
             X_train = np.concatenate(X_train)
             y_train = np.concatenate(y_train)
             # Testing data
