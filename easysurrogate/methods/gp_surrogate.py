@@ -11,6 +11,9 @@ import easysurrogate as es
 
 from sklearn.preprocessing import StandardScaler
 
+#DEBUG
+from matplotlib import pyplot as plt
+
 class GP_Surrogate(Campaign):
 
     def __init__(self, **kwargs):
@@ -44,7 +47,7 @@ class GP_Surrogate(Campaign):
         # prepare the training data
         if postrain == False:
             X_train, y_train, X_test, y_test = \
-                                self.feat_eng.get_training_data(feats, target, local=False, test_frac=test_frac)
+                                self.feat_eng.get_training_data(feats, target, local=False, test_frac=test_frac, train_first=True)
 
             # scale the training data
             X_train = self.x_scaler.fit_transform(X_train)
@@ -73,6 +76,16 @@ class GP_Surrogate(Campaign):
         print('===============================')
         print('Fitting Gaussian Process...')
 
+        # # DEBUG
+        # print(feats)
+        # print(X_test)
+        # y_pred = self.model.instance.predict(X_test)
+        # err = abs(np.divide(y_pred - y_test, y_test))
+        # print(err)
+        # y_pred_tr = self.model.instance.predict(X_train)
+        # err_tr = np.divide(abs(y_pred_tr - y_train), y_train)
+        # print(err_tr)
+        # plt.plot()
 
     def predict(self, X):
         """
@@ -125,7 +138,7 @@ class GP_Surrogate(Campaign):
             self.output_mean = 0.0
             self.output_std = 1.0
 
-    def acquisition_function(self, sample):
+    def maxunc_acquisition_function(self, sample):
         """
         Returns the uncertainty of the model as (a posterior variance on Y) for a given sample
         Args:
@@ -137,3 +150,23 @@ class GP_Surrogate(Campaign):
             sample = sample[None, :]
         _, uncertatinty = self.model.predict(sample)
         return -1.*uncertatinty
+
+    def poi_acquisition_function(self, sample):
+        """
+        Returns the probability of improvement for a given sample
+        Args:
+            sample: a single sample from a feature array
+        Returns:
+            the probability of improvement if a given sample will be added to the model
+        """
+        jitter = 1e-9
+        f_star = self.output_mean
+
+        if sample.ndim == 1:
+            sample = sample[None, :]
+
+        mu, std = self.model.predict(sample)
+        poi = np.divide(mu - f_star, std + jitter)
+
+        return poi
+

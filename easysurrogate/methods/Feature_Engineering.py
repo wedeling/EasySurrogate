@@ -109,7 +109,7 @@ class Feature_Engineering:
 
         """
 
-    def get_training_data(self, feats, target, lags=None, local=False, test_frac=0.0, train_sample_choice=None, index=None):
+    def get_training_data(self, feats, target, lags=None, local=False, test_frac=0.0, train_first=False, train_sample_choice=None, index=None):
         """
         Generate trainig data. Training data can be made (time) lagged and/or local.
 
@@ -197,8 +197,13 @@ class Feature_Engineering:
             # number of testing points, as what is left after excluding training set
             self.n_test = np.int(self.n_samples - self.n_train)
             # get indices of samples  to be used for training
-            self.train_indices = np.random.choice(self.n_samples, self.n_train, replace=False)  # chose train fraction randomly
-            self.test_indices = np.array([el for el in list(range(0, self.n_samples)) if el not in self.train_indices]) # chose train fraction randomly
+            if train_first:
+                self.train_indices = np.arange(self.n_samples)[:self.n_train]  # chose train fraction from first sims
+                self.test_indices = np.arange(self.n_samples)[self.n_train:]
+            else:
+                self.train_indices = np.random.choice(self.n_samples, self.n_train, replace=False)  # chose train fraction randomly
+                self.train_indices = np.sort(self.train_indices)
+                self.test_indices = np.array([el for el in list(range(0, self.n_samples)) if el not in self.train_indices]) # chose train fraction randomly
 
             print('Using  %d/%d samples to train the ML model' % (self.n_train, self.n_samples))
 
@@ -220,16 +225,16 @@ class Feature_Engineering:
             X[0] = [X_i[self.train_indices] for X_i in feats]  # chose train fraction randomly
             X_r[0] = [X_i[self.test_indices] for X_i in feats]  # chose train fraction randomly
             # the data
-            y[0] = target[0:self.n_train]
-            y_r[0] = target[-self.n_test:]
+            y[0] = target[self.train_indices]
+            y_r[0] = target[self.test_indices]
         # do not use entire row as feature, apply surrogate locally along second dimension
         else:
             # create a separate training set for every grid point
             for i in range(self.n_points):
-                X[i] = [X_i[0:self.n_train, i] for X_i in feats]
-                y[i] = target[0:self.n_train, i].reshape([-1, 1])
-                X_r[i] = [X_i[-self.n_test:, i] for X_i in feats]
-                y_r[i] = target[-self.n_test:, i].reshape([-1, 1])
+                X[i] = [X_i[self.train_indices, i] for X_i in feats]
+                y[i] = target[self.train_indices].reshape([-1, 1])
+                X_r[i] = [X_i[self.test_indices, i] for X_i in feats]
+                y_r[i] = target[self.test_indices, i].reshape([-1, 1])
 
         X_train = []
         y_train = []

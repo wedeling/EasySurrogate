@@ -61,7 +61,7 @@ def load_csv_dict_file(input_file='gem0_lhc_res.csv', n_runs=1000):
 
     return data
 
-def load_wf_csv_file(data_dir='', input_file='AUG_gem_inoutput.txt'):
+def load_wf_csv_file(data_dir='', input_file='AUG_gem_inoutput.txt', runs=[0, 500]):
 
     Xlabels = ['Te-ft5', 'Ti-ft5', 'dTe-ft5', 'dTi-ft5']
     Ylabels = ['flux-Te-ft5', 'flux-Ti-ft5']
@@ -81,24 +81,29 @@ def load_wf_csv_file(data_dir='', input_file='AUG_gem_inoutput.txt'):
     input_samples = np.array(input_samples)
     output_samples = np.array(output_samples)
 
+    run_first = runs[0]
+    run_last = runs[-1]
+
     data = {}
-    data['te_value'] = input_samples[:, 0].reshape(-1, 1)
-    data['ti_value'] = input_samples[:, 1].reshape(-1, 1)
-    data['te_ddrho'] = input_samples[:, 2].reshape(-1, 1)
-    data['ti_ddrho'] = input_samples[:, 3].reshape(-1, 1)
-    data['te_transp_flux'] = output_samples[:, 0].reshape(-1, 1)
-    data['ti_transp_flux'] = output_samples[:, 1].reshape(-1, 1)
+    data['te_value'] = input_samples[run_first:run_last, 0].reshape(-1, 1)
+    data['ti_value'] = input_samples[run_first:run_last, 1].reshape(-1, 1)
+    data['te_ddrho'] = input_samples[run_first:run_last, 2].reshape(-1, 1)
+    data['ti_ddrho'] = input_samples[run_first:run_last, 3].reshape(-1, 1)
+    data['te_transp_flux'] = output_samples[run_first:run_last, 0].reshape(-1, 1)
+    data['ti_transp_flux'] = output_samples[run_first:run_last, 1].reshape(-1, 1)
 
     return data
 
 # get dat ato a hfd5
 campaign = es.Campaign(load_state=False)
 
-data = load_csv_file()
-campaign.store_data_to_hdf5(data, file_path='gem_data_625.hdf5')
+#data = load_csv_file()
+#campaign.store_data_to_hdf5(data, file_path='gem_data_625.hdf5')
 
-#data = load_wf_csv_file(input_file='AUG_gem_inoutput.txt')
-#campaign.store_data_to_hdf5(data, file_path='gem_workflow.hdf5')
+data = load_wf_csv_file(input_file='AUG_gem_inoutput.txt')
+#DEBUG
+print(data['ti_transp_flux'].min(), data['ti_transp_flux'].max())
+campaign.store_data_to_hdf5(data, file_path='gem_workflow_500.hdf5')
 
 #data = load_csv_dict_file()
 #campaign.store_data_to_hdf5(data, file_path='gem0_lhc.hdf5')
