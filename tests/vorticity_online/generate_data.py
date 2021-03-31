@@ -95,7 +95,7 @@ T_END = T + 10 * 365 * DAY
 n_steps = np.ceil((T_END - T) / DT_LR).astype('int')
 
 # plot the solution while running
-PLOT = True
+PLOT = False
 plot_frame_rate = np.floor(DAY / DT_LR).astype('int')
 # restart from a previous stored state
 RESTART = True
@@ -107,29 +107,33 @@ if PLOT:
 
 if RESTART:
     # load the HR state from a HDF5 file
-    IC_HR = campaign.load_hdf5_data(file_path='./restart/state_HR_t%d_N%d.hdf5' % (T / DAY, DT_MULTIPLIER))
-    # vorticity at HR stencil n
+    IC_HR = campaign.load_hdf5_data(file_path=
+                                    './restart/state_HR_t%d_N%d.hdf5' % (T / DAY, DT_MULTIPLIER))
+    # HR vorticity at HR stencil k
+    w_hat_k_HR = IC_HR['w_hat_k_HR']
+    # HR vorticity at HR stencil k-1
+    w_hat_km1_HR = IC_HR['w_hat_km1_HR']
+    # HR Jacobian at HR stencil n-1
+    VgradW_hat_km1_HR = IC_HR['VgradW_hat_km1_HR']
+    # HR vorticity at LR stencil n
     w_hat_n_HR = IC_HR['w_hat_n_HR']
-    # vorticity at HR stencil n-1
+    # HR vorticity at LR stencil n - 1
     w_hat_nm1_HR = IC_HR['w_hat_nm1_HR']
-    # Jacobian at HR stencil n-1
-    VgradW_hat_nm1_HR = IC_HR['VgradW_hat_nm1_HR']
-    # vorticity used to compute the QoI - corresponding to physical time
-    # t_n = n * DT_LR
-    w_hat_before_HR = IC_HR['w_hat_np1_HR']
+
     # load the LR state from a HDF5 file
-    IC_LR = campaign.load_hdf5_data(file_path='./restart/state_LR_t%d_N%d.hdf5' % (T / DAY, DT_MULTIPLIER))
+    IC_LR = campaign.load_hdf5_data(file_path=
+                                    './restart/state_LR_t%d_N%d.hdf5' % (T / DAY, DT_MULTIPLIER))
     w_hat_n_LR = IC_LR['w_hat_n_LR']
     w_hat_nm1_LR = IC_LR['w_hat_nm1_LR']
     VgradW_hat_nm1_LR = IC_LR['VgradW_hat_nm1_LR']
 else:
-    # compute the HR initial condition stencil vorticity at HR step n and n-1
-    # and Jacobian at n-1
-    w_hat_n_HR, w_hat_nm1_HR, VgradW_hat_nm1_HR = vort_solver_HR.inital_cond()
-    # vorticity used to compute the QoI - corresponding to physical time
-    # t_n = n * DT_LR
-    w_hat_before_HR = w_hat_n_HR
-    # compute the LR initial condition stencil vorticity at HR step n and n-1
+    # compute the HR initial condition stencil vorticity at HR step k and k-1
+    # and Jacobian at k-1
+    w_hat_k_HR, w_hat_km1_HR, VgradW_hat_km1_HR = vort_solver_HR.inital_cond()
+    # the corresponding HR values at the times of the LR stencil
+    w_hat_n_HR = w_hat_k_HR
+    w_hat_nm1_HR = w_hat_km1_HR
+    # compute the LR initial condition stencil vorticity at LR step n and n-1
     # and Jacobian at n-1
     w_hat_n_LR, w_hat_nm1_LR, VgradW_hat_nm1_LR = vort_solver_LR.inital_cond()
 
@@ -141,24 +145,27 @@ for n in range(n_steps):
 
     # integrate the HR solver over DT_MULTIPLIER HR time steps
     for i in range(DT_MULTIPLIER):
-        w_hat_np1_HR, VgradW_hat_n_HR = vort_solver_HR.step(w_hat_n_HR, w_hat_nm1_HR,
-                                                            VgradW_hat_nm1_HR)
+        w_hat_kp1_HR, VgradW_hat_k_HR = vort_solver_HR.step(w_hat_k_HR, w_hat_km1_HR,
+                                                            VgradW_hat_km1_HR)
         # update HR vars
-        w_hat_nm1_HR = np.copy(w_hat_n_HR)
-        w_hat_n_HR = np.copy(w_hat_np1_HR)
-        VgradW_hat_nm1_HR = np.copy(VgradW_hat_n_HR)
+        w_hat_km1_HR = np.copy(w_hat_k_HR)
+        w_hat_k_HR = np.copy(w_hat_kp1_HR)
+        VgradW_hat_km1_HR = np.copy(VgradW_hat_k_HR)
+
+    # the HR vorticity at time t_n = n * DT_LR
+    w_hat_np1_HR = w_hat_kp1_HR
 
     # exact sgs term
     # sgs_hat_exact = vort_solver_HR.down_scale(VgradW_hat_nm1_HR, N_LR) - VgradW_hat_nm1_LR
 
     # compute the HR stream function
-    psi_hat_n_HR = vort_solver_HR.compute_stream_function(w_hat_before_HR)
+    psi_hat_n_HR = vort_solver_HR.compute_stream_function(w_hat_n_HR)
 
     # compute the LR stream function
     psi_hat_n_LR = vort_solver_LR.compute_stream_function(w_hat_n_LR)
 
     # compute the QoI using the HR state
-    Q_HR = qoi_func(w_hat_before_HR, psi_hat = psi_hat_n_HR)
+    Q_HR = qoi_func(w_hat_n_HR, psi_hat = psi_hat_n_HR)
 
     # compute the QoI using the LR state
     Q_LR = qoi_func(w_hat_n_LR, psi_hat = psi_hat_n_LR)
@@ -178,13 +185,13 @@ for n in range(n_steps):
     campaign.accumulate_data(reduced_dict)
 
     # update LR vars
-    w_hat_nm1_LR = np.copy(w_hat_n_LR)
-    w_hat_n_LR = np.copy(w_hat_np1_LR)
-    VgradW_hat_nm1_LR = np.copy(VgradW_hat_n_LR)
+    w_hat_nm1_LR = w_hat_n_LR
+    w_hat_n_LR = w_hat_np1_LR
+    VgradW_hat_nm1_LR = VgradW_hat_n_LR
 
-    # HR vorticity at time t_n in the next iteration. Store to compute the QoIs,
-    # since the LR QoIs will also be compute using the LR solution at t_n
-    w_hat_before_HR = w_hat_np1_HR
+    # update HR vars on LR time stencil
+    w_hat_nm1_HR = w_hat_n_HR
+    w_hat_n_HR = w_hat_np1_HR
 
     T += DT_LR
 
@@ -198,9 +205,9 @@ for n in range(n_steps):
         draw()
 
 # store the state of the LR and HR models
-campaign.store_data_to_hdf5({'w_hat_np1_HR': w_hat_np1_HR, 'w_hat_n_HR': w_hat_n_HR,
-                             'w_hat_nm1_HR': w_hat_nm1_HR,
-                             'VgradW_hat_nm1_HR': VgradW_hat_nm1_HR},
+campaign.store_data_to_hdf5({'w_hat_n_HR': w_hat_n_HR, 'w_hat_nm1_HR': w_hat_nm1_HR,
+                             'w_hat_k_HR': w_hat_k_HR, 'w_hat_km1_HR': w_hat_km1_HR,
+                             'VgradW_hat_km1_HR': VgradW_hat_km1_HR},
                              file_path='./restart/state_HR_t%d_N%d.hdf5' % (T / DAY, DT_MULTIPLIER))
 campaign.store_data_to_hdf5({'w_hat_np1_LR': w_hat_np1_LR, 'w_hat_n_LR': w_hat_n_LR,
                              'w_hat_nm1_LR': w_hat_nm1_LR,
@@ -209,4 +216,5 @@ campaign.store_data_to_hdf5({'w_hat_np1_LR': w_hat_np1_LR, 'w_hat_n_LR': w_hat_n
 
 # store the accumulated data
 if STORE_DATA:
-    campaign.store_accumulated_data(file_path='../samples/reduced_vorticity_training_N%d.hdf5' % (DT_MULTIPLIER))
+    campaign.store_accumulated_data(file_path='../samples/reduced_vorticity_training_N%d.hdf5' %
+                                    (DT_MULTIPLIER))

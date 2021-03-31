@@ -9,7 +9,7 @@ campaign = es.Campaign()
 analysis = es.analysis.BaseAnalysis()
 
 # load the training data (from gray_scott_rk4.py)
-data_frame = campaign.load_hdf5_data(file_path='../samples/reduced_vorticity_training.hdf5')
+data_frame = campaign.load_hdf5_data(file_path='../samples/reduced_vorticity_online_N2_M1.hdf5')
 
 # load reference data
 Q_ref = data_frame['Q_HR']
@@ -24,7 +24,7 @@ Q_reduced = data_frame['Q_LR']
 start_idx = 0
 fig = plt.figure(figsize=[8, 4])
 for i in range(2):
-    ax = fig.add_subplot(1, 4, i + 1, xlabel=r'$Q_%d$' % (i + 1))
+    ax = fig.add_subplot(1, 2, i + 1, xlabel=r'$Q_%d$' % (i + 1))
     dom_surr, pdf_surr = analysis.get_pdf(Q_reduced[start_idx:-1:10, i])
     dom_ref, pdf_ref = analysis.get_pdf(Q_ref[start_idx:-1:10, i])
     ax.plot(dom_ref, pdf_ref, 'k+', label='Ref')

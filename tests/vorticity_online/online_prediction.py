@@ -57,7 +57,7 @@ def qoi_func(w_hat_n, **kwargs):
         The spatially-integrated energy and enstrophy.
 
     """
-    
+
     n_1d = w_hat_n.shape[0]
     if n_1d == N_LR:
         psi_hat_n = kwargs['psi_hat_n_LR']
@@ -82,12 +82,14 @@ DECAY_TIME_NU = 5.0
 # decay time Fourier mode of  term, at cutoff scale
 DECAY_TIME_MU = 90.0
 # time step
-DT = 0.01
+DT_HR = 0.005
+DT_MULTIPLIER = 2
+DT_LR = DT_MULTIPLIER * DT_HR
 
 # low-res 2D Navier Stokes solver (in vorticity-stream function formulation)
-vort_solver_LR = vort.Vorticity_2D(N_LR, DT, DECAY_TIME_NU, DECAY_TIME_MU)
+vort_solver_LR = vort.Vorticity_2D(N_LR, DT_LR, DECAY_TIME_NU, DECAY_TIME_MU)
 # high-res 2D Navier Stokes solver
-vort_solver_HR = vort.Vorticity_2D(N_HR, DT, DECAY_TIME_NU, DECAY_TIME_MU)
+vort_solver_HR = vort.Vorticity_2D(N_HR, DT_HR, DECAY_TIME_NU, DECAY_TIME_MU)
 
 # create an EasySurrogate campaign
 campaign = es.Campaign()
@@ -111,11 +113,11 @@ WINDOW_LENGTH = 2
 # batch size used in inline learning
 BATCH_SIZE = 1
 # number of time steps to wait before predicting dQ with the surrogate
-SETTLING_PERIOD = 1
-#
+SETTLING_PERIOD = 630 * 10
+# The frequency of online neural network online updates
 M = 10
 # set the online learning parameters
-campaign.surrogate.set_online_training_parameters(TAU_NUDGE, DT, WINDOW_LENGTH)
+campaign.surrogate.set_online_training_parameters(TAU_NUDGE, DT_LR, WINDOW_LENGTH)
 
 #the indices of a upper triangular N_Q x N_Q array
 idx1, idx2 = np.triu_indices(N_Q)
@@ -131,11 +133,11 @@ src_Q = data_frame_ref['src_Q'][0]
 DAY = vort_solver_LR.day
 T = 500 * DAY
 T_END = T + 10 * 365 * DAY
-n_steps = np.ceil((T_END - T) / DT).astype('int')
+n_steps = np.ceil((T_END - T) / DT_LR).astype('int')
 
 # PLOT the solution while running
 PLOT = True
-plot_frame_rate = np.floor(DAY / DT).astype('int')
+plot_frame_rate = np.floor(DAY / DT_LR).astype('int')
 # RESTART from a previous stored state
 RESTART = True
 # store the data at the end
@@ -148,34 +150,57 @@ if PLOT:
 
 if RESTART:
     # load the HR state from a HDF5 file
-    IC_HR = campaign.load_hdf5_data(file_path='./restart/state_HR_t%d.hdf5' % (T / DAY))
+    IC_HR = campaign.load_hdf5_data(file_path=
+                                    './restart/state_HR_t%d_N%d.hdf5' % (T / DAY, DT_MULTIPLIER))
+    # HR vorticity at HR stencil k
+    w_hat_k_HR = IC_HR['w_hat_k_HR']
+    # HR vorticity at HR stencil k-1
+    w_hat_km1_HR = IC_HR['w_hat_km1_HR']
+    # HR Jacobian at HR stencil n-1
+    VgradW_hat_km1_HR = IC_HR['VgradW_hat_km1_HR']
+    # HR vorticity at LR stencil n
     w_hat_n_HR = IC_HR['w_hat_n_HR']
+    # HR vorticity at LR stencil n - 1
     w_hat_nm1_HR = IC_HR['w_hat_nm1_HR']
-    VgradW_hat_nm1_HR = IC_HR['VgradW_hat_nm1_HR']
+
     # load the LR state from a HDF5 file
-    IC_LR = campaign.load_hdf5_data(file_path='./restart/state_LR_t%d.hdf5' % (T / DAY))
+    IC_LR = campaign.load_hdf5_data(file_path=
+                                    './restart/state_LR_t%d_N%d.hdf5' % (T / DAY, DT_MULTIPLIER))
     w_hat_n_LR = IC_LR['w_hat_n_LR']
     w_hat_nm1_LR = IC_LR['w_hat_nm1_LR']
     VgradW_hat_nm1_LR = IC_LR['VgradW_hat_nm1_LR']
 else:
-    # compute the initial condition
-    w_hat_n_HR, w_hat_nm1_HR, VgradW_hat_nm1_HR = vort_solver_HR.inital_cond()
+    # compute the HR initial condition stencil vorticity at HR step k and k-1
+    # and Jacobian at k-1
+    w_hat_k_HR, w_hat_km1_HR, VgradW_hat_km1_HR = vort_solver_HR.inital_cond()
+    # the corresponding HR values at the times of the LR stencil
+    w_hat_n_HR = w_hat_k_HR
+    w_hat_nm1_HR = w_hat_km1_HR
+    # compute the LR initial condition stencil vorticity at LR step n and n-1
+    # and Jacobian at n-1
     w_hat_n_LR, w_hat_nm1_LR, VgradW_hat_nm1_LR = vort_solver_LR.inital_cond()
 
 # time loop
 for n in range(n_steps):
 
-    if np.mod(n, int(10 * DAY / DT)) == 0:
+    if np.mod(n, int(10 * DAY / DT_LR)) == 0:
         print('%.1f percent complete' % (n / n_steps * 100))
 
     # compute the difference between the LR and the HR states. To do so,
     # the LR state muts be upscaled to the HR grid.
-    Delta_w_hat = campaign.surrogate.up_scale(VgradW_hat_nm1_LR, N_HR) - VgradW_hat_nm1_HR
-    
-    # integrate the HR solver
-    w_hat_np1_HR, VgradW_hat_n_HR = vort_solver_HR.step(w_hat_n_HR, w_hat_nm1_HR,
-                                                        VgradW_hat_nm1_HR)#,
-                                                        # sgs_hat = Delta_w_hat / TAU_NUDGE)
+    # Delta_w_hat = campaign.surrogate.up_scale(VgradW_hat_nm1_LR, N_HR) - VgradW_hat_nm1_HR
+
+    # integrate the HR solver over DT_MULTIPLIER HR time steps
+    for i in range(DT_MULTIPLIER):
+        w_hat_kp1_HR, VgradW_hat_k_HR = vort_solver_HR.step(w_hat_k_HR, w_hat_km1_HR,
+                                                            VgradW_hat_km1_HR)
+        # update HR vars
+        w_hat_km1_HR = w_hat_k_HR
+        w_hat_k_HR = w_hat_kp1_HR
+        VgradW_hat_km1_HR = VgradW_hat_k_HR
+
+    # the HR vorticity at time t_n = n * DT_LR
+    w_hat_np1_HR = w_hat_kp1_HR
 
     # exact sgs term
     # sgs_hat_exact = vort_solver_HR.down_scale(VgradW_hat_nm1_HR, N_LR) - VgradW_hat_nm1_LR
@@ -194,14 +219,18 @@ for n in range(n_steps):
 
     plot1.append(Q_HR)
     plot2.append(Q_LR)
-    
+
     # make a prediction for the reduced sgs terms
     if n > SETTLING_PERIOD:
         # predict dQ using the surrogate model
         dQ_pred = ann.predict([inner_prods, c_ij, src_Q])
+        # predict without subgrid scale term
+        # dQ_pred = np.zeros(N_Q)  
     else:
         # just the reference data in the settling period
-        dQ_pred = dQ_ref[n]
+        # dQ_pred = dQ_ref[n]
+        # predict without subgrid scale term
+        dQ_pred = np.zeros(N_Q)  
 
     # compute the reduced subgrid-scale term
     reduced_dict = surrogate.train([-psi_hat_n_LR, w_hat_n_LR], dQ_pred)
@@ -237,16 +266,16 @@ for n in range(n_steps):
     del reduced_dict['sgs_hat']
     campaign.accumulate_data(reduced_dict)
 
-    # update vars
-    w_hat_nm1_HR = np.copy(w_hat_n_HR)
-    w_hat_n_HR = np.copy(w_hat_np1_HR)
-    VgradW_hat_nm1_HR = np.copy(VgradW_hat_n_HR)
-
+    # update LR vars
     w_hat_nm1_LR = np.copy(w_hat_n_LR)
     w_hat_n_LR = np.copy(w_hat_np1_LR)
     VgradW_hat_nm1_LR = np.copy(VgradW_hat_n_LR)
 
-    T += DT
+    # update HR vars on LR time stencil
+    w_hat_nm1_HR = w_hat_n_HR
+    w_hat_n_HR = w_hat_np1_HR
+
+    T += DT_LR
 
     # plot solution while running
     if np.mod(n, plot_frame_rate) == 0 and PLOT:
@@ -260,11 +289,13 @@ for n in range(n_steps):
 
 # store the state of the LR and HR models
 campaign.store_data_to_hdf5({'w_hat_n_HR': w_hat_n_HR, 'w_hat_nm1_HR': w_hat_nm1_HR,
-                             'VgradW_hat_nm1_HR': VgradW_hat_nm1_HR},
-                            file_path='./restart/state_HR_t%d.hdf5' % (T / DAY))
-campaign.store_data_to_hdf5({'w_hat_n_LR': w_hat_n_LR, 'w_hat_nm1_LR': w_hat_nm1_LR,
+                             'w_hat_k_HR': w_hat_k_HR, 'w_hat_km1_HR': w_hat_km1_HR,
+                             'VgradW_hat_km1_HR': VgradW_hat_km1_HR},
+                             file_path='./restart/state_HR_t%d_N%d.hdf5' % (T / DAY, DT_MULTIPLIER))
+campaign.store_data_to_hdf5({'w_hat_np1_LR': w_hat_np1_LR, 'w_hat_n_LR': w_hat_n_LR,
+                             'w_hat_nm1_LR': w_hat_nm1_LR,
                              'VgradW_hat_nm1_LR': VgradW_hat_nm1_LR},
-                            file_path='./restart/state_LR_t%d.hdf5' % (T / DAY))
+                             file_path='./restart/state_LR_t%d_N%d.hdf5' % (T / DAY, DT_MULTIPLIER))
 
 # store the accumulated data
 if STORE:
