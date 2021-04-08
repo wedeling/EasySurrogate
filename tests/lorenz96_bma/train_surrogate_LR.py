@@ -74,20 +74,7 @@ plt.ylabel('Target')
 plt.legend(loc='best')
 plt.show()
 
-# create Quantized Softmax Network surrogate
-#surrogate = es.methods.QSN_Surrogate()
-#
-## create time-lagged features
-#lags = [[1, 10]]
-#
-## train the surrogate on the data
-#n_iter = 20000
-#surrogate.train([features], target, n_iter, lags=lags, n_layers=4, n_neurons=256,
-#                batch_size=512)
-#
-#campaign.add_app(name='test_campaign', surrogate=surrogate)
-#campaign.save_state()
-#
-## QSN analysis object
-#analysis = es.analysis.QSN_analysis(surrogate)
-#analysis.get_classification_error(index=np.arange(0, 10000))
+
+campaign.add_app(name='test_campaign_LR', surrogate=regressor)
+campaign.save_state()
+
