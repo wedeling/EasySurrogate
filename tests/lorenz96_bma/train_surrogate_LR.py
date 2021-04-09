@@ -76,5 +76,7 @@ plt.show()
 
 
 campaign.add_app(name='test_campaign_LR', surrogate=regressor)
+campaign.add_scalers(name='test_campaign_LR', scaler_features=sc_f, scaler_target=sc_t)
+
 campaign.save_state()
 

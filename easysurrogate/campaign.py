@@ -191,6 +191,31 @@ class Campaign:
         self.campaign_name = name
         self.surrogate = surrogate
 
+    def add_scalers(self, name=None, scaler_features=None, scaler_target=None):
+        """
+        Add an application.
+
+        Parameters
+        ----------
+        name : string (optional)
+            Name of the EasySurrogate campaign. If unspecified the self.campaign_name is used.
+        scaler_features : object
+            A scaler object used in the training process for the features.
+        scaler_target : object
+            A scaler object used in the training process for the target.
+
+        Returns
+        -------
+        None.
+
+        """
+        if name is None:
+            name = self.campaign_name
+
+        self.campaign_name = name
+        self.scaler_features = scaler_features
+        self.scaler_target = scaler_target
+
     def load_state(self, **kwargs):
         """
         Loads the state of the current campaign from a pickle file
