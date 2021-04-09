@@ -18,11 +18,14 @@ data_frame = campaign.load_hdf5_data()
 
 # supervised training data set
 features = data_frame['X_data']
+features = features.flatten() # don't care of the specific X_n; just want a surrogate that makes a "good" single estimate for all k
+
 target = data_frame['B_data']
+target = target.flatten() # don't care of the specific X_n; just want a surrogate that makes a "good" single estimate for all k
 
 # Splitting the dataset into the Training set and Test set
 from sklearn.model_selection import train_test_split
-features_train, features_test, target_train, target_test = train_test_split(features[::1,0], target[::1,0], test_size = 0.2)
+features_train, features_test, target_train, target_test = train_test_split(features, target, test_size = 0.2)
 
 # Standardize the data
 from sklearn.preprocessing import StandardScaler
@@ -46,6 +49,10 @@ regressor = LinearRegression()
 #regressor = SVR(kernel='rbf')
 
 regressor.fit(features_train, target_train)
+
+# Getting the linear regression coefficients
+print(regressor.coef_)
+print(regressor.intercept_)
 
 # Predicting the Test set results
 target_pred = regressor.predict(features_test)
