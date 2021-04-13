@@ -158,6 +158,11 @@ t = np.arange(0.0, t_end, dt)
 make_movie = False  # make a movie
 store = True  # store the prediction results
 
+parameterization = 'NN' # or 'LR'
+if parameterization == 'NN':
+    import tensorflow as tf
+    ann = tf.keras.models.load_model('/home/federica/EasySurrogate/tests/lorenz96_bma/')
+    
 # equilibrium initial condition for X, zero IC for Y
 X_n = np.ones(K) * F
 X_n[10] += 0.01  # add small perturbation to 10th variable
@@ -211,10 +216,14 @@ for t_i in t:
 
     # replace SGS call with call to surrogate
     #B_n = campaign.surrogate.predict(X_n)
-    for k in range(K):
-        B_n[k] = campaign.scaler_target.inverse_transform(
-                campaign.surrogate.predict(
-                        campaign.scaler_features.transform(X_n[k].reshape(-1,1))))
+    if parameterization == 'LR':
+        for k in range(K):
+            B_n[k] = campaign.scaler_target.inverse_transform(
+                    campaign.surrogate.predict(campaign.scaler_features.transform(X_n[k].reshape(-1,1))) )
+    elif parameterization == 'NN':
+        for k in range(K):
+            B_n[k] = campaign.scaler_target.inverse_transform(
+                    ann.predict(campaign.scaler_features.transform(X_n[k].reshape(-1,1))) )
 
     ##################################
     # End Easysurrogate modification #

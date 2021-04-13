@@ -72,17 +72,28 @@ features_test = sc_f.transform(features_test)
 target_train = sc_t.fit_transform(target_train.reshape(-1,1))
 target_test = sc_t.transform(target_test.reshape(-1,1))
 
-# create a linear regression surrogate (deterministic)
-from sklearn.linear_model import LinearRegression
-regressor = LinearRegression()
-regressor.fit(features_train, target_train)
+# create a surrogate based on ANN (deterministic)
+import tensorflow as tf
+# Initializing the ANN
+ann = tf.keras.models.Sequential()
 
-# Getting the linear regression coefficients
-print(regressor.coef_)
-print(regressor.intercept_)
+# Adding the first hidden layer; the input layer is added automatically 
+ann.add(tf.keras.layers.Dense(units=32, activation='elu')) 
+
+# Adding the second hidden layer
+ann.add(tf.keras.layers.Dense(units=32, activation='elu'))
+
+# Adding the output layer
+ann.add(tf.keras.layers.Dense(units=1))
+
+# Compiling the ANN
+ann.compile(optimizer = 'adam', loss = 'mean_squared_error')
+
+# Training the ANN on the training set
+ann.fit(features_train, target_train, batch_size = 64, epochs = 40)
 
 # Predicting the Test set results
-target_pred = regressor.predict(features_test)
+target_pred = ann.predict(features_test)
 
 # Check the R squares and the mean squared error
 from sklearn.metrics import mean_squared_error, r2_score
@@ -94,21 +105,9 @@ print('Mean squared error: %.2f'
 print('Coefficient of determination: %.2f'
       % r2_score(target_test, target_pred))
 
-
-if (len(lags) == 0 or max_lag == 0):
-    # Plot data vs linear regression
-    plt.figure() 
-    plt.scatter(sc_f.inverse_transform(features_train), sc_t.inverse_transform(target_train), color = 'red', label='Training samples')
-    plt.scatter(sc_f.inverse_transform(features_test), sc_t.inverse_transform(target_test), color = 'purple', label='Test samples')
-    plt.plot(sc_f.inverse_transform(features_test), sc_t.inverse_transform(target_pred), color = 'blue', label='Predictions')
-    plt.title('How good is my regressor?')
-    plt.xlabel('Features')
-    plt.ylabel('Target')
-    plt.legend(loc='best')
-    plt.show()
-
-campaign.add_app(name='test_campaign_LR', surrogate=regressor)
-campaign.add_scalers(name='test_campaign_LR', scaler_features=sc_f, scaler_target=sc_t)
+#campaign.add_app(name='test_campaign_NN', surrogate=ann)
+ann.save('/home/federica/EasySurrogate/tests/lorenz96_bma/')
+campaign.add_scalers(name='test_campaign_NN', scaler_features=sc_f, scaler_target=sc_t)
 
 campaign.save_state()
 
