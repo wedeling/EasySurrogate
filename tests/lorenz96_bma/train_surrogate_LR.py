@@ -1,4 +1,3 @@
-#from itertools import chain
 import numpy as np
 import sys
 import easysurrogate as es
@@ -63,7 +62,7 @@ from sklearn.preprocessing import StandardScaler
 sc_f = StandardScaler()
 sc_t = StandardScaler()
 
-if len(lags) == 0 or max_lag == 0:
+if (len(lags) == 0 or max_lag == 0):
     features_train = features_train.reshape(-1,1)
     features_test = features_test.reshape(-1,1)
 
@@ -76,13 +75,6 @@ target_test = sc_t.transform(target_test.reshape(-1,1))
 # create a linear regression surrogate
 from sklearn.linear_model import LinearRegression
 regressor = LinearRegression()
-
-#from sklearn.ensemble import RandomForestRegressor 
-#regressor = RandomForestRegressor(n_estimators = 10) 
-
-#from sklearn.svm import SVR
-#regressor = SVR(kernel='rbf')
-
 regressor.fit(features_train, target_train)
 
 # Getting the linear regression coefficients
@@ -103,7 +95,7 @@ print('Coefficient of determination: %.2f'
       % r2_score(target_test, target_pred))
 
 
-if len(lags) == 0 or max_lag == 0:
+if (len(lags) == 0 or max_lag == 0):
     # Plot data vs linear regression
     plt.figure() 
     plt.scatter(sc_f.inverse_transform(features_train), sc_t.inverse_transform(target_train), color = 'red', label='Training samples')
