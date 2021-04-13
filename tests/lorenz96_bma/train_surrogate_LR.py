@@ -1,5 +1,6 @@
-from itertools import chain
+#from itertools import chain
 import numpy as np
+import sys
 import easysurrogate as es
 import matplotlib.pyplot as plt
 
@@ -30,7 +31,7 @@ if len(lags) == 0:
 else:
     # check for negative lags
     if any(lag<0 for lag in lags):
-        print('Error: defined negative lag.')
+        sys.exit("Error: defined negative lag.")
     else:
         # consider also lagged features
         max_lag = np.max(lags)
