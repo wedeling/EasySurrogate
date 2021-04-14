@@ -158,25 +158,25 @@ t = np.arange(0.0, t_end, dt)
 make_movie = False  # make a movie
 store = True  # store the prediction results
 
-parameterization = 'NN' # or 'LR'
+parameterization = 'NN' # 'NN' or 'LR'
 if parameterization == 'NN':
     import tensorflow as tf
     ann = tf.keras.models.load_model('/home/federica/EasySurrogate/tests/lorenz96_bma/')
     
-# equilibrium initial condition for X, zero IC for Y
-X_n = np.ones(K) * F
-X_n[10] += 0.01  # add small perturbation to 10th variable
+## equilibrium initial condition for X, zero IC for Y
+#X_n = np.ones(K) * F
+#X_n[10] += 0.01  # add small perturbation to 10th variable
 
-# initial condition small-scale variables
-Y_n = np.zeros([J, K])
-B_n = h_x * np.mean(Y_n, axis=0)
-
-# initial right-hand sides
-f_nm1 = rhs_X(X_n, B_n)
-
-g_nm1 = np.zeros([J, K])
-for k in range(K):
-    g_nm1[:, k] = rhs_Y_k(Y_n, X_n[k], k)
+## initial condition small-scale variables
+#Y_n = np.zeros([J, K])
+#B_n = h_x * np.mean(Y_n, axis=0)
+#
+## initial right-hand sides
+#f_nm1 = rhs_X(X_n, B_n)
+#
+#g_nm1 = np.zeros([J, K])
+#for k in range(K):
+#    g_nm1[:, k] = rhs_Y_k(Y_n, X_n[k], k)
 
 ##############################
 # Easysurrogate modification #
@@ -187,8 +187,9 @@ campaign = es.Campaign(load_state=True)
 
 # change IC
 data_frame = campaign.load_hdf5_data()
-X_n = data_frame['X_data'][-1]#[campaign.surrogate.max_lag]
-B_n = data_frame['B_data'][-1]#[campaign.surrogate.max_lag]
+max_lag = np.max(campaign.lags)
+X_n = data_frame['X_data'][max_lag]
+B_n = data_frame['B_data'][max_lag]
 # initial right-hand side
 f_nm1 = rhs_X(X_n, B_n)
 
@@ -198,11 +199,15 @@ f_nm1 = rhs_X(X_n, B_n)
 
 # allocate memory for solutions
 X_data = np.zeros([t.size, K])
-Y_data = np.zeros([t.size, J, K])
+#Y_data = np.zeros([t.size, J, K])
 B_data = np.zeros([t.size, K])
 
+# Add the lagged data necessary for predictions (at the beginning of the simulation)
+X_data = np.concatenate((data_frame['X_data'][0:max_lag+1], X_data), axis=0)
+B_data = np.concatenate((data_frame['B_data'][0:max_lag+1], B_data), axis=0)
+
 # start time integration
-idx = 0
+idx = max_lag + 1 #0
 for t_i in t:
     ##############################
     # Easysurrogate modification #
@@ -216,14 +221,25 @@ for t_i in t:
 
     # replace SGS call with call to surrogate
     #B_n = campaign.surrogate.predict(X_n)
+    if max_lag == 0:
+        features = X_n
+    else:
+        features = np.zeros((K,len(campaign.lags)+1))
+        
+        count = 0
+        features[:,count] = X_n
+        for lag in campaign.lags:
+            count += 1
+            features[:,count] = X_data[idx-1-lag,:]
+                    
     if parameterization == 'LR':
         for k in range(K):
             B_n[k] = campaign.scaler_target.inverse_transform(
-                    campaign.surrogate.predict(campaign.scaler_features.transform(X_n[k].reshape(-1,1))) )
+                    campaign.surrogate.predict(campaign.scaler_features.transform(features[k].reshape(1,-1))) )
     elif parameterization == 'NN':
         for k in range(K):
             B_n[k] = campaign.scaler_target.inverse_transform(
-                    ann.predict(campaign.scaler_features.transform(X_n[k].reshape(-1,1))) )
+                    ann.predict(campaign.scaler_features.transform(features[k].reshape(1,-1))) )
 
     ##################################
     # End Easysurrogate modification #
@@ -244,11 +260,11 @@ for t_i in t:
     f_nm1 = np.copy(f_n)
     # g_nm1 = np.copy(g_n)
 
-    if np.mod(idx, 1000) == 0:
+    if np.mod(idx-max_lag-1, 1000) == 0:
         print('t =', np.around(t_i, 1), 'of', t_end)
 
 if store:
-    campaign.store_data_to_hdf5({'X_data': X_data, 'B_data': B_data})
+    campaign.store_data_to_hdf5({'X_data': X_data[max_lag+1:], 'B_data': B_data[max_lag+1:]})
 
 # plot results
 fig = plt.figure()
