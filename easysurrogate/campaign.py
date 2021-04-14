@@ -191,9 +191,31 @@ class Campaign:
         self.campaign_name = name
         self.surrogate = surrogate
 
-    def add_scalers(self, name=None, scaler_features=None, scaler_target=None):
+    def add_lags(self, name=None, lags=None):
         """
         Add an application.
+
+        Parameters
+        ----------
+        name : string (optional)
+            Name of the EasySurrogate campaign. If unspecified the self.campaign_name is used.
+        lags : integer(s)
+            Lags used in the training process.
+
+        Returns
+        -------
+        None.
+
+        """
+        if name is None:
+            name = self.campaign_name
+
+        self.campaign_name = name
+        self.lags = lags
+
+    def add_scalers(self, name=None, scaler_features=None, scaler_target=None):
+        """
+        Add features and target scalers.
 
         Parameters
         ----------
