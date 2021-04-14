@@ -1,7 +1,6 @@
 import numpy as np
 import sys
 import easysurrogate as es
-import matplotlib.pyplot as plt
 
 """
 Note that I create a surrogate that predicts a scalar quantity, i.e. the value of B_k for k in {0, ..., K-1}, 
@@ -20,7 +19,7 @@ data_frame = campaign.load_hdf5_data()
 X_data = data_frame['X_data']
 B_data = data_frame['B_data']
 
-lags = [] #[np.arange(start=1,stop=2,step=1)] # remember that the ending point of the interval is not included!
+lags = [1, 10] #[np.arange(start=1,stop=2,step=1)] 
 
 if len(lags) == 0: 
     # no lagged features
@@ -90,7 +89,7 @@ ann.add(tf.keras.layers.Dense(units=1))
 ann.compile(optimizer = 'adam', loss = 'mean_squared_error')
 
 # Training the ANN on the training set
-ann.fit(features_train, target_train, batch_size = 64, epochs = 40)
+ann.fit(features_train, target_train, batch_size = 64, epochs = 50)
 
 # Predicting the Test set results
 target_pred = ann.predict(features_test)
@@ -105,9 +104,14 @@ print('Mean squared error: %.2f'
 print('Coefficient of determination: %.2f'
       % r2_score(target_test, target_pred))
 
-#campaign.add_app(name='test_campaign_NN', surrogate=ann)
+#campaign.add_app(name='test_campaign_NN', surrogate=ann) 
 ann.save('/home/federica/EasySurrogate/tests/lorenz96_bma/')
 campaign.add_scalers(name='test_campaign_NN', scaler_features=sc_f, scaler_target=sc_t)
+
+if len(lags) == 0:
+    campaign.add_max_lag(name='test_campaign_NN', max_lag=0)
+else:
+    campaign.add_max_lag(name='test_campaign_NN', max_lag=max_lag)
 
 campaign.save_state()
 

@@ -20,7 +20,7 @@ data_frame = campaign.load_hdf5_data()
 X_data = data_frame['X_data']
 B_data = data_frame['B_data']
 
-lags = [] #[np.arange(start=1,stop=2,step=1)] # remember that the ending point of the interval is not included!
+lags = [1, 10] #[np.arange(start=1,stop=2,step=1)] # remember that the ending point of the interval is not included!
 
 if len(lags) == 0: 
     # no lagged features
@@ -109,6 +109,10 @@ if (len(lags) == 0 or max_lag == 0):
 
 campaign.add_app(name='test_campaign_LR', surrogate=regressor)
 campaign.add_scalers(name='test_campaign_LR', scaler_features=sc_f, scaler_target=sc_t)
+
+if len(lags) == 0:
+    lags = [0] # avoid adding empty string to the campaign object
+campaign.add_lags(name='test_campaign_LR', lags=lags)
 
 campaign.save_state()
 
