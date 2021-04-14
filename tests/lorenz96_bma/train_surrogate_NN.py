@@ -109,9 +109,8 @@ ann.save('/home/federica/EasySurrogate/tests/lorenz96_bma/')
 campaign.add_scalers(name='test_campaign_NN', scaler_features=sc_f, scaler_target=sc_t)
 
 if len(lags) == 0:
-    campaign.add_max_lag(name='test_campaign_NN', max_lag=0)
-else:
-    campaign.add_max_lag(name='test_campaign_NN', max_lag=max_lag)
+    lags = [0] # avoid adding empty string to the campaign object
+campaign.add_lags(name='test_campaign_LR', lags=lags)
 
 campaign.save_state()
 
