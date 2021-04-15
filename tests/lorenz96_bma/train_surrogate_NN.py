@@ -110,7 +110,7 @@ campaign.add_scalers(name='test_campaign_NN', scaler_features=sc_f, scaler_targe
 
 if len(lags) == 0:
     lags = [0] # avoid adding empty string to the campaign object
-campaign.add_lags(name='test_campaign_LR', lags=lags)
+campaign.add_lags(name='test_campaign_NN', lags=lags)
 
 campaign.save_state()
 
