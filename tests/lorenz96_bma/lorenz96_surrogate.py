@@ -10,7 +10,7 @@ Generate Lorenz 96 data with surrogate
 
 import numpy as np
 import easysurrogate as es
-from matplotlib import animation
+#from matplotlib import animation
 import matplotlib.pyplot as plt
 
 
@@ -160,8 +160,11 @@ store = True  # store the prediction results
 
 parameterization = 'NN' # 'NN' or 'LR'
 if parameterization == 'NN':
-    import tensorflow as tf
-    ann = tf.keras.models.load_model('/home/federica/EasySurrogate/tests/lorenz96_bma/')
+    # PyTorch
+    import torch
+    # TensorFlow
+#    import tensorflow as tf
+#    ann = tf.keras.models.load_model('/home/federica/EasySurrogate/tests/lorenz96_bma/')
     
 ## equilibrium initial condition for X, zero IC for Y
 #X_n = np.ones(K) * F
@@ -238,8 +241,12 @@ for t_i in t:
                     campaign.surrogate.predict(campaign.scaler_features.transform(features[k].reshape(1,-1))) )
     elif parameterization == 'NN':
         for k in range(K):
-            B_n[k] = campaign.scaler_target.inverse_transform(
-                    ann.predict(campaign.scaler_features.transform(features[k].reshape(1,-1))) )
+            # PyTorch
+            inputs = torch.from_numpy(campaign.scaler_features.transform(features[k].reshape(1,-1))).float()
+            B_n[k] = campaign.scaler_target.inverse_transform( campaign.surrogate(inputs).detach().numpy() )
+            # TensorFlow
+#            B_n[k] = campaign.scaler_target.inverse_transform(
+#                    ann.predict(campaign.scaler_features.transform(features[k].reshape(1,-1))) )
 
     ##################################
     # End Easysurrogate modification #
