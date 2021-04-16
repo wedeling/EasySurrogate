@@ -19,38 +19,25 @@ data_frame = campaign.load_hdf5_data()
 X_data = data_frame['X_data']
 B_data = data_frame['B_data']
 
-lags = [1, 10] #[np.arange(start=1,stop=2,step=1)] 
+lags = [0, 1, 10] # list of integers
 
-if len(lags) == 0: 
-    # no lagged features
-    print('No lagged features.')
-    features = X_data.flatten() 
-    target = B_data.flatten()
+if len(lags) == 0:
+    sys.exit("Error: lags cannot be an empty list.")
+elif any(lag<0 for lag in lags):
+    sys.exit("Error: lags cannot contain negative values.")
 else:
-    # check for negative lags
-    if any(lag<0 for lag in lags):
-        sys.exit("Error: defined negative lag.")
-    else:
-        # consider also lagged features
-        max_lag = np.max(lags)
-        if max_lag == 0:
-            # no lagged features
-            print('No lagged features.')
-            features = X_data.flatten()
-            target = B_data.flatten()
-        else:
-            print('Considering also lagged features.')
-            target = B_data[max_lag:].flatten()
-        
-            L = len(X_data.flatten()) - max_lag*len(X_data[0])
-            features = np.zeros((L,len(lags)+1))
-            idx = 0
+    max_lag = np.max(lags)
+    target = B_data[max_lag:].flatten()
+    
+    L = len(X_data.flatten()) - max_lag*len(X_data[0])
+    features = np.zeros((L,len(lags)))
+    idx = 0
+    for lag in lags:
+        if lag == 0:
             features[:,idx] = X_data[max_lag:,:].flatten()
-            for lag in lags:
-                lag = np.int(lag)
-                idx += 1
-                features[:,idx] = X_data[max_lag-lag:-lag,:].flatten()
-        
+        else:
+            features[:,idx] = X_data[max_lag-lag:-lag,:].flatten()
+        idx += 1
 
 # Splitting the dataset into the Training set and Test set
 from sklearn.model_selection import train_test_split
@@ -108,8 +95,6 @@ print('Coefficient of determination: %.2f'
 ann.save('/home/federica/EasySurrogate/tests/lorenz96_bma/')
 campaign.add_scalers(name='test_campaign_NN', scaler_features=sc_f, scaler_target=sc_t)
 
-if len(lags) == 0:
-    lags = [0] # avoid adding empty string to the campaign object
 campaign.add_lags(name='test_campaign_NN', lags=lags)
 
 campaign.save_state()
