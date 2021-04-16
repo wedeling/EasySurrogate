@@ -82,7 +82,7 @@ print('Coefficient of determination: %.2f'
       % r2_score(target_test, target_pred))
 
 
-if (len(lags) == 0 or max_lag == 0):
+if max_lag == 0:
     # Plot data vs linear regression
     plt.figure() 
     plt.scatter(sc_f.inverse_transform(features_train), sc_t.inverse_transform(target_train), color = 'red', label='Training samples')
