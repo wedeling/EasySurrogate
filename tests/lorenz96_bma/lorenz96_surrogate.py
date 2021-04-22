@@ -138,10 +138,10 @@ plt.close('all')
 # Lorenz96 parameters
 #####################
 
-K = 18
-J = 20
-F = 10.0
-h_x = -1.0
+K = 32 #18
+J = 16 #20
+F = 18.0 #10.0
+h_x = -3.2 #-1.0
 h_y = 1.0
 epsilon = 0.5
 
@@ -149,7 +149,7 @@ epsilon = 0.5
 # Time parameters
 ##################
 dt = 0.01
-t_end = 100.0 #1000.0
+t_end = 1000.0 #1000.0
 t = np.arange(0.0, t_end, dt)
 
 ###################
@@ -227,13 +227,17 @@ for t_i in t:
     if max_lag == 0:
         features = X_n
     else:
-        features = np.zeros((K,len(campaign.lags)+1))
+        features = np.zeros((K,len(campaign.lags)))
         
         count = 0
         features[:,count] = X_n
         for lag in campaign.lags:
+            if lag == 0:
+                features[:,count] = X_n
+            else:
+                features[:,count] = X_data[idx-1-lag,:]
             count += 1
-            features[:,count] = X_data[idx-1-lag,:]
+            
                     
     if parameterization == 'LR':
         for k in range(K):
