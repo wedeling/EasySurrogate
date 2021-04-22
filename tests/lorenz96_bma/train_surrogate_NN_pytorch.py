@@ -137,10 +137,10 @@ print('Mean squared error: %.2f'
 print('Coefficient of determination: %.2f'
       % r2_score(target_test.detach().numpy()[:,:], target_pred.detach().numpy()[:,:]))
 
-#MODEL_PATH = 'model.pth'
-#torch.save(ann, MODEL_PATH) # ann = torch.load(MODEL_PATH)
+model_path = 'ann_3mode.pth'
+torch.save(ann.state_dict(), model_path) 
 
-campaign.add_app(name='test_campaign_NN_torch', surrogate=ann)
+#campaign.add_app(name='test_campaign_NN_torch', surrogate=ann)
 campaign.add_scalers(name='test_campaign_NN_torch', scaler_features=sc_f, scaler_target=sc_t)
 
 campaign.add_lags(name='test_campaign_NN_torch', lags=lags)
