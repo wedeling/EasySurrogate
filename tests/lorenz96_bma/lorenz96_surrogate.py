@@ -158,14 +158,6 @@ t = np.arange(0.0, t_end, dt)
 make_movie = False  # make a movie
 store = True  # store the prediction results
 
-parameterization = 'NN' # 'NN' or 'LR'
-if parameterization == 'NN':
-    # PyTorch
-    import torch
-    # TensorFlow
-#    import tensorflow as tf
-#    ann = tf.keras.models.load_model('/home/federica/EasySurrogate/tests/lorenz96_bma/')
-    
 ## equilibrium initial condition for X, zero IC for Y
 #X_n = np.ones(K) * F
 #X_n[10] += 0.01  # add small perturbation to 10th variable
@@ -187,6 +179,38 @@ if parameterization == 'NN':
 
 # load pre-trained campaign
 campaign = es.Campaign(load_state=True)
+
+##################
+# PyTorch NN
+#################
+import torch.nn as nn
+import torch.nn.functional as Fn
+
+class ANN(nn.Module):
+    def __init__(self):
+        super(ANN, self).__init__()
+        self.fc1 = nn.Linear(len(campaign.lags), 32)
+        self.fc2 = nn.Linear(32, 32)
+        self.fc3 = nn.Linear(32, 1)
+        
+    def forward(self, x):
+        x = Fn.elu(self.fc1(x))
+        x = Fn.elu(self.fc2(x))
+        x = self.fc3(x)
+        return x
+
+parameterization = 'NN' # 'NN' or 'LR'
+if parameterization == 'NN':
+    # PyTorch
+    import torch
+    ann = ANN()
+    model_path = 'ann_3mode.pth'
+    ann.load_state_dict(torch.load(model_path))
+    ann.eval()
+    # TensorFlow
+#    import tensorflow as tf
+#    ann = tf.keras.models.load_model('/home/federica/EasySurrogate/tests/lorenz96_bma/')
+    
 
 # change IC
 data_frame = campaign.load_hdf5_data()
@@ -247,7 +271,7 @@ for t_i in t:
         for k in range(K):
             # PyTorch
             inputs = torch.from_numpy(campaign.scaler_features.transform(features[k].reshape(1,-1))).float()
-            B_n[k] = campaign.scaler_target.inverse_transform( campaign.surrogate(inputs).detach().numpy() )
+            B_n[k] = campaign.scaler_target.inverse_transform( ann(inputs).detach().numpy() )
             # TensorFlow
 #            B_n[k] = campaign.scaler_target.inverse_transform(
 #                    ann.predict(campaign.scaler_features.transform(features[k].reshape(1,-1))) )
