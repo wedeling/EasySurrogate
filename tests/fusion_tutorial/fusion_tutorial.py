@@ -139,20 +139,25 @@ def derivative_based_sa(surrogate, sampler, D=10):
 
 def ann_surrogate_test():
 
-    # number of output neurons
-    n_out = samples.shape[1]
+    campaign = es.Campaign()
 
     # create a vanilla ANN surrogate
     surrogate = es.methods.ANN_Surrogate()
 
+    samples_axial = samples[:, 0].reshape(-1, 1)  # axial
+
+    # number of output neurons
+    n_out = samples_axial.shape[1]
+
     # train the surrogate on the data
     n_iter = 20000
+    n_iter = 2000  # axial
 
-    # surrogate.train(theta, samples, n_iter, test_frac=test_frac, n_layers=2, n_neurons=100)
-    # campaign.add_app(name='ann_campaign', surrogate=surrogate)
-    # campaign.save_state()
+    #surrogate.train(theta, samples_axial, n_iter, test_frac=test_frac, n_layers=2, n_neurons=1)
+    #campaign.add_app(name='ann_campaign', surrogate=surrogate)
+    #campaign.save_state()
 
-    campaign = es.Campaign(load_state=True, file_path='ann_model_2804.pickle')
+    campaign = es.Campaign(load_state=True, file_path='ann_ax_model_2804.pickle')
     surrogate = campaign.surrogate
 
     # evaluate the surrogate on the test data
@@ -164,16 +169,40 @@ def ann_surrogate_test():
     # plot the test predictions and data
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    ax.plot(test_predictions.T, 'b')
-    ax.plot(samples[I:].T, 'r+')
+    #ax.plot(test_predictions.T, 'b')
+    #ax.plot(samples[I:].T, 'r+')
+    ax.plot(samples_axial[I:], test_predictions, 'r+')
+    ax.plot(samples_axial[I:], samples_axial[I:], 'ko-', markersize=5)
     plt.tight_layout()
-    plt.savefig('ann_test_data_res.png')
+    plt.savefig('ann_ax_test_data_res.png')
 
     # print the relative test error
-    rel_err_test = np.linalg.norm(test_predictions - samples[I:]) / np.linalg.norm(test_predictions)
+    rel_err_test = np.linalg.norm(test_predictions - samples_axial[I:]) / np.linalg.norm(test_predictions)
     print('Relative error on the test set is %.2f percent' % (rel_err_test * 100))
 
-def gp_surroget_test():
+def get_sa_order(feat_names_orig, feat_names_sa):
+
+    order = []
+
+    for f in feat_names_orig:
+        order.append(feat_names_sa.index(f))
+
+    return order
+
+def chose_feat_subset(theta, res_dim_num=1, order=None):
+
+    if order is None:
+        order = np.arange(len(theta))
+
+    res_order = order[:res_dim_num]
+
+    theta = [theta[i] for i in res_order]
+
+    return theta
+
+def gp_surroget_test(order=None, ndim=None):
+
+    campaign = es.Campaign()
 
     surrogate_gp = es.methods.GP_Surrogate(backend='mogp')
 
@@ -182,17 +211,38 @@ def gp_surroget_test():
 
     n_out = samples_axial.shape[1]
 
-    #surrogate_gp.train(theta, samples_axial, test_frac=test_frac)
+    if ndim is None:
+        ndim = theta.shape[1]
+
+    if order is None:
+        order = np.arange(ndim)
+
+    theta_train = chose_feat_subset(theta, ndim, order)
+
+    st_time = time.time()
+    #surrogate_gp.train(theta_train, samples_axial, test_frac=test_frac)
+    print('Time to train a GP surrogate {:.3}'.format(time.time() - st_time))
+
     #campaign.add_app(name='gp_campaign', surrogate=surrogate_gp)
     #campaign.save_state()
 
-    campaign = es.Campaign(load_state=True, file_path='mogp_model_2804.pickle')
+    campaign = es.Campaign(load_state=True, file_path='mogp_2_model_2804.pickle')
     surrogate_gp = campaign.surrogate
 
+    # evaluate the surrogate on the training data
+    training_predictions = np.zeros([I, n_out])
+    training_pred_vars = np.zeros([I, n_out])
+    for i in range(I):
+        theta_point = [x[i] for x in theta_train]
+        training_predictions[i], training_pred_vars[i] = surrogate_gp.predict(theta_point)
+    rel_err_train = np.linalg.norm(training_predictions - samples_axial[:I]) / np.linalg.norm(samples_axial[:I])
+    print('Relative error on the training set is %.2f percent' % (rel_err_train * 100))
+
+    # evaluate on testing data
     test_predictions = np.zeros([n_mc - I, n_out])
     test_pred_vars = np.zeros([n_mc - I, n_out])
     for count, i in enumerate(range(I, n_mc)):
-        theta_point = [x[i] for x in theta]
+        theta_point = [x[i] for x in theta_train]
         test_predictions[count], test_pred_vars[count] = surrogate_gp.predict(theta_point)
 
     # plot the test predictions and data
@@ -218,12 +268,15 @@ n_mc = 500
 test_frac = 0.25
 I = np.int(len(samples) * (1.0 - test_frac))
 
-campaign = es.Campaign()
-
 # ===== ANN surrogate =====
 
 #ann_surrogate_test()
 
 # ===== GP surrogate =====
 
-gp_surroget_test()
+order_orig = ["Qe_tot", "H0", "Hw", "chi", "Te_bc", "b_pos", "b_height", "b_sol", "b_width", "b_slope"]
+order_sa = ['chi', 'b_height', 'Hw', 'Qe_tot', 'b_pos', 'b_sol', 'H0', 'Te_bc', 'b_slope', 'b_width']
+order = get_sa_order(order_orig, order_sa)
+
+for i in range(1, len(theta) - 7):
+    gp_surroget_test(order, i)
