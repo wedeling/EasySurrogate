@@ -92,7 +92,9 @@ class Feature_Engineering:
                 return feed_forward(feat)
             # no lags and local, get feature vector and loop over 2nd dimension
             else:
+                # if passed list of features [n_samples x n_grid_points]
                 X = np.array(X).reshape([n_points, len(X)])
+                #X_train.append(np.moveaxis(np.array(X[i]), 0, -1).reshape([self.n_train, -1]))
                 y = []
                 for p in range(n_points):
                     y.append(feed_forward(X[p]))  # GP case: for single sample should be one point
@@ -211,30 +213,31 @@ class Feature_Engineering:
             self.n_train = len(index)
             self.n_test = self.n_samples - self.n_train
             self.train_indices = index
-            self.test_indices = np.array([el for el in list(range(0, self.n_samples)) if el not in self.train_indices]) # chose train fraction randomly
+            self.test_indices = np.array([el for el in list(range(0, self.n_samples)) if el not in self.train_indices]) 
 
         X = {}
         y = {}
-        X_r = {}
-        y_r = {}
+        if self.n_test > 0:
+            X_r = {}
+            y_r = {}
         # use the entire row as a feature
         if not local:
             # list of features
-            #X[0] = [X_i[0:self.n_train] for X_i in feats]
-            #X_r[0] = [X_i[-self.n_test:] for X_i in feats]
             X[0] = [X_i[self.train_indices] for X_i in feats]  # chose train fraction randomly
-            X_r[0] = [X_i[self.test_indices] for X_i in feats]  # chose train fraction randomly
-            # the data
+            # the target data
             y[0] = target[self.train_indices]
-            y_r[0] = target[self.test_indices]
+            if self.n_test > 0:
+                X_r[0] = [X_i[self.test_indices] for X_i in feats]  # chose train fraction randomly
+                y_r[0] = target[self.test_indices]
         # do not use entire row as feature, apply surrogate locally along second dimension
         else:
             # create a separate training set for every grid point
             for i in range(self.n_points):
                 X[i] = [X_i[self.train_indices, i] for X_i in feats]
                 y[i] = target[self.train_indices].reshape([-1, 1])
-                X_r[i] = [X_i[self.test_indices, i] for X_i in feats]
-                y_r[i] = target[self.test_indices, i].reshape([-1, 1])
+                if self.n_test > 0:
+                    X_r[i] = [X_i[self.test_indices, i] for X_i in feats]
+                    y_r[i] = target[self.test_indices, i].reshape([-1, 1])
 
         X_train = []
         y_train = []
@@ -258,17 +261,18 @@ class Feature_Engineering:
             self.max_lag = 0
             # no time lag, just add every entry in X and y to an array
             for i in range(len(X)):
-                #X_train.append(np.array(X[i]).reshape([self.n_train, -1]))
                 X_train.append(np.moveaxis(np.array(X[i]), 0, -1).reshape([self.n_train, -1]))
                 y_train.append(y[i])
                 # Testing data
-                X_test.append(np.moveaxis(np.array(X_r[i]), 0, -1).reshape([self.n_test, -1]))  # appends same feature values in a single 4-long array
-                y_test.append(y_r[i])
+                if self.n_test > 0:
+                    X_test.append(np.moveaxis(np.array(X_r[i]), 0, -1).reshape([self.n_test, -1]))  # appends same feature values in a single nfeat-long array
+                    y_test.append(y_r[i])
             X_train = np.concatenate(X_train)
             y_train = np.concatenate(y_train)
             # Testing data
-            X_test = np.concatenate(X_test)
-            y_test = np.concatenate(y_test)
+            if self.n_test > 0:
+                X_test = np.concatenate(X_test)
+                y_test = np.concatenate(y_test)
 
         return X_train, y_train, X_test, y_test
 
