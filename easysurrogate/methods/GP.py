@@ -51,19 +51,22 @@ class GP:
 
         # sciki-learn specific part
         if self.backend == 'scikit-learn':
-            self.kernel = ConstantKernel(constant_value=1.0, constant_value_bounds=(1e-6, 1e+6))
+            self.kernel = ConstantKernel(constant_value=1.0,
+                                         constant_value_bounds=(1e-6, 1e+6))
 
             if kernel == 'Matern':
-                #self.kernel = Matern(length_scale=[length_scale]*self.n_in)
-                self.kernel *= Matern()
+                self.kernel *= Matern([length_scale]*self.n_in)
             elif kernel == 'RBF':
-                self.kernel *= RBF(length_scale=[length_scale]*self.n_in, length_scale_bounds=[1e-4, 1e+4])
+                self.kernel *= RBF(length_scale=[length_scale]*self.n_in,
+                                   length_scale_bounds=[length_scale*1e-4, length_scale*1e+4])
 
             if bias:
-                self.kernel += ConstantKernel(constant_value=1.0, constant_value_bounds=(1e-5, 1e+5))
+                self.kernel += ConstantKernel(constant_value=1.0,
+                                              constant_value_bounds=(1e-5, 1e+5))
 
             if noize is not False:
-                self.kernel += WhiteKernel(noise_level=noize, noise_level_bounds=(noize*1e-3, noize*1e+3))
+                self.kernel += WhiteKernel(noise_level=noize,
+                                           noise_level_bounds=(noize*1e-3, noize*1e+3))
 
             self.instance = GaussianProcessRegressor(kernel=self.kernel, n_restarts_optimizer=5, normalize_y=True)  #, random_state=42
 
@@ -80,8 +83,12 @@ class GP:
             if kernel == 'RBF':
                 kernel_argument += 'SquaredExponential'
 
-            if noize is not False:
+            if isinstance(noize, float):
                 noize_argument = noize
+            elif noize:
+                noize_argument = 'fit'
+            else:
+                noize_argument = 0.0
 
             if bias:
                 raise NotImplementedError('Non-stationary kernels are not implemented in MOGP')

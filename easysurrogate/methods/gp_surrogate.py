@@ -16,12 +16,13 @@ from matplotlib import pyplot as plt
 
 class GP_Surrogate(Campaign):
 
-    def __init__(self, **kwargs):
+    def __init__(self, backend='scikit-learn', **kwargs):
         print('Creating Gaussain Process Object')
         self.name = 'GP Surrogate'
         self.feat_eng = es.methods.Feature_Engineering()
         self.x_scaler = StandardScaler()
         self.y_scaler = StandardScaler()
+        self.backend = backend
 
     ############################
     # START COMMON SUBROUTINES #
@@ -29,7 +30,7 @@ class GP_Surrogate(Campaign):
 
     def train(self, feats, target, n_iter=0,
               test_frac=0.0,
-              kernel=['RBF'], postrain=False):
+              kernel={'core': 'Matern', 'noize': True}, postrain=False):
         """
 
         Args:
@@ -45,9 +46,9 @@ class GP_Surrogate(Campaign):
         """
 
         # prepare the training data
-        if postrain == False:
-            X_train, y_train, X_test, y_test = \
-                                self.feat_eng.get_training_data(feats, target, local=False, test_frac=test_frac, train_first=True)
+        if not postrain:
+            X_train, y_train, X_test, y_test = self.feat_eng.get_training_data(feats, target,
+                                                            local=False, test_frac=test_frac, train_first=True)
 
             # scale the training data
             X_train = self.x_scaler.fit_transform(X_train)
@@ -56,9 +57,10 @@ class GP_Surrogate(Campaign):
             y_test = self.y_scaler.transform(y_test)
 
             # create a GP process
-            self.model = es.methods.GP(X_train, y_train, kernel=kernel[0], bias=True, noize=True)
+            self.model = es.methods.GP(X_train, y_train,
+                                       kernel=kernel['core'], bias=False, noize=kernel['noize'], backend=self.backend)
 
-        else:
+        elif postrain:
             X_train, y_train, X_test, y_test = \
                                 self.feat_eng.get_training_data(feats, target, local=False, test_frac=test_frac,
                                         train_sample_choice=lambda x: self.acquisition_function(x))  # case with acquisition
@@ -93,14 +95,23 @@ class GP_Surrogate(Campaign):
         input features [X]
 
         Args:
-            X: the state given at the given point
+            X: list of feture arrays, the state given at the point
 
         Returns:
         -------
         Stochastic prediction of the output y
         """
-        return self.feat_eng._predict(X, feed_forward=lambda x: self.model.predict(x.reshape(1, -1)))  #TODO check if there is a way to pass right shape of sample
+        x = np.array([x.reshape(-1) for x in X]).T
+        x = self.x_scaler.transform(x)
+        x = [np.array(i).reshape(-1, 1) for i in x.T.tolist()]
+        y, std = self.feat_eng._predict(X, feed_forward=lambda x: self.model.predict(x))  #TODO check if there is a way to pass right shape of sample
+
         #return self.model.predict(X)
+
+        y = self.y_scaler.inverse_transform(y)
+        std = self.y_scaler.inverse_transform(std)
+
+        return y, std
 
     def save_state(self):
         """
