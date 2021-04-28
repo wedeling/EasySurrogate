@@ -220,14 +220,14 @@ def gp_surroget_test(order=None, ndim=None):
     theta_train = chose_feat_subset(theta, ndim, order)
 
     st_time = time.time()
-    #surrogate_gp.train(theta_train, samples_axial, test_frac=test_frac)
+    surrogate_gp.train(theta_train, samples_axial, test_frac=test_frac)
     print('Time to train a GP surrogate {:.3}'.format(time.time() - st_time))
 
-    #campaign.add_app(name='gp_campaign', surrogate=surrogate_gp)
-    #campaign.save_state()
+    campaign.add_app(name='gp_campaign', surrogate=surrogate_gp)
+    campaign.save_state('mogp_{}_model_2804.pickle'.format(ndim))
 
-    campaign = es.Campaign(load_state=True, file_path='mogp_2_model_2804.pickle')
-    surrogate_gp = campaign.surrogate
+    #campaign = es.Campaign(load_state=True, file_path='mogp_2_model_2804.pickle')
+    #surrogate_gp = campaign.surrogate
 
     # evaluate the surrogate on the training data
     training_predictions = np.zeros([I, n_out])
@@ -250,9 +250,11 @@ def gp_surroget_test(order=None, ndim=None):
     ax = fig.add_subplot(111)
     ax.plot(samples_axial[I:], test_predictions, 'r+')
     plt.tight_layout()
-    plt.savefig('gp_test_data_res.png')
+    plt.savefig('gp_test_{}_data_res.png'.format(ndim))
 
     # print the relative test error
+    test_pred_var_tot = test_predictions.var()
+    print('Variance of predicted result means for the test set %.3f' % test_pred_var_tot)
     rel_err_test = np.linalg.norm(test_predictions - samples_axial[I:]) / np.linalg.norm(samples_axial[I:])
     print('Relative error on the test set is %.2f percent' % (rel_err_test * 100))
 
@@ -278,5 +280,5 @@ order_orig = ["Qe_tot", "H0", "Hw", "chi", "Te_bc", "b_pos", "b_height", "b_sol"
 order_sa = ['chi', 'b_height', 'Hw', 'Qe_tot', 'b_pos', 'b_sol', 'H0', 'Te_bc', 'b_slope', 'b_width']
 order = get_sa_order(order_orig, order_sa)
 
-for i in range(1, len(theta) - 7):
+for i in range(1, len(theta) + 1):
     gp_surroget_test(order, i)
