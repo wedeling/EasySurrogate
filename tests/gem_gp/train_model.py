@@ -10,8 +10,8 @@ target_names = ['te_transp_flux', 'ti_transp_flux']
 features_names_selected = features_names
 target_name_selected = [target_names[1]]
 
-#data_file_name = 'gem_data_625.hdf5'
-data_file_name = 'gem_workflow_500.hdf5'
+data_file_name = 'gem_data_625.hdf5'
+#data_file_name = 'gem_workflow_500.hdf5'
 #data_file_name = 'gem0_lhc.hdf5'
 
 # Create a campaign object
@@ -30,7 +30,7 @@ surrogate = es.methods.GP_Surrogate()
 print('Time to initialise the surrogate: {:.3} s'.format(t.time() - time_init_start))
 
 time_train_start = t.time()
-surrogate.train(features, target, test_frac=0.5)
+surrogate.train(features, target, test_frac=0.0)
 print('Time to train the surrogate: {:.3} s'.format(t.time() - time_train_start))
 surrogate.model.print_model_info()  # TODO the result of fitting does not change the default hyperparameter values
 
