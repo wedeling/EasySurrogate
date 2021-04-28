@@ -271,8 +271,6 @@ B_data = np.zeros([t.size, K])
 
 X_data_LR = np.zeros([t.size, K])
 
-foo = []
-
 # start time integration
 idx = 0
 for t_i in t:
@@ -319,7 +317,6 @@ for t_i in t:
     # update the neural network every M time steps
     if np.mod(idx, M) == 0 and idx != 0 and idx > window_length:
         campaign.surrogate.train_online(batch_size=batch_size)
-        foo.append(np.array(campaign.surrogate.feat_eng.online_target))
 
     # update low-res vars
     X_n_LR = np.copy(X_np1_LR)

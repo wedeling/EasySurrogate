@@ -213,7 +213,7 @@ class Feature_Engineering:
             self.n_train = len(index)
             self.n_test = self.n_samples - self.n_train
             self.train_indices = index
-            self.test_indices = np.array([el for el in list(range(0, self.n_samples)) if el not in self.train_indices]) 
+            self.test_indices = np.array([el for el in list(range(0, self.n_samples)) if el not in self.train_indices])
 
         X = {}
         y = {}
@@ -260,8 +260,19 @@ class Feature_Engineering:
         else:
             self.max_lag = 0
             # no time lag, just add every entry in X and y to an array
+            self.foo = X
+            # loop over all spatial points in the case of a local surrogate. For non-local
+            # surrogates, len(X) = 1
             for i in range(len(X)):
-                X_train.append(np.moveaxis(np.array(X[i]), 0, -1).reshape([self.n_train, -1]))
+
+                # if only one unique feature vector is used
+                if len(X[i]) == 1:
+                    X_train.append(np.array(X[i]).reshape([self.n_train, -1]))
+                # if there are multiple feature vectors, concatenate them
+                else:
+                    #X_train.append(np.concatenate(X[i], axis=1))
+                    X_train.append(np.moveaxis(np.array(X[i]), 0, -1).reshape([self.n_train, -1]))
+
                 y_train.append(y[i])
                 # Testing data
                 if self.n_test > 0:
@@ -382,8 +393,9 @@ class Feature_Engineering:
         self.online_target.append(correction / self.dt_LR)
 
         # remove oldest item from the online features is the window lendth is exceeded
-        if len(self.online_feats) > self.window_length:
-            self.online_feats.pop(0)
+        if len(self.online_feats[0]) > self.window_length:
+            for i in range(self.n_feat_arrays):
+                self.online_feats[i].pop(0)
             self.online_target.pop(0)
 
     def set_online_training_parameters(self, tau_nudge, dt_LR, window_length):
