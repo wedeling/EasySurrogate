@@ -19,7 +19,7 @@ surrogate = es.methods.QSN_Surrogate()
 lags = [[1, 10]]
 
 # train the surrogate on the data
-n_iter = 10000
+n_iter = 20000
 surrogate.train([features], target, n_iter, lags=lags, n_layers=4, n_neurons=256,
                 batch_size=512)
 

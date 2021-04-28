@@ -1,11 +1,10 @@
 """
 EasySurrogate campaign class
 """
-import pickle
-import copy
-import numpy as np
+
 from tkinter import filedialog
 import tkinter as tk
+import pickle
 import h5py
 
 
@@ -14,19 +13,22 @@ class Campaign:
     The main EasySurrogate Campaign object
     """
 
-    def __init__(self, name=None, load_data=False,
-                 load_state=False, **kwargs):
+    def __init__(self, name=None, load_state=False, **kwargs):
         """
-        Create a Campaign object
+        Create a Campaign object.
 
         Parameters
         ----------
-        load_data (boolean): flag for loading training data
+        name : string, optional
+            The name of this object. The default is None.
+        load_state : boolean, optional
+            Load a campaign state from file. The default is False.
 
-        load_state (boolean): flag for loading the campaign state
+        Returns
+        -------
+        None.
+
         """
-        if load_data:
-            self.load_data(**kwargs)
 
         if load_state:
             self.load_state(**kwargs)
@@ -83,10 +85,11 @@ class Campaign:
 
         Parameters
         ----------
-        + data : data stored in a dictionary or h5py file object.
+        data : dict
+            data stored in a dictionary or h5py file object.
 
-        + file_path : (optional) a path to the file. If unspecified a file dialog
-        is opened
+        file_path : sting (optional)
+            A path to the file. If unspecified a file dialog is opened.
 
         Returns
         -------
@@ -146,7 +149,7 @@ class Campaign:
         if 'names' in kwargs:
             names = kwargs['names']
         else:
-            names = data.keys()
+            names = list(data.keys())
         idx = 0
         for key in data.keys():
             if not names[idx] in self.accum_data:
@@ -158,17 +161,24 @@ class Campaign:
         """
         Stores the data accumulated by the 'accumulate_data' subroutine to
         a HDF5 file.
+
+        Returns
+        -------
+        None.
+
         """
         self.store_data_to_hdf5(self.accum_data, **kwargs)
 
     def add_app(self, name=None, surrogate=None):
         """
-        Add an application
+        Add an application.
 
         Parameters
         ----------
-        name : name of the EasySurrogate campaign,
-        surrogate : a surrogate object
+        name : string (optional)
+            Name of the EasySurrogate campaign. If unspecified the self.campaign_name is used.
+        surrogate : object
+            A surrogate object.
 
         Returns
         -------
@@ -224,11 +234,14 @@ class Campaign:
 
         Parameters
         ----------
-        state, default is None : If None, store the state of the Campaign, not
-        including the training data, which is stored separately.
+        state: dict or None
+            If None, store the state of the Campaign, not including the training data. This
+            subroutine is inherited by the Surrogate classes to store their state.
 
-        **kwargs : can contain file_path=<path_to_file>,  to save to this file
-                   directly, otherwise open up a filedialog window.
+        **kwargs :
+            Can contain file_path=<path_to_file>, to save to this file  directly,
+            otherwise open up a filedialog window.
+
         Returns
         -------
         None.
