@@ -24,13 +24,16 @@ class GP_Surrogate(Campaign):
         self.y_scaler = StandardScaler()
         self.backend = backend
 
+        if 'noise' in kwargs:
+            self.noise = kwargs['noise']
+
     ############################
     # START COMMON SUBROUTINES #
     ############################
 
     def train(self, feats, target, n_iter=0,
-              test_frac=0.0,
-              kernel={'core': 'Matern', 'noize': True}, postrain=False):
+              test_frac=0.0, postrain=False,
+              **kwargs):
         """
 
         Args:
@@ -45,6 +48,16 @@ class GP_Surrogate(Campaign):
         None.
         """
 
+        if 'base_kernel' not in kwargs:
+            base_kernel = 'Matern'
+        else:
+            base_kernel = kwargs['basekernel']
+
+        if 'noize' not in kwargs:
+            noize = 'True'
+        else:
+            noize = kwargs['noize']
+
         # prepare the training data
         if not postrain:
             X_train, y_train, X_test, y_test = self.feat_eng.get_training_data(feats, target,
@@ -58,7 +71,7 @@ class GP_Surrogate(Campaign):
 
             # create a GP process
             self.model = es.methods.GP(X_train, y_train,
-                                       kernel=kernel['core'], bias=False, noize=kernel['noize'], backend=self.backend)
+                                       kernel=base_kernel, bias=False, noize=noize, backend=self.backend)
 
         elif postrain:
             X_train, y_train, X_test, y_test = \
@@ -101,7 +114,7 @@ class GP_Surrogate(Campaign):
         -------
         Stochastic prediction of the output y
         """
-        x = np.array([x.reshape(-1) for x in X]).T
+        x = np.array([x.reshape(-1) for x in X]).T  # TODO slows down a lot, maybe FeatureEngineering should return training data still as list
         x = self.x_scaler.transform(x)
         x = [np.array(i).reshape(-1, 1) for i in x.T.tolist()]
         y, std = self.feat_eng._predict(X, feed_forward=lambda x: self.model.predict(x))  #TODO check if there is a way to pass right shape of sample

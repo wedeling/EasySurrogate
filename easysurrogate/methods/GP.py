@@ -11,6 +11,7 @@ from sklearn.metrics import mean_squared_error as mse
 
 import mogp_emulator as mogp
 from mogp_emulator import GaussianProcess
+from mogp_emulator.MeanFunction import Coefficient, LinearMean, MeanFunction
 
 
 class GP:
@@ -85,15 +86,19 @@ class GP:
 
             if isinstance(noize, float):
                 noize_argument = noize
-            elif noize:
+            elif noize == 'fit' or noize is True:
                 noize_argument = 'fit'
+            elif noize == 'adaptive':
+                noize_argument = 'adaptive'
             else:
-                noize_argument = 0.0
+                noize_argument = 'adaptive'  # redundant, but keeping a default option for future
 
             if bias:
                 raise NotImplementedError('Non-stationary kernels are not implemented in MOGP')
 
-            self.instance = GaussianProcess(X, y, kernel=kernel_argument, nugget=noize_argument)
+            mean = Coefficient() + Coefficient() * LinearMean()
+
+            self.instance = GaussianProcess(X, y, mean=mean, kernel=kernel_argument, nugget=noize_argument)
 
         else:
             raise NotImplementedError('Currently supporting only scikit-learn and mogp backend')
@@ -124,9 +129,10 @@ class GP:
         print('===============================')
         print('Gaussian Process parameters')
         print('===============================')
-        #print('Kernel =', self.instance.kernel)
+        print('Kernel =', self.instance.kernel)
         #print('Kernel params =', self.instance.kernel.get_params())
-        #print('Kernel theta =', self.instance.kernel.theta)
+        #print('Kernel theta =', self.instance.kernel.theta)  # scikit-learn
+        print('Kernel theta =', self.instance.theta)  # mogp
         print('Output dimensionality =', self.n_out)
         print('Input dimensionality =', self.n_in)
         print('On GPU =', self.on_gpu)
