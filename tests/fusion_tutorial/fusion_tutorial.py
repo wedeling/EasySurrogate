@@ -226,7 +226,7 @@ def gp_surrogate_test(order=None, ndim=None):
 
     campaign = es.Campaign()
 
-    surrogate_gp = es.methods.GP_Surrogate(backend='mogp')
+    surrogate_gp = es.methods.GP_Surrogate(backend='scikit-learn')
 
     # train the surrogate on the data
     samples_axial = samples_c[:, 0].reshape(-1, 1)
@@ -243,12 +243,12 @@ def gp_surrogate_test(order=None, ndim=None):
     theta_reod = chose_feat_subset(theta_c, ndim, order)
 
     st_time = time.time()
-    surrogate_gp.train(theta_reod, samples_axial, test_frac=test_frac, basekernel='Matern', noize='adaptive')
+    surrogate_gp.train(theta_reod, samples_axial, test_frac=test_frac, basekernel='RBF', noize='fit')
     surrogate_gp.model.print_model_info()
     print('Time to train a GP surrogate {:.3}'.format(time.time() - st_time))
 
     campaign.add_app(name='gp_campaign', surrogate=surrogate_gp)
-    campaign.save_state(file_path='mogp_{}_model_2804.pickle'.format(ndim))
+    campaign.save_state(file_path='mogp_{}_model_3004.pickle'.format(ndim))
 
     #campaign = es.Campaign(load_state=True, file_path='mogp_1_model_2804.pickle')
     #surrogate_gp = campaign.surrogate
@@ -260,18 +260,32 @@ def gp_surrogate_test(order=None, ndim=None):
         theta_point = [x[i] for x in theta_reod]
         training_predictions[i], training_pred_vars[i] = surrogate_gp.predict(theta_point)
 
+    # prefactor to determine the percentiles around mean of normal distibution
+    # 0.13 is ~5% percentile from mean for gaussian, 0.02 is ~1%, 1.96 is 95%
+    sigma_prefactor = 1.0
     # plot the train predictions and data
     fig = plt.figure()
     ax = fig.add_subplot(111)
     #ax.plot(samples_axial[:I], training_predictions, 'r+')
     ax.errorbar(samples_axial[:I].reshape(-1), training_predictions.reshape(-1),
-                0.02*training_pred_vars.reshape(-1), linestyle='dotted')  #0.13 is ~5% percentile from mean for gaussian, 0.02 is ~1%
-    ax.plot(samples_axial[:I], samples_axial[:I], 'ko-', markersize=5)
+                sigma_prefactor*training_pred_vars.reshape(-1), fmt='+')
+    ax.plot(samples_axial[:I], samples_axial[:I], 'ko', markersize=5)
     plt.tight_layout()
     plt.savefig('gp_train_{}_data_res.png'.format(ndim))
 
     rel_err_train = np.linalg.norm(training_predictions - samples_axial[:I]) / np.linalg.norm(samples_axial[:I])
     print('Relative error on the training set is %.2f percent' % (rel_err_train * 100))
+
+    # plot prediction against parameter values
+    if len(theta_reod) == 1:
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot(theta_reod[0][:I], samples_axial[:I], 'r+', label='simulation')
+        ax.errorbar(theta_reod[0][:I].reshape(-1), training_predictions.reshape(-1), sigma_prefactor*training_pred_vars.reshape(-1),
+                    fmt='b+', label='surrogate')
+        plt.tight_layout()
+        plt.legend(loc='best')
+        plt.savefig('gp_theta_train_{}_data_res.png'.format(ndim))
 
     # evaluate on testing data
     test_predictions = np.zeros([n_mc_l - I, n_out])
@@ -284,10 +298,21 @@ def gp_surrogate_test(order=None, ndim=None):
     fig = plt.figure()
     ax = fig.add_subplot(111)
     #ax.plot(samples_axial[I:], test_predictions, 'r+')
-    ax.errorbar(samples_axial[I:].reshape(-1), test_predictions.reshape(-1), yerr=0.02*test_pred_vars.reshape(-1), linestyle='dotted')
-    ax.plot(samples_axial[I:], samples_axial[I:], 'ko-', markersize=5)
+    ax.errorbar(samples_axial[I:].reshape(-1), test_predictions.reshape(-1), yerr=sigma_prefactor*test_pred_vars.reshape(-1), fmt='+')
+    ax.plot(samples_axial[I:], samples_axial[I:], 'ko', markersize=5)
     plt.tight_layout()
     plt.savefig('gp_test_{}_data_res.png'.format(ndim))
+
+    # plot prediction against parameter values for testing data
+    if len(theta_reod) == 1:
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot(theta_reod[0][I:], samples_axial[I:], 'r+', label='simulation')
+        ax.errorbar(theta_reod[0][I:].reshape(-1), test_predictions.reshape(-1), yerr=sigma_prefactor*test_pred_vars.reshape(-1),
+                    fmt='b+', label='surrogate')
+        plt.tight_layout()
+        plt.legend(loc='best')
+        plt.savefig('gp_theta_test_{}_data_res.png'.format(ndim))
 
     # print the relative test error
     test_pred_var_tot = test_predictions.var()
@@ -302,7 +327,7 @@ def gp_derivative_based_sa(surrogate, keys):
 
     # loop over all training samples
     for i in range(1, surrogate.model.X.shape[0]):
-        surrogate.model.jacobian(surrogate.neural_net.X[i].reshape([1, -1]))  # TODO do it with what MOGP returns
+        surrogate.model.jacobian(surrogate.neural_net.X[i].reshape([1, -1]))  # TODO do it with derivatives that MOGP returns
         f_grad_x2 = surrogate.neural_net.layers[0].delta_hy ** 2
         # use recusive formulas to update the mean (and variance although I don't use it)
         # with a new f_grad_x2 sample
@@ -325,7 +350,7 @@ theta = [np.array(x).reshape(-1, 1) for x in theta]
 samples = pd.read_pickle('outputs_2704.pickle').to_numpy()[:, :]
 
 n_mc = 500
-n_mc_c = 5
+n_mc_c = 500
 samples_c = samples[:n_mc_c]
 theta_c = [t[:n_mc_c] for t in theta]
 
@@ -337,6 +362,7 @@ order_orig = ["Qe_tot", "H0", "Hw", "chi", "Te_bc", "b_pos", "b_height", "b_sol"
 order_sa = ['chi', 'b_height', 'Hw', 'Qe_tot', 'b_pos', 'b_sol', 'H0', 'Te_bc', 'b_slope', 'b_width']
 order_sa_ax = ['Hw', 'chi', 'b_height', 'H0', 'Qe_tot', 'b_slope', 'Te_bc', 'b_width', 'b_pos', 'b_sol']
 order = get_sa_order(order_orig, order_sa)
+order_inv = order[::-1]
 
 # ===== ANN surrogate =====
 
@@ -344,5 +370,5 @@ order = get_sa_order(order_orig, order_sa)
 
 # ===== GP surrogate =====
 
-for i in range(1, 2):
+for i in range(10, 11):
     gp_surrogate_test(order, i)

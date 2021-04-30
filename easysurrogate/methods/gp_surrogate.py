@@ -114,15 +114,19 @@ class GP_Surrogate(Campaign):
         -------
         Stochastic prediction of the output y
         """
-        x = np.array([x.reshape(-1) for x in X]).T  # TODO slows down a lot, maybe FeatureEngineering should return training data still as list
+        x = np.array([x for x in X]).T  # TODO slows down a lot, maybe FeatureEngineering should return training data still as list
         x = self.x_scaler.transform(x)
-        x = [np.array(i).reshape(-1, 1) for i in x.T.tolist()]
-        y, std = self.feat_eng._predict(X, feed_forward=lambda x: self.model.predict(x))  #TODO check if there is a way to pass right shape of sample
+        x = [np.array(i) for i in x.T.tolist()]
+        y, std = self.feat_eng._predict(x, feed_forward=lambda x: self.model.predict(x))  #TODO check if there is a way to pass right shape of sample
+        #TODO currently for full dataset number of features passed is 10, but for some reason kernel accepts dimension one
 
         #return self.model.predict(X)
 
         y = self.y_scaler.inverse_transform(y)
+
+        self.y_scaler.with_mean = False
         std = self.y_scaler.inverse_transform(std)
+        self.y_scaler.with_mean = True
 
         return y, std
 
