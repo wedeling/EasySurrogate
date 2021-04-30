@@ -65,14 +65,22 @@ class GP:
                 self.kernel += ConstantKernel(constant_value=1.0,
                                               constant_value_bounds=(1e-5, 1e+5))
 
+            noize_val = 1e-8
+            bounds_val = (noize_val * 1e-3, noize_val * 1e+3)
+            if noize == 'adaptive':
+                noize_val = 1e-12
+                bounds_val = 'fixed'
+            elif isinstance(noize, float):
+                noize_val = noize
+                bounds_val = (noize_val * 1e-3, noize_val * 1e+3)
             if noize is not False:
-                self.kernel += WhiteKernel(noise_level=noize,
-                                           noise_level_bounds=(noize*1e-3, noize*1e+3))
+                self.kernel += WhiteKernel(noise_level=noize_val,
+                                           noise_level_bounds=bounds_val)
 
             self.instance = GaussianProcessRegressor(kernel=self.kernel, n_restarts_optimizer=5, normalize_y=True)  #, random_state=42
 
         # MOGP specific part
-        if self.backend == 'mogp':
+        elif self.backend == 'mogp':
 
             y = y.reshape(-1)
 
@@ -96,14 +104,17 @@ class GP:
             if bias:
                 raise NotImplementedError('Non-stationary kernels are not implemented in MOGP')
 
-            mean = Coefficient() + Coefficient() * LinearMean()
+            #mean = Coefficient() + Coefficient() * LinearMean()
 
-            self.instance = GaussianProcess(X, y, mean=mean, kernel=kernel_argument, nugget=noize_argument)
+            self.instance = GaussianProcess(X, y, kernel=kernel_argument, nugget=noize_argument)
 
         else:
             raise NotImplementedError('Currently supporting only scikit-learn and mogp backend')
 
         self.train(X, y)
+
+        if backend == 'scikit-learn':
+            self.kernel = self.instance.kernel_
 
     def train(self, X, y):
         if self.backend == 'scikit-learn':
@@ -114,8 +125,8 @@ class GP:
     def predict(self, X_i):
         if self.backend == 'scikit-learn':
             # for single sample X_i should be nparray(1, n_feat)
-            m, v = self.instance.predict(X_i, return_std=True)
-        if self.backend == 'mogp':
+            m, v = self.instance.predict(X_i.reshape(-1, 1), return_std=True)
+        elif self.backend == 'mogp':
             m, v, d = self.instance.predict(X_i)
         else:
             raise NotImplementedError('Non-stationary kernels are not implemented in MOGP')
@@ -129,10 +140,12 @@ class GP:
         print('===============================')
         print('Gaussian Process parameters')
         print('===============================')
-        print('Kernel =', self.instance.kernel)
-        #print('Kernel params =', self.instance.kernel.get_params())
-        #print('Kernel theta =', self.instance.kernel.theta)  # scikit-learn
-        print('Kernel theta =', self.instance.theta)  # mogp
+        if self.backend == 'scikit-learn':
+            # print('Kernel params =', self.instance.kernel_.get_params())
+            print('Kernel =', self.instance.kernel_)
+            print('Kernel theta =', self.instance.kernel_.theta)
+        if self.backend == 'mogp':
+            print('Kernel theta =', self.instance.theta)
         print('Output dimensionality =', self.n_out)
         print('Input dimensionality =', self.n_in)
         print('On GPU =', self.on_gpu)
