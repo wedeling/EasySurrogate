@@ -125,7 +125,7 @@ class GP:
     def predict(self, X_i):
         if self.backend == 'scikit-learn':
             # for single sample X_i should be nparray(1, n_feat)
-            m, v = self.instance.predict(X_i.reshape(-1, 1), return_std=True)
+            m, v = self.instance.predict(X_i.reshape(1, -1), return_std=True)
         elif self.backend == 'mogp':
             m, v, d = self.instance.predict(X_i)
         else:

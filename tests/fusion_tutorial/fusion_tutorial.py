@@ -147,14 +147,16 @@ def ann_surrogate_test():
     # create a vanilla ANN surrogate
     surrogate = es.methods.ANN_Surrogate()
 
-    samples_axial = samples[:, 0].reshape(-1, 1)  # axial
+    samples_axial = samples_c[:, 0].reshape(-1, 1)  # axial
+    samples_axial = samples_c[:, np.arange(0, 100, 5).tolist()]  # sparse
+    samples_axial = samples_c
 
     # number of output neurons
     n_out = samples_axial.shape[1]
 
     # train the surrogate on the data
     n_iter = 20000
-    n_iter = 2000  # axial
+    #n_iter = 2000  # axial
 
     surrogate.train(theta, samples_axial, n_iter, test_frac=test_frac, n_layers=2, n_neurons=1)
     campaign.add_app(name='ann_campaign', surrogate=surrogate)
@@ -230,6 +232,7 @@ def gp_surrogate_test(order=None, ndim=None):
 
     # train the surrogate on the data
     samples_axial = samples_c[:, 0].reshape(-1, 1)
+    samples_axial = samples_c[:, np.arange(0, 100, 5).tolist()]
 
     n_out = samples_axial.shape[1]
     n_mc_l = samples_c.shape[0]
@@ -248,9 +251,9 @@ def gp_surrogate_test(order=None, ndim=None):
     print('Time to train a GP surrogate {:.3}'.format(time.time() - st_time))
 
     campaign.add_app(name='gp_campaign', surrogate=surrogate_gp)
-    campaign.save_state(file_path='mogp_{}_model_3004.pickle'.format(ndim))
+    campaign.save_state(file_path='mogp_{}_model_0505_sparse.pickle'.format(ndim))
 
-    #campaign = es.Campaign(load_state=True, file_path='mogp_1_model_2804.pickle')
+    #campaign = es.Campaign(load_state=True, file_path='mogp_10_model_0505_sparse.pickle')
     #surrogate_gp = campaign.surrogate
 
     # evaluate the surrogate on the training data
@@ -366,9 +369,10 @@ order_inv = order[::-1]
 
 # ===== ANN surrogate =====
 
-# ann_surrogate_test()
+ann_surrogate_test()
 
 # ===== GP surrogate =====
 
 for i in range(10, 11):
     gp_surrogate_test(order, i)
+    # TOOD now predicts the axial value of the Te with accuracy 0.36% using 10 input parameters
