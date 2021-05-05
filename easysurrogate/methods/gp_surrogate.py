@@ -117,8 +117,7 @@ class GP_Surrogate(Campaign):
         x = np.array([x for x in X]).T  # TODO slows down a lot, maybe FeatureEngineering should return training data still as list
         x = self.x_scaler.transform(x)
         x = [np.array(i) for i in x.T.tolist()]
-        y, std = self.feat_eng._predict(x, feed_forward=lambda x: self.model.predict(x))  #TODO check if there is a way to pass right shape of sample
-        #TODO currently for full dataset number of features passed is 10, but for some reason kernel accepts dimension one
+        y, std = self.feat_eng._predict(x, feed_forward=lambda x: self.model.predict(x))  #TODO check how to pass right shape of sample
 
         #return self.model.predict(X)
 
