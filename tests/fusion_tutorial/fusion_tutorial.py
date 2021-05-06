@@ -147,9 +147,9 @@ def ann_surrogate_test():
     # create a vanilla ANN surrogate
     surrogate = es.methods.ANN_Surrogate()
 
-    samples_axial = samples_c[:, 0].reshape(-1, 1)  # axial
+    #samples_axial = samples_c[:, 0].reshape(-1, 1)  # axial
     samples_axial = samples_c[:, np.arange(0, 100, 5).tolist()]  # sparse
-    samples_axial = samples_c
+    #samples_axial = samples_c
 
     # number of output neurons
     n_out = samples_axial.shape[1]
@@ -228,7 +228,7 @@ def gp_surrogate_test(order=None, ndim=None):
 
     campaign = es.Campaign()
 
-    surrogate_gp = es.methods.GP_Surrogate(backend='scikit-learn')
+    surrogate_gp = es.methods.GP_Surrogate(backend='mogp')
 
     # train the surrogate on the data
     samples_axial = samples_c[:, 0].reshape(-1, 1)
@@ -251,7 +251,7 @@ def gp_surrogate_test(order=None, ndim=None):
     print('Time to train a GP surrogate {:.3}'.format(time.time() - st_time))
 
     campaign.add_app(name='gp_campaign', surrogate=surrogate_gp)
-    campaign.save_state(file_path='mogp_{}_model_0505_sparse.pickle'.format(ndim))
+    campaign.save_state(file_path='mogp_{}_model_0605_sparse.pickle'.format(ndim))
 
     #campaign = es.Campaign(load_state=True, file_path='mogp_10_model_0505_sparse.pickle')
     #surrogate_gp = campaign.surrogate
@@ -369,7 +369,7 @@ order_inv = order[::-1]
 
 # ===== ANN surrogate =====
 
-ann_surrogate_test()
+#ann_surrogate_test()
 
 # ===== GP surrogate =====
 
