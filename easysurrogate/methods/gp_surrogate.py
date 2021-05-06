@@ -70,26 +70,33 @@ class GP_Surrogate(Campaign):
             y_test = self.y_scaler.transform(y_test)
 
             # create a GP process
+            print('===============================')
+            print('Fitting Gaussian Process...')
             self.model = es.methods.GP(X_train, y_train,
                                        kernel=base_kernel, bias=False, noize=noize, backend=self.backend)
 
         elif postrain:
-            X_train, y_train, X_test, y_test = \
-                                self.feat_eng.get_training_data(feats, target, local=False, test_frac=test_frac,
-                                        train_sample_choice=lambda x: self.acquisition_function(x))  # case with acquisition
 
-            X = feats[self.feat_eng.train_indices]
-            y = target[self.feat_eng.train_indices]
+            if self.backend == 'scikit-learn':
+                X_train, y_train, X_test, y_test = \
+                                    self.feat_eng.get_training_data(feats, target, local=False, test_frac=test_frac,
+                                            train_sample_choice=lambda x: self.acquisition_function(x))  # case with acquisition
 
-            X = np.concatenate([X, X_train])
-            y = np.concatenate([y, y_train])
-            self.model.train(X, y)
+                X = feats[self.feat_eng.train_indices]
+                y = target[self.feat_eng.train_indices]
+
+                X = np.concatenate([X, X_train])
+                y = np.concatenate([y, y_train])
+
+                self.model.train(X, y)
+
+            elif self.backend == 'mogp':
+                pass
+            else:
+                raise NotImplementedError('Currently supporting only scikit-learn and mogp backend')
 
         # get dimensionality of the output
         self.n_out = y_train.shape[1]
-
-        print('===============================')
-        print('Fitting Gaussian Process...')
 
         # # DEBUG
         # print(feats)
@@ -124,7 +131,7 @@ class GP_Surrogate(Campaign):
         y = self.y_scaler.inverse_transform(y)
 
         self.y_scaler.with_mean = False
-        std = self.y_scaler.inverse_transform(std)
+        std = self.y_scaler.inverse_transform(std) #TODO sklearn always return single variance for the model regardles the target dimensionality -> workaround?
         self.y_scaler.with_mean = True
 
         return y, std

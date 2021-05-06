@@ -10,7 +10,7 @@ from sklearn.gaussian_process.kernels import DotProduct, WhiteKernel, Matern, RB
 from sklearn.metrics import mean_squared_error as mse
 
 import mogp_emulator as mogp
-from mogp_emulator import GaussianProcess
+from mogp_emulator import GaussianProcess, MultiOutputGP
 from mogp_emulator.MeanFunction import Coefficient, LinearMean, MeanFunction
 
 
@@ -82,8 +82,6 @@ class GP:
         # MOGP specific part
         elif self.backend == 'mogp':
 
-            y = y.reshape(-1)
-
             kernel_argument = ''
 
             if kernel == 'Matern':
@@ -106,7 +104,11 @@ class GP:
 
             #mean = Coefficient() + Coefficient() * LinearMean()
 
-            self.instance = GaussianProcess(X, y, kernel=kernel_argument, nugget=noize_argument)
+            if self.n_out == 1:
+                self.instance = GaussianProcess(X, y.reshape(-1), kernel=kernel_argument, nugget=noize_argument)
+            else:
+                self.instance = MultiOutputGP(X, y.T, kernel=kernel_argument, nugget=noize_argument)
+                #TODO MultiOutputGP() has no kernel, fix printing
 
         else:
             raise NotImplementedError('Currently supporting only scikit-learn and mogp backend')
