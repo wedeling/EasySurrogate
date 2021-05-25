@@ -128,11 +128,12 @@ class GP:
         if self.backend == 'scikit-learn':
             # for single sample X_i should be nparray(1, n_feat)
             m, v = self.instance.predict(X_i.reshape(1, -1), return_std=True)
+            d = np.zeros(m.shape)
         elif self.backend == 'mogp':
-            m, v, d = self.instance.predict(X_i)
+            m, v, d = self.instance.predict(X_i, unc=True, deriv=True)
         else:
             raise NotImplementedError('Non-stationary kernels are not implemented in MOGP')
-        return m, v
+        return m, v, d
 
     def forward(self, X_i):  # for no cases when required different from predict at GP case
         m, v = self.instance.predict(X_i)
@@ -147,6 +148,7 @@ class GP:
             print('Kernel =', self.instance.kernel_)
             print('Kernel theta =', self.instance.kernel_.theta)
         if self.backend == 'mogp':
+            print('Kernel =', self.instance.kernel)
             print('Kernel theta =', self.instance.theta)
         print('Output dimensionality =', self.n_out)
         print('Input dimensionality =', self.n_in)

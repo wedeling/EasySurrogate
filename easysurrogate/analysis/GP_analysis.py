@@ -17,7 +17,7 @@ class GP_analysis(BaseAnalysis):
         print('Creating GP_analysis object')
         self.gp_surrogate = gp_surrogate
 
-    def plot_err(self, metric, original, name): #TODO: clean up and add subplots, use for abs error
+    def plot_err(self, metric, original, name):  #TODO: clean up and add subplots, use for abs error
         plt.ioff()
         #plt.figure(figsize=(2,1))
         #plt.subplot(311)
@@ -28,7 +28,9 @@ class GP_analysis(BaseAnalysis):
         plt.xlabel('Run number')
         plt.ylabel('Results of {}'.format(name))
         plt.legend()
-        plt.grid()
+        plt.grid('major')
+        #ax.xaxis.grid(True, which='major')
+        #ax.yaxis.grid(True, which='major')
         plt.yscale("symlog")
         plt.savefig('gp_abs_err.png')
 
@@ -56,8 +58,8 @@ class GP_analysis(BaseAnalysis):
         plt.plot(x_train, y_train_orig, '*', label='Turbulence model, train', color='green')
 
         if y_var_pred_test is not None and y_var_pred_train is not None:
-            plt.errorbar(x=x_test, y=y_test_pred, yerr=y_var_pred_test, label='GP metamodel, test', marker ='.')
-            plt.errorbar(x=x_train, y=y_train_pred, yerr=y_var_pred_train, label='GP metamodel, train', marker ='.')
+            plt.errorbar(x=x_test, y=y_test_pred, yerr=1.96*y_var_pred_test, label='GP metamodel, test', fmt='+')
+            plt.errorbar(x=x_train, y=y_train_pred, yerr=1.96*y_var_pred_train, label='GP metamodel, train', fmt='+')
         else:
             plt.plot(x_test, y_test_pred, '.', label='GP metamodel', color=out_color)
             plt.plot(x_train, y_train_pred, '*', label='GP metamodel', color=out_color)
@@ -120,8 +122,8 @@ class GP_analysis(BaseAnalysis):
             X_test = self.gp_surrogate.model.X[index]  # TODO store indexes at a model state
             y_test = self.gp_surrogate.model.y[index]
 
-        X_test = self.gp_surrogate.x_scaler.transform(X_test)
-        X_train = self.gp_surrogate.x_scaler.transform(X_train)
+        #X_test = self.gp_surrogate.x_scaler.transform(X_test)
+        #X_train = self.gp_surrogate.x_scaler.transform(X_train)
 
         x_test_inds = self.gp_surrogate.feat_eng.test_indices
         x_train_inds = self.gp_surrogate.feat_eng.train_indices
@@ -130,19 +132,19 @@ class GP_analysis(BaseAnalysis):
         #y_pred_single = self.gp_surrogate.predict(X_single)
 
         print("Prediction of new fluxes")
-        y_pred = [self.gp_surrogate.predict(X_test[i, :])[0] for i in range(X_test.shape[0])]  # TODO make predict call work on a (n_samples, n_features) np array
-        y_var_pred = [self.gp_surrogate.predict(X_test[i, :])[1] for i in range(X_test.shape[0])]
+        y_pred = [self.gp_surrogate.predict(X_test[i, :].reshape(-1, 1))[0] for i in range(X_test.shape[0])]  # TODO make predict call work on a (n_samples, n_features) np array
+        y_var_pred = [self.gp_surrogate.predict(X_test[i, :].reshape(-1, 1))[1] for i in range(X_test.shape[0])]
         y_t_len = len(y_test)
 
-        y_pred_train = [self.gp_surrogate.predict(X_train[i, :])[0] for i in range(X_train.shape[0])]
-        y_var_pred_train = [self.gp_surrogate.predict(X_train[i, :])[1] for i in range(X_train.shape[0])]
+        y_pred_train = [self.gp_surrogate.predict(X_train[i, :].reshape(-1, 1))[0] for i in range(X_train.shape[0])]
+        y_var_pred_train = [self.gp_surrogate.predict(X_train[i, :].reshape(-1, 1))[1] for i in range(X_train.shape[0])]
 
         # inverse transform target values
-        y_pred = self.gp_surrogate.y_scaler.inverse_transform(y_pred)
-        y_pred_train = self.gp_surrogate.y_scaler.inverse_transform(y_pred_train)
+        #y_pred = self.gp_surrogate.y_scaler.inverse_transform(y_pred)
+        #y_pred_train = self.gp_surrogate.y_scaler.inverse_transform(y_pred_train)
 
-        y_var_pred = self.gp_surrogate.y_scaler.inverse_transform(y_var_pred)
-        y_var_pred_train = self.gp_surrogate.y_scaler.inverse_transform(y_var_pred_train)
+        #y_var_pred = self.gp_surrogate.y_scaler.inverse_transform(y_var_pred)
+        #y_var_pred_train = self.gp_surrogate.y_scaler.inverse_transform(y_var_pred_train)
 
         # reshape the resuting arrays
         y_pred = np.squeeze(np.array(y_pred), axis=1)
@@ -151,12 +153,15 @@ class GP_analysis(BaseAnalysis):
         y_var_pred = np.squeeze(np.array(y_var_pred), axis=1)
         y_var_pred_train = np.squeeze(np.array(y_var_pred_train), axis=1)
 
+        if len(y_pred.shape) == 1:
+            y_pred = y_pred.reshape(-1, 1)
+            y_pred_train = y_pred_train.reshape(-1, 1)
         # calculate the errors
         err_abs = np.subtract(y_pred[:y_t_len, :], y_test)  # TODO check why test data appears smaller in length (by 1)
         err_rel = np.divide(err_abs, y_test)
 
         print("Printing and plotting the evaluation results")
-        self.plot_err(err_rel[:, 0], y_test[:, 0], 'relative error of prediction mean for test dataset in Te fluxes')
+        self.plot_err(err_rel[:, 0], y_test[:, 0], 'rel. err. of prediction mean for test dataset in Ti fluxes')
 
         train_n = self.gp_surrogate.feat_eng.n_samples - y_t_len
         self.plot_res(x_test_inds, y_pred[:y_t_len, 0], y_test[:, 0],
@@ -178,8 +183,10 @@ class GP_analysis(BaseAnalysis):
 
     def plot_pfds(self, y_dom, y_pdf, y_dom_sur, y_pdf_sur,
                   y_dom_tr=None, y_pdf_tr=None, y_dom_tot=None, y_pdf_tot=None,
-                  names=['GEM testing', 'GP', 'GEM training', 'GEM', ]):
-        fig, ax = plt.subplots(figsize=[10, 10])
+                  names=['GEM testing', 'GP', 'GEM training', 'GEM', ],
+                  qoi_names=['TiFl'], filename='pdfs'):
+
+        fig, ax = plt.subplots(figsize=[7, 7])
 
         ax.plot(y_dom, y_pdf, 'r-', label=names[0])
         ax.plot(y_dom_sur, y_pdf_sur, 'b', label=names[1])
@@ -190,9 +197,14 @@ class GP_analysis(BaseAnalysis):
         if y_dom_tot is not None and y_pdf_tot is not None:
             ax.plot(y_dom_tot, y_pdf_tot, 'k-', label=names[3])
 
-        ax.set_xlabel('TiFl')
-        plt.yticks([])
-        plt.grid()
+        ax.set_xlabel(qoi_names[0])
+        ax.set_ylabel('pdf')
+
+        ax.xaxis.grid(True, which='major')
+        ax.yaxis.grid(True, which='major')
+
+        #plt.yticks([])
+        #plt.xticks([])
         plt.legend(loc='best')
-        plt.title('pdf of simulated and predicted target values')
-        plt.savefig('pdfs.png')
+        plt.title('PDF of simulated and predicted target values')
+        plt.savefig(filename + '.png')

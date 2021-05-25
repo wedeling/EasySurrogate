@@ -32,7 +32,7 @@ class GP_Surrogate(Campaign):
     ############################
 
     def train(self, feats, target, n_iter=0,
-              test_frac=0.0, postrain=False,
+              test_frac=0.0,
               **kwargs):
         """
 
@@ -48,55 +48,43 @@ class GP_Surrogate(Campaign):
         None.
         """
 
-        if 'base_kernel' not in kwargs:
-            base_kernel = 'Matern'
+        if 'basekernel' not in kwargs:
+            self.base_kernel = 'Matern'
         else:
-            base_kernel = kwargs['basekernel']
+            self.base_kernel = kwargs['basekernel']
 
         if 'noize' not in kwargs:
-            noize = 'True'
+            self.noize = 'True'
         else:
-            noize = kwargs['noize']
+            self.noize = kwargs['noize']
 
         # prepare the training data
-        if not postrain:
-            X_train, y_train, X_test, y_test = self.feat_eng.get_training_data(feats, target,
-                                                            local=False, test_frac=test_frac, train_first=True)
+        X_train, y_train, X_test, y_test = self.feat_eng.get_training_data(feats, target,
+                                                                           local=False, test_frac=test_frac,
+                                                                           train_first=True)
 
-            # scale the training data
-            X_train = self.x_scaler.fit_transform(X_train)
-            y_train = self.y_scaler.fit_transform(y_train)
-            X_test = self.x_scaler.transform(X_test)
-            y_test = self.y_scaler.transform(y_test)
+        # scale the training data
+        X_train = self.x_scaler.fit_transform(X_train)
+        y_train = self.y_scaler.fit_transform(y_train)
+        X_test = self.x_scaler.transform(X_test)
+        y_test = self.y_scaler.transform(y_test)
 
-            # create a GP process
-            print('===============================')
-            print('Fitting Gaussian Process...')
-            self.model = es.methods.GP(X_train, y_train,
-                                       kernel=base_kernel, bias=False, noize=noize, backend=self.backend)
+        self.X_train = X_train
+        self.y_train = y_train
+        self.X_test = X_test
+        self.y_test = y_test
 
-        elif postrain:
-
-            if self.backend == 'scikit-learn':
-                X_train, y_train, X_test, y_test = \
-                                    self.feat_eng.get_training_data(feats, target, local=False, test_frac=test_frac,
-                                            train_sample_choice=lambda x: self.acquisition_function(x))  # case with acquisition
-
-                X = feats[self.feat_eng.train_indices]
-                y = target[self.feat_eng.train_indices]
-
-                X = np.concatenate([X, X_train])
-                y = np.concatenate([y, y_train])
-
-                self.model.train(X, y)
-
-            elif self.backend == 'mogp':
-                pass
-            else:
-                raise NotImplementedError('Currently supporting only scikit-learn and mogp backend')
+        # create a GP process
+        print('===============================')
+        print('Fitting Gaussian Process...')
+        self.model = es.methods.GP(X_train, y_train,
+                                   kernel=self.base_kernel, bias=False, noize=self.noize, backend=self.backend)
 
         # get dimensionality of the output
         self.n_out = y_train.shape[1]
+
+        # get the dinesionality of te input
+        self.n_in = X_train.shape[1]
 
         # # DEBUG
         # print(feats)
@@ -115,7 +103,7 @@ class GP_Surrogate(Campaign):
         input features [X]
 
         Args:
-            X: list of feture arrays, the state given at the point
+            X: list of feature arrays, the state given at the point
 
         Returns:
         -------
@@ -124,14 +112,14 @@ class GP_Surrogate(Campaign):
         x = np.array([x for x in X]).T  # TODO slows down a lot, maybe FeatureEngineering should return training data still as list
         x = self.x_scaler.transform(x)
         x = [np.array(i) for i in x.T.tolist()]
-        y, std = self.feat_eng._predict(x, feed_forward=lambda x: self.model.predict(x))  #TODO check how to pass right shape of sample
+        y, std, _ = self.feat_eng._predict(x, feed_forward=lambda x: self.model.predict(x))  #TODO check how to pass right shape of sample
 
         #return self.model.predict(X)
 
         y = self.y_scaler.inverse_transform(y)
 
         self.y_scaler.with_mean = False
-        std = self.y_scaler.inverse_transform(std) #TODO sklearn always return single variance for the model regardles the target dimensionality -> workaround?
+        std = self.y_scaler.inverse_transform(std*np.ones(y.shape))
         self.y_scaler.with_mean = True
 
         return y, std
@@ -162,17 +150,109 @@ class GP_Surrogate(Campaign):
             self.feat_mean = self.model.X_mean
             self.seat_Std = self.model.X_std
         else:
-            self.feat_mean = 0.0
-            self.feat_std = 1.0
+            self.feat_mean = 0.0 * np.ones((1, self.n_in))
+            self.feat_std = 1.0 * np.ones((1, self.n_in))
 
         if hasattr(self.model, 'y_mean'):
             self.output_mean = self.model.y_mean
             self.output_std = self.model.y_std
         else:
-            self.output_mean = 0.0
-            self.output_std = 1.0
+            self.output_mean = 0.0 * np.ones((1, self.n_out))
+            self.output_std = 1.0 * np.ones((1, self.n_out))
 
-    def maxunc_acquisition_function(self, sample):
+    def train_sequentially(self, feats, target,
+                           n_iter=0, **kwargs):
+
+        self.set_data_stats()
+
+        if 'acquisition_function' in kwargs:
+            acq_func_arg = kwargs['acquisition_function']
+            if acq_func_arg == 'poi':
+                acq_func_obj = self.poi_acquisition_function
+            elif acq_func_arg == 'mu':
+                acq_func_obj = self.maxunc_acquisition_function
+            else:
+                raise NotImplementedError('This rule for sequential optimisation is not implemented.')
+
+        if self.backend == 'scikit-learn':
+
+            """
+            1) iterate for n_iter
+                2) state on step n: object has X_train, X_test, their inidices, model instance
+                3) find set of candidates at minima of acq function X_cand; now object has X_train:=X_train U X_cand, X_test = X_test U_ X_cand, global inidces and set sizes updated
+                4) model instance is updated : fisrt approach to train new model for new  X_train
+            """
+
+            for i in range(n_iter):
+
+                X_new, x_new_ind_test, x_new_ind_glob = self.feat_eng.chose_feature_from_acquisition(acq_func_obj, self.X_test)
+                X_new = X_new.reshape(1, -1)
+
+                #x_new_inds = feats.index(X_new)  # feats is list of features, for this has to be list of samples
+                y_new = self.y_test[x_new_ind_test].reshape(1, -1)
+
+                self.feat_eng.train_indices = np.concatenate([self.feat_eng.train_indices, np.array(x_new_ind_glob).reshape(-1)])
+                self.feat_eng.test_indices = np.delete(self.feat_eng.test_indices, x_new_ind_test, 0)
+                self.feat_eng.n_train += 1
+                self.feat_eng.n_test -= 1
+
+                X_train = np.concatenate([self.X_train, X_new])
+                y_train = np.concatenate([self.y_train, y_new])
+                X_test = np.delete(self.X_test, x_new_ind_test, 0)
+                y_test = np.delete(self.y_test, x_new_ind_test, 0)
+
+                X_train = self.x_scaler.fit_transform(X_train)
+                y_train = self.y_scaler.fit_transform(y_train)
+                X_test = self.x_scaler.transform(X_test)
+                y_test = self.y_scaler.transform(y_test)
+
+                self.X_train = X_train
+                self.y_train = y_train
+                self.X_test = X_test
+                self.y_test = y_test
+
+                self.model = es.methods.GP(X_train, y_train,
+                                           kernel=self.base_kernel, bias=False, noize=self.noize, backend=self.backend)
+
+        elif self.backend == 'mogp':
+            pass
+        else:
+            raise NotImplementedError('Currently supporting only scikit-learn and mogp backend')
+
+
+    def derivative_x(self, X):
+        """
+        Make a prediction of the derivative of output y by input x
+
+        Args:
+            X: list of feature arrays
+
+        Returns:
+        -------
+        dy/dx
+        """
+        # TODO ideally should be a jacobian (dy_i/dx_j)_ij
+        if self.backend == 'mogp':
+
+            x = np.array([x for x in X]).T
+            x = self.x_scaler.transform(x)
+            x = [np.array(i) for i in x.T.tolist()]
+
+            _, _, der = self.feat_eng._predict(x, feed_forward=lambda t: self.model.predict(t))
+        else:
+            raise NotImplementedError("Gaussian Process derivatives w.r.t. inputs are implemented only for MOGP")
+
+        self.y_scaler.with_mean = False
+        der = self.y_scaler.inverse_transform(der)
+        self.y_scaler.with_mean = True
+
+        self.x_scaler.with_mean = False
+        der = self.x_scaler.transform(der)
+        self.x_scaler.with_mean = True
+
+        return der
+
+    def maxunc_acquisition_function(self, sample, candidates=None):
         """
         Returns the uncertainty of the model as (a posterior variance on Y) for a given sample
         Args:
@@ -185,7 +265,7 @@ class GP_Surrogate(Campaign):
         _, uncertatinty = self.model.predict(sample)
         return -1.*uncertatinty
 
-    def poi_acquisition_function(self, sample):
+    def poi_acquisition_function(self, sample, candidates=None):
         """
         Returns the probability of improvement for a given sample
         Args:
@@ -199,8 +279,8 @@ class GP_Surrogate(Campaign):
         if sample.ndim == 1:
             sample = sample[None, :]
 
-        mu, std = self.model.predict(sample)
-        poi = np.divide(mu - f_star, std + jitter)
+        mu, std, d = self.model.predict(sample)
+        poi = np.linalg.norm(np.divide(abs(mu - f_star), std + jitter), ord=2)
 
-        return poi
+        return -poi
 
