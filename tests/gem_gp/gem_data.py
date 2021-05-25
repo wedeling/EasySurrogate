@@ -32,12 +32,15 @@ def load_csv_file(input_file='gem_data_625.txt', n_runs=625):
 
     return data
 
-def load_csv_dict_file(input_file='gem0_lhc_res.csv', n_runs=1000):
-    Xlabels = ['te.value', 'ti.value', 'te.ddrho', 'ti.ddrho']
-    Ylabels = ['te.flux', 'ti.flux']
-
-    input_dim = 4
-    output_dim = 2
+def load_csv_dict_file(input_file='gem0_lhc_res.csv', n_runs=1000, input_dim=4, output_dim=2):
+    if input_dim == 4:
+        Xlabels = ['te.value', 'ti.value', 'te.ddrho', 'ti.ddrho']
+    elif input_dim == 2:
+        Xlabels = ['te.ddrho', 'ti.ddrho']
+    if output_dim == 2:
+        Ylabels = ['te.flux', 'ti.flux']
+    if output_dim == 1:
+        Ylabels = ['ti.flux']
 
     input_samples = []
     output_samples = []
@@ -52,12 +55,20 @@ def load_csv_dict_file(input_file='gem0_lhc_res.csv', n_runs=1000):
     output_samples = np.array(output_samples)
 
     data = {}
-    data['te_value'] = input_samples[:, 0].reshape(-1, 1)
-    data['ti_value'] = input_samples[:, 1].reshape(-1, 1)
-    data['te_ddrho'] = input_samples[:, 2].reshape(-1, 1)
-    data['ti_ddrho'] = input_samples[:, 3].reshape(-1, 1)
-    data['te_transp_flux'] = output_samples[:, 0].reshape(-1, 1)
-    data['ti_transp_flux'] = output_samples[:, 1].reshape(-1, 1)
+
+    if input_dim == 4:
+        data['te_value'] = input_samples[:, 0].reshape(-1, 1)
+        data['ti_value'] = input_samples[:, 1].reshape(-1, 1)
+        data['te_ddrho'] = input_samples[:, 2].reshape(-1, 1)
+        data['ti_ddrho'] = input_samples[:, 3].reshape(-1, 1)
+    elif input_dim == 2:
+        data['te_ddrho'] = input_samples[:, 0].reshape(-1, 1)
+        data['ti_ddrho'] = input_samples[:, 1].reshape(-1, 1)
+    if output_dim == 2:
+        data['te_transp_flux'] = output_samples[:, 0].reshape(-1, 1)
+        data['ti_transp_flux'] = output_samples[:, 1].reshape(-1, 1)
+    elif output_dim == 1:
+        data['ti_transp_flux'] = output_samples[:, 0].reshape(-1, 1)
 
     return data
 
@@ -94,16 +105,21 @@ def load_wf_csv_file(data_dir='', input_file='AUG_gem_inoutput.txt', runs=[0, 50
 
     return data
 
-# get dat ato a hfd5
+# get data to a hfd5
 campaign = es.Campaign(load_state=False)
 
 #data = load_csv_file()
 #campaign.store_data_to_hdf5(data, file_path='gem_data_625.hdf5')
 
-data = load_wf_csv_file(input_file='AUG_gem_inoutput.txt')
+#data = load_wf_csv_file(input_file='AUG_gem_inoutput.txt')
+
 #DEBUG
-print(data['ti_transp_flux'].min(), data['ti_transp_flux'].max())
-campaign.store_data_to_hdf5(data, file_path='gem_workflow_500.hdf5')
+#print(data['ti_transp_flux'].min(), data['ti_transp_flux'].max())
+
+#campaign.store_data_to_hdf5(data, file_path='gem_workflow_500.hdf5')
 
 #data = load_csv_dict_file()
 #campaign.store_data_to_hdf5(data, file_path='gem0_lhc.hdf5')
+
+data = load_csv_dict_file(input_file='gem0_lhc_256.csv', n_runs=256, input_dim=2, output_dim=1)
+campaign.store_data_to_hdf5(data, file_path='gem0_lhc_256.hdf5')
