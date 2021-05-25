@@ -52,8 +52,8 @@ def plot_3D_convex_hull(points, ax):
                         np.array([p1[2], p2[2], p3[2]]), 
                         alpha=0.5, color='coral',
                         label=r'Convex hull active subspace')
-        surf._facecolors2d=surf._facecolors3d
-        surf._edgecolors2d=surf._edgecolors3d
+        surf._facecolors2d = surf._facecolor3d
+        surf._edgecolors2d = surf._edgecolor3d
 
 import easysurrogate as es
 import matplotlib.pyplot as plt
@@ -78,7 +78,7 @@ params, samples, ref_mean, ref_std = get_g_func_training_data(n_mc, D)
 
 #save part of the data for testing
 test_frac = 0.5
-I = np.int(samples.shape[0] * (1.0 - test_frac))
+I = int(samples.shape[0] * (1.0 - test_frac))
 
 surrogate = es.methods.DAS_network(params[0:I], samples[0:I], d, n_layers=4, n_neurons=200,
                                    save=False, bias=True, alpha=0.001, batch_size=128)

@@ -159,10 +159,6 @@ class DAS_network(ANN):
                 on_gpu=self.on_gpu,
                 **kwargs))
 
-        if 'cumsum' in kwargs and kwargs['cumsum'] == True:
-            self.layers.append(CumSum_Layer(self.n_out, r+2, self.n_layers,
-                                            self.loss, self.batch_size))
-
         super().connect_layers()
         super().print_network_info()
 

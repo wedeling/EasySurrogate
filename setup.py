@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 setup(
     name='easysurrogate',
 
-    version=0.12,
+    version=0.13,
 
     description=(''),
 
