@@ -21,17 +21,28 @@ def draw():
     ax1 = fig.add_subplot(121)
     ax2 = fig.add_subplot(122)
 
-    ax1.contourf(Q1, 50)
+    ax1.contourf(Q2, 50)
     # ax2.contourf(Q2, 50)
     # ax2.plot(vort_solver_LR.bins, E_spec_LR)
     # ax2.plot(vort_solver_HR.bins, E_spec_HR)
     # ax2.plot(campaign.accum_data['Q_LR'])
     # ax2.plot(campaign.accum_data['Q_HR'], 'o')
-    ax2.plot(np.array(plot1))
-    ax2.plot(np.array(plot2))
+    ax2.plot(np.array(plot1)[:, 0], 'o', color=colors[0], label=r'$E^{ref}$')
+    ax2.plot(np.array(plot2)[:, 0], color=colors[1], label=r'$E$')
+    ax2.tick_params(axis='y', labelcolor=colors[1])
+    ax2.set_ylabel('E')
+    leg = ax2.legend(loc=3)
+
+    ax3 = ax2.twinx()
+    # ax3.set_ylim([0, 1e-3])
+    ax3.tick_params(axis='y', labelcolor=colors[3])
+    ax3.plot(np.array(plot1)[:, 1], 'o', color=colors[2], label=r'$Z^{ref}$')
+    ax3.plot(np.array(plot2)[:, 1], color=colors[3], label=r'$Z$')
+    ax3.set_ylabel('Z')
+    leg = ax3.legend(loc=4)
+
     plt.pause(0.1)
     plt.tight_layout()
-
 
 def compute_int(x1_hat, x2_hat, n_points_1d):
     """
@@ -123,7 +134,7 @@ campaign.surrogate.set_online_training_parameters(TAU_NUDGE, DT_LR, WINDOW_LENGT
 idx1, idx2 = np.triu_indices(N_Q)
 
 # the reference data frame used to train the ANN
-data_frame_ref = campaign.load_hdf5_data(file_path='../samples/reduced_vorticity_training2.hdf5')
+data_frame_ref = campaign.load_hdf5_data(file_path='/home/wouter/VECMA/samples/reduced_vorticity_training2.hdf5')
 dQ_ref = data_frame_ref['Q_HR'] - data_frame_ref['Q_LR']
 inner_prods = data_frame_ref['inner_prods'][0][idx1, idx2]
 c_ij = data_frame_ref['c_ij'][0].flatten()
@@ -145,6 +156,7 @@ STORE = True
 
 if PLOT:
     fig = plt.figure(figsize=[8, 4])
+    colors = plt.rcParams["axes.prop_cycle"].by_key()["color"]
     plot1 = []
     plot2 = []
 

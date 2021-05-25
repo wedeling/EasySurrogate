@@ -34,8 +34,8 @@ local = False
 surrogate.train(features, target, n_iter, lags=lags, n_layers=4, n_neurons=50,
                 batch_size=512, test_frac=0.5)
 
-campaign.add_app(name='test_campaign', surrogate=surrogate)
-campaign.save_state(file_path='../samples/campaign.pickle')
+# campaign.add_app(name='test_campaign', surrogate=surrogate)
+# campaign.save_state(file_path='../samples/campaign.pickle')
 
 # plot fit
 fig = plt.figure(figsize=[4, 4])
