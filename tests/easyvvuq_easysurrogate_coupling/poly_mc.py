@@ -1,10 +1,10 @@
+import easysurrogate as es
 import chaospy as cp
 import numpy as np
 import easyvvuq as uq
 import os
 import matplotlib.pyplot as plt
-import time
-from easyvvuq.actions import CreateRunDirectory, Encode, Decode, CleanUp, ExecuteLocal, Actions
+from easyvvuq.actions import CreateRunDirectory, Encode, Decode, ExecuteLocal, Actions
 
 plt.close('all')
 
@@ -29,13 +29,13 @@ output_filename = params["out_file"]["default"]
 output_columns = ["f"]
 
 encoder = uq.encoders.GenericEncoder(template_fname=HOME + '/sc/poly.template',
-                                     delimiter='$', 
+                                     delimiter='$',
                                      target_filename='poly_in.json')
 decoder = uq.decoders.SimpleCSV(target_filename=output_filename,
-                                output_columns=output_columns)  
+                                output_columns=output_columns)
 execute = ExecuteLocal('{}/sc/poly_model.py poly_in.json'.format(os.getcwd()))
 
-actions = Actions(CreateRunDirectory('/tmp'), 
+actions = Actions(CreateRunDirectory('/tmp'),
                   Encode(encoder), execute, Decode(decoder))
 
 # uncertain variables
@@ -77,3 +77,30 @@ print("--------------------------------------")
 print("Analytic standard deviation = %.4e" % ref_std)
 print("Computed standard deviation = %.4e" % results.describe('f', 'std'))
 print("--------------------------------------")
+
+surr_campaign = es.Campaign()
+features, samples = surr_campaign.load_easyvvuq_data(campaign, qoi_cols='f')
+
+surrogate = es.methods.ANN_Surrogate()
+n_iter = 10000
+test_frac = 0.3
+surrogate.train(features, samples['f'], n_iter, 
+                n_layers=4, n_neurons=50, test_frac=test_frac)
+
+dims = surrogate.get_dimensions()
+training_predictions = np.zeros([dims['n_train'], dims['n_out']])
+
+for i in range(dims['n_train']):
+    training_predictions[i] = surrogate.predict(features[i])
+
+error_train = np.linalg.norm(training_predictions - samples['f'][0:dims['n_train']])/\
+    np.linalg.norm(samples['f'][0:dims['n_train']])
+print("Relative error on training set = %.3f percent" % (error_train * 100))
+
+test_predictions = np.zeros([dims['n_test'], dims['n_out']])
+for count, i in enumerate(range(dims['n_train'], dims['n_samples'])):
+    test_predictions[count] = surrogate.predict(features[i])
+
+error_test = np.linalg.norm(test_predictions - samples['f'][dims['n_train']:])/\
+    np.linalg.norm(samples['f'][dims['n_train']:])
+print("Relative error on test set = %.3f percent" % (error_test * 100))
