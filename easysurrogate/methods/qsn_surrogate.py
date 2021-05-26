@@ -69,6 +69,9 @@ class QSN_Surrogate(Campaign):
         # flag if the surrogate is to be applied locally or not
         self.local = local
 
+        # test fraction
+        self.test_frac = test_frac
+
         # prepare the training data
         X_train, y_train, _, _ = self.feat_eng.get_training_data(feats, target, lags=lags, local=local,
                                                            test_frac=test_frac)

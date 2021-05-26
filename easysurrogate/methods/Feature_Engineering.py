@@ -298,7 +298,6 @@ class Feature_Engineering:
         else:
             self.max_lag = 0
             # no time lag, just add every entry in X and y to an array
-            self.foo = X
             # loop over all spatial points in the case of a local surrogate. For non-local
             # surrogates, len(X) = 1
             for i in range(len(X)):

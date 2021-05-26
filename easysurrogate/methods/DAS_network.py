@@ -125,9 +125,9 @@ class DAS_network(ANN):
         """
 
         self.layers = []
-        
+
         n_hidden = self.n_layers
-        if 'cumsum' in kwargs and kwargs['cumsum'] == True:
+        if 'cumsum' in kwargs and kwargs['cumsum']:
             self.n_layers += 1
 
         # add the input layer
@@ -149,7 +149,7 @@ class DAS_network(ANN):
         self.layers.append(
             Layer(
                 self.n_out,
-                r+1,
+                r + 1,
                 self.n_layers,
                 self.activation_out,
                 self.loss,

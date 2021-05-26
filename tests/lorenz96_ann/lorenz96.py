@@ -172,7 +172,7 @@ t = np.arange(0.0, t_end, dt)
 ###################
 # Simulation flags
 ###################
-make_movie = False # make a movie
+make_movie = False  # make a movie
 store = True  # store the prediction results
 
 # equilibrium initial condition for X, zero IC for Y

@@ -479,8 +479,8 @@ class ANN:
             if store_loss:
                 # l = 0.0
                 # for k in range(self.n_out):
-                    # l += self.layers[-1].L_i
-                
+                # l += self.layers[-1].L_i
+
                 l = self.layers[-1].L_i
 
                 if np.mod(i, 1000) == 0:

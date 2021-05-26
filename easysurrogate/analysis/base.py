@@ -150,9 +150,9 @@ class BaseAnalysis:
             The new variance, updated with the latest data point..
 
         """
-    
-        mu_np1 = mu_n + (X_np1 - mu_n)/(N+1)
-    
-        sigma2_np1 = sigma2_n + mu_n**2 - mu_np1**2 + (X_np1**2 - sigma2_n - mu_n**2)/(N+1)
-    
+
+        mu_np1 = mu_n + (X_np1 - mu_n) / (N + 1)
+
+        sigma2_np1 = sigma2_n + mu_n**2 - mu_np1**2 + (X_np1**2 - sigma2_n - mu_n**2) / (N + 1)
+
         return mu_np1, sigma2_np1

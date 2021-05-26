@@ -14,5 +14,3 @@ from .CumSum_Layer import CumSum_Layer
 
 from .gp_surrogate import GP_Surrogate
 from .GP import GP
-
-
