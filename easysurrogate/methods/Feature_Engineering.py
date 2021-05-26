@@ -24,7 +24,7 @@ class Feature_Engineering:
         """
         Contains the generic processing of features that is independent of the chosen surrogate
         method. Features are processined depending upon the presence of time lags or the local /
-        non-local nature of the surroagte. The processed features are then passed to the
+        non-local nature of the surrogate. The processed features are then passed to the
         surrogate-specific feed_forward method.
 
         Parameters
@@ -183,7 +183,6 @@ class Feature_Engineering:
         else:
             self.max_lag = 0
             # no time lag, just add every entry in X and y to an array
-            self.foo = X
             # loop over all spatial points in the case of a local surrogate. For non-local
             # surrogates, len(X) = 1
             for i in range(len(X)):

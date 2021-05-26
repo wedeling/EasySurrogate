@@ -1,3 +1,9 @@
+import easysurrogate as es
+from scipy.spatial import ConvexHull
+import numpy as np
+import matplotlib.pyplot as plt
+
+
 def get_poly_training_data(n_mc, D):
 
     theta = np.random.rand(n_mc, D)
@@ -8,11 +14,12 @@ def get_poly_training_data(n_mc, D):
         for i in range(D):
             sol *= 3 * a[i] * theta[k][i]**2 + 1.0
         f[k] = sol / 2**D
-        
-    ref_mean = np.prod(a+1)/2**D
-    ref_std = np.sqrt(np.prod(9*a**2/5 + 2*a + 1)/2**(2*D) - ref_mean**2)
+
+    ref_mean = np.prod(a + 1) / 2**D
+    ref_std = np.sqrt(np.prod(9 * a**2 / 5 + 2 * a + 1) / 2**(2 * D) - ref_mean**2)
 
     return theta, f, ref_mean, ref_std
+
 
 def get_g_func_training_data(n_mc, D):
     theta = np.random.rand(n_mc, D)
@@ -24,7 +31,9 @@ def get_g_func_training_data(n_mc, D):
         f[k] = sol
     return theta, f, 0, 0
 
-#Compute the analytic sobol indices for the test function of sobol_model.py
+# Compute the analytic sobol indices for the test function of sobol_model.py
+
+
 def exact_sobols_g_function():
     V_i = np.zeros(D)
 
@@ -35,55 +44,52 @@ def exact_sobols_g_function():
 
     print('----------------------')
     print('Exact 1st-order Sobol indices: ', V_i / V)
-    
-    return V_i/V
+
+    return V_i / V
+
 
 def plot_3D_convex_hull(points, ax):
 
     hull = ConvexHull(points)
-    
+
     for simplex in hull.simplices:
         p1 = points[simplex[0]]
         p2 = points[simplex[1]]
         p3 = points[simplex[2]]
 
-        surf = ax.plot_trisurf(np.array([p1[0], p2[0], p3[0]]), 
-                        np.array([p1[1], p2[1], p3[1]]),
-                        np.array([p1[2], p2[2], p3[2]]), 
-                        alpha=0.5, color='coral',
-                        label=r'Convex hull active subspace')
+        surf = ax.plot_trisurf(np.array([p1[0], p2[0], p3[0]]),
+                               np.array([p1[1], p2[1], p3[1]]),
+                               np.array([p1[2], p2[2], p3[2]]),
+                               alpha=0.5, color='coral',
+                               label=r'Convex hull active subspace')
         surf._facecolors2d = surf._facecolor3d
         surf._edgecolors2d = surf._edgecolor3d
 
-import easysurrogate as es
-import matplotlib.pyplot as plt
-import numpy as np
-from scipy.spatial import ConvexHull
 
-#active subspace and parameter space dimenions
+# active subspace and parameter space dimenions
 d = 4
 D = 10
 
-#make only first variables important
+# make only first variables important
 # a = np.array([1/(2**(i+1)) for i in range(D)])
 # a = np.zeros(D)
 # a[0] = 1.0; a[1] = 0.0
 
-#Sobol g-func coefficients
-a = [2**i for i in range(D-1)]
+# Sobol g-func coefficients
+a = [2**i for i in range(D - 1)]
 a.insert(0, 0)
 
 n_mc = 40000
 params, samples, ref_mean, ref_std = get_g_func_training_data(n_mc, D)
 
-#save part of the data for testing
+# save part of the data for testing
 test_frac = 0.5
 I = int(samples.shape[0] * (1.0 - test_frac))
 
 surrogate = es.methods.DAS_network(params[0:I], samples[0:I], d, n_layers=4, n_neurons=200,
                                    save=False, bias=True, alpha=0.001, batch_size=128)
 # surrogate = es.methods.ANN(params[0:I], samples[0:I], n_layers=4, n_neurons=200,
-                                   # save=False, bias=True, alpha=0.001, batch_size=128)
+# save=False, bias=True, alpha=0.001, batch_size=128)
 # train the surrogate on the data
 n_iter = 20000
 surrogate.train(n_iter, store_loss=True)
@@ -98,7 +104,7 @@ for i in range(I):
     y[i] = surrogate.layers[1].h[0:d].flatten()
 data = surrogate.y.reshape([-1, 1])
 
-#plot the active subspace
+# plot the active subspace
 plt.close('all')
 if d == 1:
     fig = plt.figure()
@@ -114,11 +120,11 @@ else:
                           xlabel=r'$y_1$', ylabel=r'$y_2$',
                           title='Link function g(y) in active subspace')
     if d >= 2:
-    #     ax1.plot_trisurf(y[:, 0], y[:, 1], pred[:, -1], alpha=0.5)
-    # else:
+        #     ax1.plot_trisurf(y[:, 0], y[:, 1], pred[:, -1], alpha=0.5)
+        # else:
         points = np.array([y[:, 0], y[:, 1], pred[:, -1]]).T
         plot_3D_convex_hull(points, ax1)
-    
+
     ax1.plot(y[:, 0], y[:, 1], data.flatten(), 'o', markersize=3, label=r'data')
     handles, labels = ax1.get_legend_handles_labels()
     by_label = dict(zip(labels, handles))
@@ -130,14 +136,14 @@ else:
 
 plt.tight_layout()
 
-#run the model forward at test locations
-pred = np.zeros(n_mc-I)
+# run the model forward at test locations
+pred = np.zeros(n_mc - I)
 idx = 0
 for i in range(I, n_mc):
     feat_i = (params[i] - surrogate.X_mean) / surrogate.X_std
     pred_i = surrogate.feed_forward(feat_i.reshape([1, -1]))[0][0]
     pred[idx] = pred_i * surrogate.y_std + surrogate.y_mean
-    idx += 1 
+    idx += 1
 
 das_mean = np.mean(pred)
 das_std = np.std(pred)
@@ -149,7 +155,7 @@ print("Analytic standard deviation = %.4e" % ref_std)
 print("Computed standard deviation = %.4e" % das_std)
 print("--------------------------------------")
 
-#perform some basic analysis
+# perform some basic analysis
 analysis = es.analysis.BaseAnalysis()
 analysis.get_pdf(samples, 100)
 dom_ref, pdf_ref = analysis.get_pdf(samples, 100)
@@ -166,13 +172,13 @@ plt.tight_layout()
 exact_sobols_g_function()
 
 if d == 1:
-    inputs = np.array(['x%d' % (i+1) for i in range(D)])
+    inputs = np.array(['x%d' % (i + 1) for i in range(D)])
     idx = np.argsort(np.abs(surrogate.layers[1].W.T))
     print('Parameters ordered from most to least important:')
     print(np.fliplr((inputs[idx])))
-    
+
 surrogate.set_batch_size(1)
-surrogate.jacobian(surrogate.X[0].reshape([1,-1]))
+surrogate.jacobian(surrogate.X[0].reshape([1, -1]))
 f_grad_y = surrogate.layers[1].delta_hy
 f_grad_x = surrogate.layers[0].delta_hy
 mean_f_grad_y2 = f_grad_y**2
@@ -182,13 +188,13 @@ var2 = np.zeros(D)
 analysis = es.analysis.BaseAnalysis()
 
 for i in range(1, surrogate.X.shape[0]):
-    surrogate.jacobian(surrogate.X[i].reshape([1,-1]))
+    surrogate.jacobian(surrogate.X[i].reshape([1, -1]))
     f_grad_y2 = surrogate.layers[1].delta_hy**2
     f_grad_x2 = surrogate.layers[0].delta_hy**2
     mean_f_grad_y2, var = analysis.recursive_moments(f_grad_y2, mean_f_grad_y2, var, i)
     mean_f_grad_x2, var2 = analysis.recursive_moments(f_grad_x2, mean_f_grad_x2, var2, i)
 
-inputs = np.array(['x%d' % (i+1) for i in range(D)])
+inputs = np.array(['x%d' % (i + 1) for i in range(D)])
 idx = np.argsort(np.abs(mean_f_grad_x2).T)
 print('Parameters ordered from most to least important:')
 print(np.fliplr((inputs[idx])))

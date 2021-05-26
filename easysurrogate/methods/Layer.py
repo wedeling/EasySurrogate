@@ -176,7 +176,7 @@ class Layer:
         if self.activation == 'linear':
             self.h = a
         elif self.activation == 'sigmoid':
-            self.h = 1.0/(1.0 - np.exp(-a))
+            self.h = 1.0 / (1.0 - np.exp(-a))
         elif self.activation == 'relu':
             self.h = np.maximum(np.zeros([a.shape[0], a.shape[1]]), a)
         elif self.activation == 'leaky_relu':
@@ -228,7 +228,7 @@ class Layer:
         if self.activation == 'linear':
             self.grad_Phi = np.ones([self.n_neurons, self.batch_size])
         elif self.activation == 'sigmoid':
-            self.grad_Phi = self.h[0:self.n_neurons]*(1.0 - self.h[0:self.n_neurons])
+            self.grad_Phi = self.h[0:self.n_neurons] * (1.0 - self.h[0:self.n_neurons])
         elif self.activation == 'relu':
             idx_lt0 = np.where(self.a < 0.0)
             self.grad_Phi = np.ones([self.n_neurons, self.batch_size])
