@@ -106,20 +106,22 @@ def load_wf_csv_file(data_dir='', input_file='AUG_gem_inoutput.txt', runs=[0, 50
     return data
 
 # get data to a hfd5
+
+# create an ES campaign
 campaign = es.Campaign(load_state=False)
 
+# 1) case for data from single flux tube GEM UQ campaign
 #data = load_csv_file()
 #campaign.store_data_to_hdf5(data, file_path='gem_data_625.hdf5')
 
+# 2) case for data from a MFW production run
 #data = load_wf_csv_file(input_file='AUG_gem_inoutput.txt')
-
-#DEBUG
-#print(data['ti_transp_flux'].min(), data['ti_transp_flux'].max())
-
 #campaign.store_data_to_hdf5(data, file_path='gem_workflow_500.hdf5')
 
+# 3) case for data generated from single flux tube GEM0 with 4 parameters (LHD, with a wrapper)
 #data = load_csv_dict_file()
 #campaign.store_data_to_hdf5(data, file_path='gem0_lhc.hdf5')
 
+# 4) case for from single flux tube GEM0 with 2 parameters (LHD, with a wrapper)
 data = load_csv_dict_file(input_file='gem0_lhc_256.csv', n_runs=256, input_dim=2, output_dim=1)
 campaign.store_data_to_hdf5(data, file_path='gem0_lhc_256.hdf5')
