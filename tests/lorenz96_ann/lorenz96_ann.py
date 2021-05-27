@@ -210,8 +210,8 @@ for t_i in t:
     # B_n = h_x*np.mean(Y_n, axis=0)
 
     # replace SGS call with call to surrogate
-    # B_n = campaign.surrogate.predict(X_n)
-    B_n = campaign.surrogate.predict(X_n.reshape([1, K]))
+    B_n = campaign.surrogate.predict(X_n)
+    # B_n = campaign.surrogate.predict(X_n.reshape([1, K]))
 
     ##################################
     # End Easysurrogate modification #
