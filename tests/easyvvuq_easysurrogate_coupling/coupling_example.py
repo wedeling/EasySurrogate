@@ -40,12 +40,12 @@ output_filename = params["out_file"]["default"]
 output_columns = ["f"]
 
 # create encoder, decoder, and execute locally
-encoder = uq.encoders.GenericEncoder(template_fname=HOME + '/sc/poly.template',
+encoder = uq.encoders.GenericEncoder(template_fname=HOME + '/model/g_func.template',
                                      delimiter='$',
-                                     target_filename='poly_in.json')
+                                     target_filename='in.json')
 decoder = uq.decoders.SimpleCSV(target_filename=output_filename,
                                 output_columns=output_columns)
-execute = ExecuteLocal('{}/sc/poly_model.py poly_in.json'.format(os.getcwd()))
+execute = ExecuteLocal('{}/model/g_func.py in.json'.format(os.getcwd()))
 actions = Actions(CreateRunDirectory('/tmp'),
                   Encode(encoder), execute, Decode(decoder))
 
@@ -58,7 +58,7 @@ for i in range(D):
 my_sampler = uq.sampling.MCSampler(vary=vary, n_mc_samples=100)
 
 # EasyVVUQ Campaign
-campaign = uq.Campaign(name='mc', params=params, actions=actions)
+campaign = uq.Campaign(name='g_func', params=params, actions=actions)
 
 # Associate the sampler with the campaign
 campaign.set_sampler(my_sampler)
@@ -69,34 +69,35 @@ campaign.execute().collate()
 # get the EasyVVUQ data frame
 data_frame = campaign.get_collation_result()
 
-# Post-processing analysis
-analysis = uq.analysis.QMCAnalysis(sampler=my_sampler, qoi_cols=output_columns)
-campaign.apply_analysis(analysis)
+# # Post-processing analysis
+# analysis = uq.analysis.QMCAnalysis(sampler=my_sampler, qoi_cols=output_columns)
+# campaign.apply_analysis(analysis)
 
-# some post-processing
-results = campaign.get_last_analysis()
+# # some post-processing
+# results = campaign.get_last_analysis()
 
-# analytic mean and standard deviation
-a = np.zeros(D)
-a[0] = 1
-a[1] = 1.0
-ref_mean = np.prod(a + 1) / 2**D
-ref_std = np.sqrt(np.prod(9 * a[0:D]**2 / 5 + 2 * a[0:D] + 1) / 2**(2 * D) - ref_mean**2)
+# # analytic mean and standard deviation
+# a = np.zeros(D)
+# a[0] = 1
+# a[1] = 1.0
+# ref_mean = np.prod(a + 1) / 2**D
+# ref_std = np.sqrt(np.prod(9 * a[0:D]**2 / 5 + 2 * a[0:D] + 1) / 2**(2 * D) - ref_mean**2)
 
-print("======================================")
-print("Number of samples = %d" % my_sampler.n_samples())
-print("--------------------------------------")
-print("Analytic mean = %.4e" % ref_mean)
-print("Computed mean = %.4e" % results.describe('f', 'mean'))
-print("--------------------------------------")
-print("Analytic standard deviation = %.4e" % ref_std)
-print("Computed standard deviation = %.4e" % results.describe('f', 'std'))
-print("--------------------------------------")
+# print("======================================")
+# print("Number of samples = %d" % my_sampler.n_samples())
+# print("--------------------------------------")
+# print("Analytic mean = %.4e" % ref_mean)
+# print("Computed mean = %.4e" % results.describe('f', 'mean'))
+# print("--------------------------------------")
+# print("Analytic standard deviation = %.4e" % ref_std)
+# print("Computed standard deviation = %.4e" % results.describe('f', 'std'))
+# print("--------------------------------------")
 
 ##############################
 # EasySurrogate ANN campaign #
 ##############################
 
+# Create an EasySurrogate campaign
 surr_campaign = es.Campaign()
 
 # This is the main point of this test: extract training data from EasyVVUQ data frame
