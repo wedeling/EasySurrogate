@@ -200,7 +200,7 @@ class Feature_Engineering:
         valid_frac : float, optional
             The fraction of the testing data that is withheld to be considered for validation.
             The default is 0.0, and it must be in [0.0, 1.0].
-        train_first: boolean, if True than use first (1.0-test_frac) samples for training,
+        train_first: boolean, if True then use first (1.0-test_frac) samples for training,
             otherwise chose training sample at random
         index: list of inidices of data samples to be chosen for training set
 
