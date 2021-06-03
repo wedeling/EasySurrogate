@@ -55,7 +55,7 @@ for i in range(D):
     vary["x%d" % (i + 1)] = cp.Uniform(0, 1)
 
 # MC sampler
-my_sampler = uq.sampling.MCSampler(vary=vary, n_mc_samples=100)
+my_sampler = uq.sampling.MCSampler(vary=vary, n_mc_samples=50)
 
 # EasyVVUQ Campaign
 campaign = uq.Campaign(name='g_func', params=params, actions=actions)
@@ -68,30 +68,6 @@ campaign.execute().collate()
 
 # get the EasyVVUQ data frame
 data_frame = campaign.get_collation_result()
-
-# # Post-processing analysis
-# analysis = uq.analysis.QMCAnalysis(sampler=my_sampler, qoi_cols=output_columns)
-# campaign.apply_analysis(analysis)
-
-# # some post-processing
-# results = campaign.get_last_analysis()
-
-# # analytic mean and standard deviation
-# a = np.zeros(D)
-# a[0] = 1
-# a[1] = 1.0
-# ref_mean = np.prod(a + 1) / 2**D
-# ref_std = np.sqrt(np.prod(9 * a[0:D]**2 / 5 + 2 * a[0:D] + 1) / 2**(2 * D) - ref_mean**2)
-
-# print("======================================")
-# print("Number of samples = %d" % my_sampler.n_samples())
-# print("--------------------------------------")
-# print("Analytic mean = %.4e" % ref_mean)
-# print("Computed mean = %.4e" % results.describe('f', 'mean'))
-# print("--------------------------------------")
-# print("Analytic standard deviation = %.4e" % ref_std)
-# print("Computed standard deviation = %.4e" % results.describe('f', 'std'))
-# print("--------------------------------------")
 
 ##############################
 # EasySurrogate ANN campaign #
