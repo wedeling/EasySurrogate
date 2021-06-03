@@ -11,13 +11,18 @@ import easysurrogate as es
 
 from sklearn.preprocessing import StandardScaler
 
-#DEBUG
-from matplotlib import pyplot as plt
 
 class GP_Surrogate(Campaign):
 
     def __init__(self, backend='scikit-learn', **kwargs):
-        print('Creating Gaussain Process Object')
+        """
+        GP_surrogate class for Gaussian Process Regression
+
+        """
+        print('Creating Gaussian Process Object')
+
+        super.__init__()
+
         self.name = 'GP Surrogate'
         self.feat_eng = es.methods.Feature_Engineering()
         self.x_scaler = StandardScaler()
@@ -39,9 +44,8 @@ class GP_Surrogate(Campaign):
         Args:
             feats: feature array, or list of different feature arrays
             target: the target data
-            n_iter:
+            n_iter: number of hyperoptimisation restarts
             test_frac: Fraction of the data used for training
-            kernel: type of covariance function kernel used for gaussian process
 
         Returns:
         -------
@@ -61,7 +65,7 @@ class GP_Surrogate(Campaign):
         # prepare the training data
         X_train, y_train, X_test, y_test = self.feat_eng.get_training_data(feats, target,
                                                                            local=False, test_frac=test_frac,
-                                                                           train_first=True)
+                                                                           train_first=False)
 
         # scale the training data
         X_train = self.x_scaler.fit_transform(X_train)
@@ -77,25 +81,16 @@ class GP_Surrogate(Campaign):
         # create a GP process
         print('===============================')
         print('Fitting Gaussian Process...')
-        self.model = es.methods.GP(X_train, y_train,
-                                   kernel=self.base_kernel, bias=False, noize=self.noize, backend=self.backend)
+        self.model = es.methods.GP(kernel=self.base_kernel, bias=False,
+                                   noize=self.noize, backend=self.backend)
 
         # get dimensionality of the output
         self.n_out = y_train.shape[1]
 
-        # get the dinesionality of te input
+        # get the dimesionality of te input
         self.n_in = X_train.shape[1]
 
-        # # DEBUG
-        # print(feats)
-        # print(X_test)
-        # y_pred = self.model.instance.predict(X_test)
-        # err = abs(np.divide(y_pred - y_test, y_test))
-        # print(err)
-        # y_pred_tr = self.model.instance.predict(X_train)
-        # err_tr = np.divide(abs(y_pred_tr - y_train), y_train)
-        # print(err_tr)
-        # plt.plot()
+        self.model.train(self.X_train, self.y_train)
 
     def predict(self, X):
         """
@@ -109,12 +104,13 @@ class GP_Surrogate(Campaign):
         -------
         Stochastic prediction of the output y
         """
-        x = np.array([x for x in X]).T  # TODO slows down a lot, maybe FeatureEngineering should return training data still as list
+        # TODO slows down a lot, maybe FeatureEngineering should return training data still as list
+        x = np.array([x for x in X]).T
         x = self.x_scaler.transform(x)
         x = [np.array(i) for i in x.T.tolist()]
-        y, std, _ = self.feat_eng._predict(x, feed_forward=lambda x: self.model.predict(x))  #TODO check how to pass right shape of sample
 
-        #return self.model.predict(X)
+        # TODO unlike ANNs, GPs should provide API for vectorised .predict() and other methods
+        y, std, _ = self.feat_eng._predict(x, feed_forward=lambda t: self.model.predict(t))
 
         y = self.y_scaler.inverse_transform(y)
 
@@ -124,7 +120,7 @@ class GP_Surrogate(Campaign):
 
         return y, std
 
-    def save_state(self):
+    def save_state(self, state=None, **kwargs):
         """
         Save the state of GP surrogate as a pickle file
         """
@@ -160,8 +156,17 @@ class GP_Surrogate(Campaign):
             self.output_mean = 0.0 * np.ones((1, self.n_out))
             self.output_std = 1.0 * np.ones((1, self.n_out))
 
-    def train_sequentially(self, feats, target,
+    def train_sequentially(self, feats=None, target=None,
                            n_iter=0, **kwargs):
+        """
+        Update GP surrogate with a sequeantial design scheme
+
+        Parameters
+        ----------
+        feats: list of feature arrays
+        target: array of target data
+        n_iter: integer, number of iterations of sequential optimisation
+        """
 
         self.set_data_stats()
 
@@ -172,26 +177,30 @@ class GP_Surrogate(Campaign):
             elif acq_func_arg == 'mu':
                 acq_func_obj = self.maxunc_acquisition_function
             else:
-                raise NotImplementedError('This rule for sequential optimisation is not implemented.')
+                raise NotImplementedError('This rule for sequential optimisation is not implemented, using default.')
+                acq_func_obj = self.maxunc_acquisition_function
 
         if self.backend == 'scikit-learn':
 
             """
-            1) iterate for n_iter
-                2) state on step n: object has X_train, X_test, their inidices, model instance
-                3) find set of candidates at minima of acq function X_cand; now object has X_train:=X_train U X_cand, X_test = X_test U_ X_cand, global inidces and set sizes updated
-                4) model instance is updated : fisrt approach to train new model for new  X_train
+            0) iterate for n_iter
+                1) state on step n: object has X_train, X_test, their indices, model instance
+                2) find set of candidates at minima of acq function X_cand; now object has 
+                X_train:=X_train U X_cand, X_test = X_test U_ X_cand, global inidces and set sizes updated
+                3) model instance is updated : first approach to train new model for new X_train
             """
 
             for i in range(n_iter):
 
-                X_new, x_new_ind_test, x_new_ind_glob = self.feat_eng.chose_feature_from_acquisition(acq_func_obj, self.X_test)
+                X_new, x_new_ind_test, x_new_ind_glob = self.feat_eng.\
+                    chose_feature_from_acquisition(acq_func_obj, self.X_test)
                 X_new = X_new.reshape(1, -1)
 
-                #x_new_inds = feats.index(X_new)  # feats is list of features, for this has to be list of samples
+                # x_new_inds = feats.index(X_new)  # feats is list of features, for this has to be list of samples
                 y_new = self.y_test[x_new_ind_test].reshape(1, -1)
 
-                self.feat_eng.train_indices = np.concatenate([self.feat_eng.train_indices, np.array(x_new_ind_glob).reshape(-1)])
+                self.feat_eng.train_indices = np.concatenate([self.feat_eng.train_indices,
+                                                              np.array(x_new_ind_glob).reshape(-1)])
                 self.feat_eng.test_indices = np.delete(self.feat_eng.test_indices, x_new_ind_test, 0)
                 self.feat_eng.n_train += 1
                 self.feat_eng.n_test -= 1
@@ -211,14 +220,15 @@ class GP_Surrogate(Campaign):
                 self.X_test = X_test
                 self.y_test = y_test
 
-                self.model = es.methods.GP(X_train, y_train,
-                                           kernel=self.base_kernel, bias=False, noize=self.noize, backend=self.backend)
+                # self.model = es.methods.GP(X_train, y_train,
+                #                            kernel=self.base_kernel, bias=False, noize=self.noize, backend=self.backend)
+
+                self.model.train(X_train, y_train)
 
         elif self.backend == 'mogp':
             pass
         else:
             raise NotImplementedError('Currently supporting only scikit-learn and mogp backend')
-
 
     def derivative_x(self, X):
         """
@@ -257,12 +267,16 @@ class GP_Surrogate(Campaign):
         Returns the uncertainty of the model as (a posterior variance on Y) for a given sample
         Args:
             sample: a single sample from a feature array
+            candidates: list of input parameter files to chose optimum from
         Returns:
             the value of uncertainty (variance) of the model
         """
+
         if sample.ndim == 1:
             sample = sample[None, :]
+
         _, uncertatinty = self.model.predict(sample)
+
         return -1.*uncertatinty
 
     def poi_acquisition_function(self, sample, candidates=None):
@@ -270,9 +284,11 @@ class GP_Surrogate(Campaign):
         Returns the probability of improvement for a given sample
         Args:
             sample: a single sample from a feature array
+            candidates: list of input parameter files to chose optimum from
         Returns:
             the probability of improvement if a given sample will be added to the model
         """
+
         jitter = 1e-9
         f_star = self.output_mean
 

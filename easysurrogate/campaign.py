@@ -6,6 +6,7 @@ from tkinter import filedialog
 import tkinter as tk
 import pickle
 import h5py
+import numpy as np
 
 
 class Campaign:
@@ -78,6 +79,61 @@ class Campaign:
             data_frame[key] = h5f[key][()]
 
         return data_frame
+
+    def load_easyvvuq_data(self, easyvvuq_campaign, qoi_cols):
+        """
+        Extract the input samples (features) and code samples (target data)
+        from an EasyVVUQ dataframe.
+
+        Parameters
+        ----------
+        easyvvuq_campaign : EasyVVUQ Campaign
+            The EasyVVUQ campaign that was used to sample the input-output relation
+            of a code.
+        qoi_cols : A single string or a list of strings
+            A list containing the names of the Quantities of Interest, matching
+            the columns names in the EasyVVUQ data frame.
+
+        Returns
+        -------
+        features : array, size (n_samples, n_inputs)
+            An array of all input samples.
+        samples : dict
+            A dictionary with qoi_cols as keys. Each key contains an array of code
+            output samples.
+
+        """
+        # if just a single string is provided, add to a list anyway
+        if isinstance(qoi_cols, str):
+            qoi_cols = [qoi_cols]
+        # easyvuq vary object
+        vary = easyvvuq_campaign._active_sampler.vary
+        # number of inputs
+        n_inputs = len(vary.get_keys())
+        # number of code samples
+        n_samples = easyvvuq_campaign._active_sampler.n_samples()
+        # store the parameters in theta, will be used as features
+        features = np.zeros([n_samples, n_inputs])
+        # loop over all runs
+        print("Extracting features %s" % (list(vary.get_keys())))
+        for i, run in enumerate(easyvvuq_campaign.list_runs()):
+            # get the paramater values
+            values = run[1]['params']
+            for j, param in enumerate(vary.get_keys()):
+                # store input values as features
+                features[i, j] = values[param]
+        # Extract the QoIs from the EasyVVUQ data frame
+        data_frame = easyvvuq_campaign.get_collation_result()
+        samples = {k: [] for k in qoi_cols}
+        # Loop over all code samples and qois
+        print("Extracting output data %s " % (qoi_cols))
+        for run_id in data_frame[('run_id', 0)].unique():
+            for k in qoi_cols:
+                values = data_frame.loc[data_frame[('run_id', 0)] == run_id][k].values
+                samples[k].append(values.flatten())
+        samples[k] = np.array(samples[k])
+        # return features and code samples
+        return features, samples
 
     def store_data_to_hdf5(self, data, **kwargs):
         """

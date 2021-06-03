@@ -25,8 +25,8 @@ class Feature_Engineering:
     def _predict(self, X, feed_forward):
         """
         Contains the generic processing of features that is independent of the chosen surrogate
-        method. Features are processined depending upon the presence of time lags or the local /
-        non-local nature of the surroagte. The processed features are then passed to the
+        method. Features are processed depending upon the presence of time lags or the local /
+        non-local nature of the surrogate. The processed features are then passed to the
         surrogate-specific feed_forward method.
 
         Parameters
@@ -111,17 +111,36 @@ class Feature_Engineering:
 
         """
 
-    def chose_feature_from_acquisition(self, acquisition_function, X_cands, feats=None, n_new_cands=1):
-
-        candidate_search = True
+    def chose_feature_from_acquisition(self, acquisition_function, X_cands,
+                                       candidate_search=True, n_new_cands=1):
         """
+        Returns a new parameter value as a minimum of acquisition function, as well as its index among suggested
+        candidates index in surrogate test set.
+
         1) pass the bounds or better set of candidate points in X (by default: set of test X)
         2) pass the criteria / acquisition function f:X->R
         3) pass the number of new candidates per iteration (default=1)
         4) choose the x_star as argmin acquisition
         5) extrude x_star from test set and add to train set
-        6) return new x_train and x_test 
+        6) assign new x_train and x_test
+        7) return the new sample to add to training set x_min
+
+                Parameters
+        ----------
+        acquisition_function : the function which minimum defines the optimal new sample to add to training set
+            A callable which can accept a single argument with in same format as .predict() method
+        X_cands : list of input parameters / features
+            The new sample for training will be chosen from this list
+        candidate_search: boolean, if True search among the list of candidate values,
+            if False generate new value within boundary box as minimum using scipy.minimize()
+        n_new_cands: integer, number of new candidate input points to return
+
+        Returns
+        -------
+        array
+        feed_forward(X)
         """
+
         if candidate_search:
 
             cand_vals = [acquisition_function(x) for x in X_cands]
@@ -130,32 +149,30 @@ class Feature_Engineering:
             x_min_ind_glob = self.test_indices[x_min_ind_test]
 
         else:
-            currbounds = [(0., 2000.), (0., 2000.), (-5000., -500.), (-5000., -500.)]
-            self.n_samples = self.n_samples + 1
-            self.n_train = 1
-            self.n_test = self.n_samples - 1
-            self.train_indices = np.array([self.n_samples - 1])
-            self.test_indices = np.arange(0, self.n_samples - 1)
+            boundminima = np.array(X_cands).min(axis=0)
+            boundmaxima = np.array(X_cands).max(axis=0)
+            currbounds = []
+            for i in range(self.n_dim):
+                currbounds.append((boundminima[i], boundmaxima[i]))
 
-            self.new_sample = [statistics.mean(x) for x in currbounds]
-            # print('A CUT OF ACQUISITION FUNCTION')
-            # test_domain_1 = np.arange(0., 2000., 50.)
-            # print([train_sample_choice(np.array([x, 1200., -3000., -3000.])) for x in test_domain_1])  ### debugging only
+            opt_start_point = [statistics.mean(x) for x in currbounds]
 
-            newpoints = minimize(acquisition_function, np.array(self.new_sample),
+            newpoints = minimize(acquisition_function, np.array(opt_start_point),
                                  bounds=currbounds)  # bounds for current GP case
             if newpoints.success:
-                self.new_sample = newpoints['x']
-            for i in range(len(feats)):
-                feats[i] = np.concatenate([feats[i], self.new_sample[i].reshape(1, 1)])
+                x_min = newpoints['x']
 
-        print('Using new %d samples to retrain the ML model' % (n_new_cands))
+            x_min_ind_test = 0
+            x_min_ind_glob = 0
+
+        print('Using new %d samples to retrain the ML model' % n_new_cands)
 
         return x_min, x_min_ind_test, x_min_ind_glob
 
-    def get_training_data(self, feats, target, lags=None, local=False, test_frac=0.0, valid_frac=0.0, train_first=False, train_sample_choice=None, index=None):
+    def get_training_data(self, feats, target, lags=None, local=False, test_frac=0.0, valid_frac=0.0,
+                          train_first=True, index=None):
         """
-        Generate trainig data. Training data can be made (time) lagged and/or local.
+        Generate training data. Training data can be made (time) lagged and/or local.
 
         Parameters
         ----------
@@ -180,11 +197,19 @@ class Feature_Engineering:
         test_frac : float, optional
             The final fraction of the training data that is withheld from training.
             The default is 0.0, and it must be in [0.0, 1.0].
+        valid_frac : float, optional
+            The fraction of the testing data that is withheld to be considered for validation.
+            The default is 0.0, and it must be in [0.0, 1.0].
+        train_first: boolean, if True than use first (1.0-test_frac) samples for training,
+            otherwise chose training sample at random
+        index: list of inidices of data samples to be chosen for training set
 
         Returns
         -------
-        None.
-
+        X_train:
+        y_train:
+        X_test:
+        y_test:
         """
 
         if not isinstance(feats, list):
@@ -211,15 +236,18 @@ class Feature_Engineering:
         # number of testing points, as what is left after excluding training set
         self.n_test = np.int(self.n_samples - self.n_train)
         # get indices of samples  to be used for training
+        # 1) train_first True: choose first (1-test_frac) fraction of the data set points, if points arranged in time
+        # 2) train_first False: choose (1-test_frac) fraction of data set at random without replacement
         if train_first:
             self.train_indices = np.arange(self.n_samples)[:self.n_train]  # chose train fraction from first sims
             self.test_indices = np.arange(self.n_samples)[self.n_train:]
         else:
-            self.train_indices = np.random.choice(self.n_samples, self.n_train, replace=False)  # chose train fraction randomly
+            self.train_indices = np.random.choice(self.n_samples, self.n_train, replace=False)
             self.train_indices = np.sort(self.train_indices)
-            self.test_indices = np.array([el for el in list(range(0, self.n_samples)) if el not in self.train_indices]) # chose train fraction randomly
+            self.test_indices = np.array([el for el in list(range(0, self.n_samples)) if el not in self.train_indices])
 
-        # TODO: for GP and other models strong for interpolation: add option to prioritize training samples at the border of presented parameter space
+        # TODO: for GP and other models bad for extrapolation:
+        #  add option to prioritize training samples at the border of presented parameter space
         print('Using  %d/%d samples to train the ML model' % (self.n_train, self.n_samples))
 
         if index is not None:
@@ -270,7 +298,6 @@ class Feature_Engineering:
         else:
             self.max_lag = 0
             # no time lag, just add every entry in X and y to an array
-            self.foo = X
             # loop over all spatial points in the case of a local surrogate. For non-local
             # surrogates, len(X) = 1
             for i in range(len(X)):
@@ -286,14 +313,17 @@ class Feature_Engineering:
                 y_train.append(y[i])
                 # Testing data
                 if self.n_test > 0:
-                    X_test.append(np.moveaxis(np.array(X_r[i]), 0, -1).reshape([self.n_test, -1]))  # appends same feature values in a single nfeat-long array
+                    # appends same feature values in a single nfeat-long array
+                    X_test.append(np.moveaxis(np.array(X_r[i]), 0, -1).reshape([self.n_test, -1]))
                     y_test.append(y_r[i])
 
         X_train = np.concatenate(X_train)
         y_train = np.concatenate(y_train)
         # Testing and validation data
         if self.n_test > 0:
-            if valid_frac > 0.0:  # validation fraction is extracted from original test fraction (valid_frac always has t0 be lesser than test_frac)
+            if valid_frac > 0.0:
+                # validation fraction is extracted from original test fraction
+                # (valid_frac always has t0 be lesser than test_frac)
                 self.n_valid = (self.n_test + self.n_train) * valid_frac
                 X_valid = X_test[-self.n_valid:]
                 X_test = X_test[:-self.n_valid]
@@ -305,26 +335,6 @@ class Feature_Engineering:
             X_test = np.concatenate(X_test)
             y_test = np.concatenate(y_test)
             print('done preparing data')
-
-        # chose training data set according to some criteria:
-        # 1) test_frac: choose first (1-test_frac) fraction of the data set points, if points arranged in time
-        # 2) test_frac random: choose (1-test_frace) fraction of data set at random without replacement
-        # 3) acquisition: choose points
-
-        if train_sample_choice is not None:
-
-            x_min = self.chose_feature_from_acquisition(train_sample_choice, X_test)
-
-            x_min_ind_glob = X.index(x_min)
-
-            X_train.append(x_min)
-            X_test.remove(x_min)
-
-            self.train_indices.append(x_min_ind_glob)
-            self.test_indices.remove(x_min_ind_glob)
-
-            self.n_train += 1
-            self.n_test -= 1
 
         return X_train, y_train, X_test, y_test
 

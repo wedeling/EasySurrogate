@@ -56,8 +56,12 @@ class ANN_Surrogate(Campaign):
 
         # time lags
         self.lags = lags
+
         # flag if the surrogate is to be applied locally or not
         self.local = local
+
+        # test fraction
+        self.test_frac = test_frac
 
         # prepare the training data
         X_train, y_train, _, _ = self.feat_eng.get_training_data(feats, target, lags=lags, local=local,
@@ -81,7 +85,7 @@ class ANN_Surrogate(Campaign):
         print('===============================')
         print('Training Artificial Neural Network...')
 
-        # train network for N_iter mini batches
+        # train network for n_iter mini batches
         self.neural_net.train(n_iter, store_loss=True)
         self.set_data_stats()
         if lags is not None:
@@ -258,3 +262,26 @@ class ANN_Surrogate(Campaign):
         else:
             self.output_mean = 0.0
             self.output_std = 1.0
+
+    def get_dimensions(self):
+        """
+        Get some useful dimensions of the ANN surrogate. Returns a dict with the number
+        of training samples (n_train), the number of data samples (n_samples),
+        the number of test samples (n_test), the number of input neurons (n_in),
+        and the number of output_neurons (n_out).
+
+        Returns
+        -------
+        dims : dict
+            The dimensions dictionary.
+
+        """
+
+        dims = {}
+        dims['n_train'] = self.feat_eng.n_train
+        dims['n_samples'] = self.feat_eng.n_samples
+        dims['n_test'] = dims['n_samples'] - dims['n_train']
+        dims['n_in'] = self.neural_net.n_in
+        dims['n_out'] = self.neural_net.n_out
+
+        return dims

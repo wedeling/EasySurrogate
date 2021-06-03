@@ -249,4 +249,5 @@ ax.set_rgrids([-10, 0, 10], labels=['', '', ''])[0][1]
 ax.legend(loc=1)
 ax.plot(theta, np.append(X_data[-1, :], X_data[-1, 0]), label='X')
 ax.plot(theta, np.append(B_data[-1, :], B_data[-1, 0]), label='B')
+
 plt.show()

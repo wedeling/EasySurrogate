@@ -5,11 +5,12 @@ import numpy as np
 
 from .Layer import Layer
 
+
 class CumSum_Layer(Layer):
-    
+
     def __init__(self, n_neurons, r, n_layers, loss, batch_size):
         """
-        Initialize a CumSum layer object.      
+        Initialize a CumSum layer object.
 
         Parameters
         ----------
@@ -29,9 +30,9 @@ class CumSum_Layer(Layer):
         None.
 
         """
-        super().__init__(n_neurons, r, n_layers, 'linear', loss, 
+        super().__init__(n_neurons, r, n_layers, 'linear', loss,
                          bias=False, batch_size=batch_size)
-    
+
     def compute_output(self, batch_size):
         self.h = np.cumsum(self.layer_rm1.h, axis=0)
         # compute the gradient of the activation function,
@@ -58,7 +59,7 @@ class CumSum_Layer(Layer):
         self.A = np.zeros([self.layer_rm1.n_neurons, self.n_neurons])
         # L2 regularization
         self.Lamb = np.ones([self.layer_rm1.n_neurons, self.n_neurons]) * self.lamb
-        
+
     def compute_L_grad_W(self):
         """
         Compute the gradient of the loss function wrt the weights of this layer.
@@ -69,4 +70,3 @@ class CumSum_Layer(Layer):
 
         """
         return self.L_grad_W
-    

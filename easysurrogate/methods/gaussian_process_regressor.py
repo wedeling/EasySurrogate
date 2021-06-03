@@ -33,6 +33,7 @@ class GaussianProcess():
     def optmize_hyperparameters(self, X_train, y_train):
         """
         Optimizes hyperparamter values for minimum of R^2 score on training dataset
+        #TODO has to optimise form MLE or MAP
         Uses scipy .minimize() to find the optimum
         Reassigns the attributes of the object after optimization
         """
@@ -43,7 +44,6 @@ class GaussianProcess():
 
         hp_optval_res = minimize(self.r2_score_hp, hp_curval, options={'maxiter': 100})
 
-        #print(hp_optval_res)
         hp_optval = hp_optval_res.x
 
         self.sigma_f = hp_optval[0]
