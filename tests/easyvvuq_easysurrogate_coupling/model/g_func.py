@@ -27,10 +27,10 @@ output_filename = inputs['outfile']
 # stocastic dimension of the problem
 d = inputs['D']
 # make only first variables important
-# a = [1/(2*(i+1)) for i in range(d)]
-a = np.zeros(d)
-a[0] = 1.0
-a[1] = 1.0
+a = [1/(2*(i+1)) for i in range(d)]
+# a = np.zeros(d)
+# a[0] = 1.0
+# a[1] = 1.0
 
 theta = []
 for i in range(d):
