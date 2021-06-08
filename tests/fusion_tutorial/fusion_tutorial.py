@@ -369,11 +369,12 @@ def ann_surrogate_test(samples_c, n_train):
     ann_derivative_based_sa(surrogate_ann, order_orig)
 
 
-def gp_surrogate_test(order=None, ndim=None, n_train=None):
+def gp_surrogate_test(order=None, ndim_in=None, ndim_out=None, n_train=None):
+
     ### TRAINING PHASE
     campaign = es.Campaign()
 
-    surrogate_gp = es.methods.GP_Surrogate(backend='scikit-learn')
+    surrogate_gp = es.methods.GP_Surrogate(n_in=ndim_in, n_out=ndim_out, backend='scikit-learn')
 
     # -- If chosing data not on every grid point
     # samples_c= samples_c[:, 0].reshape(-1, 1)
@@ -382,16 +383,16 @@ def gp_surrogate_test(order=None, ndim=None, n_train=None):
     n_out = samples_c.shape[1]
     n_mc_l = samples_c.shape[0]
 
-    if ndim is None:
+    if ndim_in is None:
         if isinstance(theta_c, list):
-            ndim = theta_c[0].shape[0]
+            ndim_in = theta_c[0].shape[0]
         elif isinstance(theta_c, np.ndarray):
-            ndim = theta_c.shape[1]
+            ndim_in = theta_c.shape[1]
 
     if order is None:
-        order = np.arange(ndim)
+        order = np.arange(ndim_in)
 
-    theta_reod = chose_feat_subset(theta_c, ndim, order)
+    theta_reod = chose_feat_subset(theta_c, ndim_in, order)
 
     day = date.today().strftime('%d%m')
     st_time = time.time()
@@ -400,7 +401,7 @@ def gp_surrogate_test(order=None, ndim=None, n_train=None):
     print('Time to train a GP surrogate {:.3}'.format(tot_time))
 
     campaign.add_app(name='gp_campaign', surrogate=surrogate_gp)
-    campaign.save_state(file_path='mogp_{}_model_{}_full_100.pickle'.format(ndim, day))
+    campaign.save_state(file_path='mogp_{}_model_{}_full_100.pickle'.format(ndim_in, day))
 
     # -- If loading a pretrained surrogate
     # campaign = es.Campaign(load_state=True, file_path='skl_1_model_2505_full_100.pickle')
@@ -432,7 +433,7 @@ def gp_surrogate_test(order=None, ndim=None, n_train=None):
 
     # plot the train predictions and original data
     plot_prediction_results(samples_c[train_inds].reshape(-1), training_predictions.reshape(-1),
-                            training_pred_vars.reshape(-1), 1.0, 'gp_train_{}_data_res.png'.format(ndim))
+                            training_pred_vars.reshape(-1), 1.0, 'gp_train_{}_data_res.png'.format(ndim_in))
 
     rel_err_train = np.linalg.norm(training_predictions - samples_c[train_inds]) / np.linalg.norm(samples_c[train_inds])
     print('Relative error on the training set is %.2f percent' % (rel_err_train * 100))
@@ -443,7 +444,7 @@ def gp_surrogate_test(order=None, ndim=None, n_train=None):
                                       samples_c[train_inds],
                                       training_predictions.reshape(-1),
                                       training_pred_vars.reshape(-1),
-                                      name='gp_theta_train_{}_data_res.png'.format(ndim))
+                                      name='gp_theta_train_{}_data_res.png'.format(ndim_in))
 
     ## Testing set
     # evaluate on testing data
@@ -455,11 +456,11 @@ def gp_surrogate_test(order=None, ndim=None, n_train=None):
 
     # plot the test predictions and data
     plot_prediction_results(samples_c[test_inds].reshape(-1), test_predictions.reshape(-1),
-                            test_pred_vars.reshape(-1), name='gp_test_{}_data_res.png'.format(ndim))
+                            test_pred_vars.reshape(-1), name='gp_test_{}_data_res.png'.format(ndim_in))
 
     # plot a several chosen test prediction as radial dependency
     plot_prediction_results_vectorqoi(samples_c[test_inds], test_predictions, test_pred_vars,
-                                      name='gp_test_{}_data_res_profiles.png'.format(ndim))
+                                      name='gp_test_{}_data_res_profiles.png'.format(ndim_in))
 
     # plot prediction against parameter values for testing data
     if len(theta_reod) == 1 and samples_c.shape[1] == 1:
@@ -467,7 +468,7 @@ def gp_surrogate_test(order=None, ndim=None, n_train=None):
                                       samples_c[test_inds],
                                       test_predictions.reshape(-1),
                                       test_pred_vars,
-                                      name='gp_theta_test_{}_data_res.png'.format(ndim))
+                                      name='gp_theta_test_{}_data_res.png'.format(ndim_in))
 
     # print the relative test error
     rel_err_test = np.linalg.norm(test_predictions - samples_c[test_inds]) / np.linalg.norm(samples_c[test_inds])
@@ -477,7 +478,7 @@ def gp_surrogate_test(order=None, ndim=None, n_train=None):
     test_pred_var_tot = test_predictions.var()
     print('Variance of predicted result means for the test set %.3f' % test_pred_var_tot)
     print('R2 score on testing set: {}'.format(surrogate_gp.model.instance.score(
-        np.array(theta_reod)[:, [test_inds]].reshape(n_mc - n_train, ndim), samples_c[test_inds])))
+        np.array(theta_reod)[:, [test_inds]].reshape(n_mc - n_train, ndim_in), samples_c[test_inds])))
 
     ### SENSITIVITY ANALYSIS
     if surrogate_gp.backend == 'mogp':
@@ -500,7 +501,7 @@ def gp_surrogate_test(order=None, ndim=None, n_train=None):
 
     analysis.plot_pdfs(te_ax_ts_dat_dom, te_ax_ts_dat_pdf, te_ax_ts_surr_dom, te_ax_ts_surr_pdf,
                        names=['simulation_test', 'surrogate_test', 'simulation_train', 'surrogate_train'],
-                       qoi_names=['Te(r=0)'], filename='pdf_qoi_trts_{}'.format(ndim))
+                       qoi_names=['Te(r=0)'], filename='pdf_qoi_trts_{}'.format(ndim_in))
     w_d = ws_dist(te_ax_ts_surr_pdf, te_ax_ts_dat_pdf)
     print('Wasserstein distance for distribution of selected QoI produced by simulation and surrogate: {}'.format(w_d))
 
@@ -547,8 +548,8 @@ order = np.arange(len(order_orig))
 times = []
 errors = []
 
-for i in range(1, 11):
-    t, e = gp_surrogate_test(order, i)
+for i in range(10, 11):
+    t, e = gp_surrogate_test(order, ndim_in=i, ndim_out=100)
     times.append(t)
     errors.append(e)
 
