@@ -295,6 +295,13 @@ class Feature_Engineering:
                 X_train_i, y_train_i = self.lag_training_data(X[i], y[i], lags=lags)
                 X_train.append(X_train_i)
                 y_train.append(y_train_i)
+            if self.n_test > 0:
+                # lag testing set as well, so it correspond to new features generated during lagging
+                # NB: works only for train_first=True
+                for i in range(len(X_r)):
+                    X_test_i, y_test_i = self.lag_training_data(X_r[i], y_r[i], lags=lags)
+                    X_test.append(X_test_i)
+                    y_test.append(y_test_i)
         else:
             self.max_lag = 0
             # no time lag, just add every entry in X and y to an array
@@ -335,6 +342,9 @@ class Feature_Engineering:
             X_test = np.concatenate(X_test)
             y_test = np.concatenate(y_test)
             print('done preparing data')
+        else:
+            X_test = np.empty((0, X_train.shape[1]))
+            y_test = np.empty((0, y_train.shape[1]))
 
         return X_train, y_train, X_test, y_test
 
