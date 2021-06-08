@@ -21,8 +21,6 @@ class GP_Surrogate(Campaign):
         """
         print('Creating Gaussian Process Object')
 
-        super.__init__()
-
         self.name = 'GP Surrogate'
         self.feat_eng = es.methods.Feature_Engineering()
         self.x_scaler = StandardScaler()
@@ -31,6 +29,16 @@ class GP_Surrogate(Campaign):
 
         if 'noise' in kwargs:
             self.noise = kwargs['noise']
+
+        if 'n_in' in kwargs:
+            self.n_in = kwargs['n_in']
+        else:
+            self.n_in = 1
+
+        if 'n_out' in kwargs:
+            self.n_out = kwargs['n_out']
+        else:
+            self.n_out = 1
 
     ############################
     # START COMMON SUBROUTINES #
@@ -70,8 +78,9 @@ class GP_Surrogate(Campaign):
         # scale the training data
         X_train = self.x_scaler.fit_transform(X_train)
         y_train = self.y_scaler.fit_transform(y_train)
-        X_test = self.x_scaler.transform(X_test)
-        y_test = self.y_scaler.transform(y_test)
+        if len(X_test) > 0 and len(y_test) > 0:
+            X_test = self.x_scaler.transform(X_test)
+            y_test = self.y_scaler.transform(y_test)
 
         self.X_train = X_train
         self.y_train = y_train
@@ -81,7 +90,7 @@ class GP_Surrogate(Campaign):
         # create a GP process
         print('===============================')
         print('Fitting Gaussian Process...')
-        self.model = es.methods.GP(kernel=self.base_kernel, bias=False,
+        self.model = es.methods.GP(kernel=self.base_kernel, n_in=self.n_in, n_out=self.n_out, bias=False,
                                    noize=self.noize, backend=self.backend)
 
         # get dimensionality of the output
@@ -178,7 +187,16 @@ class GP_Surrogate(Campaign):
                 acq_func_obj = self.maxunc_acquisition_function
             else:
                 raise NotImplementedError('This rule for sequential optimisation is not implemented, using default.')
-                acq_func_obj = self.maxunc_acquisition_function
+        else:
+            acq_func_obj = self.maxunc_acquisition_function
+
+        if 'save_history' in kwargs:
+            save_history = kwargs['save_history']
+        else:
+            save_history = False
+
+        if save_history:
+            self.design_history = []
 
         if self.backend == 'scikit-learn':
 
@@ -210,10 +228,14 @@ class GP_Surrogate(Campaign):
                 X_test = np.delete(self.X_test, x_new_ind_test, 0)
                 y_test = np.delete(self.y_test, x_new_ind_test, 0)
 
-                X_train = self.x_scaler.fit_transform(X_train)
-                y_train = self.y_scaler.fit_transform(y_train)
-                X_test = self.x_scaler.transform(X_test)
-                y_test = self.y_scaler.transform(y_test)
+                if save_history:
+                    self.design_history.append(x_new_ind_test)
+
+                # TODO update the scaler - has to transform back to original values, then refit
+                #X_train = self.x_scaler.fit_transform(X_train)
+                #y_train = self.y_scaler.fit_transform(y_train)
+                #X_test = self.x_scaler.transform(X_test)
+                #y_test = self.y_scaler.transform(y_test)
 
                 self.X_train = X_train
                 self.y_train = y_train
@@ -275,7 +297,7 @@ class GP_Surrogate(Campaign):
         if sample.ndim == 1:
             sample = sample[None, :]
 
-        _, uncertatinty = self.model.predict(sample)
+        _, uncertatinty, _ = self.model.predict(sample)
 
         return -1.*uncertatinty
 
