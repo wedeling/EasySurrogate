@@ -20,6 +20,7 @@ lags = [[1, 10]]
 
 # train the surrogate on the data
 n_iter = 10000
+
 surrogate.train([features], target, n_iter, lags=lags, n_layers=4, n_neurons=256,
                 batch_size=512, test_frac=0.3)
 

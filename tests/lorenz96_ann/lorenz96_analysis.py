@@ -47,6 +47,8 @@ plt.legend(loc=0)
 
 plt.tight_layout()
 
+plt.savefig('pde_s.png')
+
 #############
 # Plot ACFs #
 #############
@@ -84,6 +86,8 @@ leg = plt.legend(loc=0)
 
 plt.tight_layout()
 
+plt.savefig('acf_s.png')
+
 #############
 # Plot CCFs #
 #############
@@ -120,3 +124,5 @@ ax2.plot(dom_ccf, ccf_B_sol, label='ann')
 leg = plt.legend(loc=0)
 
 plt.tight_layout()
+
+plt.savefig('ccf.png')

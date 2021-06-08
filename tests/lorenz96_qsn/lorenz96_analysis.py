@@ -46,6 +46,7 @@ plt.yticks([])
 plt.legend(loc=0)
 
 plt.tight_layout()
+plt.savefig('pdf.png')
 
 # #############
 # # Plot ACFs #
