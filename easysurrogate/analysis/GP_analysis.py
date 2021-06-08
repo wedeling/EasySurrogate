@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy import stats
 from sklearn.metrics import mean_squared_error as mse
-
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 class GP_analysis(BaseAnalysis):
     """
@@ -15,8 +15,9 @@ class GP_analysis(BaseAnalysis):
     """
 
     def __init__(self, gp_surrogate, **kwargs):
+
         print('Creating GP_analysis object')
-        super.__init__()
+
         self.gp_surrogate = gp_surrogate
 
     def plot_err(self, error, name, original=None):
@@ -122,6 +123,56 @@ class GP_analysis(BaseAnalysis):
         plt.legend(loc='best')
         plt.title('PDF of simulated and predicted target values')
         plt.savefig(filename + '.png')
+        plt.close()
+
+    def plot_2d_design_history(self, x_test=None, y_test=None):
+
+        if not hasattr(self.gp_surrogate, 'design_history'):
+            raise RuntimeWarning('This surrogate has no recorded history of sequential design')
+            return
+
+        x_train = self.gp_surrogate.x_scaler.inverse_transform(self.gp_surrogate.X_train)
+        x1tr = x_train[:, 0]
+        x2tr = x_train[:, 1]
+        if x_test is not None:
+            x1ts = x_test[:, 0]
+            x2ts = x_test[:, 1]
+        else:
+            x1ts = x1tr
+            x2ts = x1tr
+
+        ytr = self.gp_surrogate.y_scaler.inverse_transform(self.gp_surrogate.y_train)
+        ytr = ytr.reshape(-1)
+        if y_test is not None:
+            yts = y_test
+            yts = yts.reshape(-1)
+        else:
+            yts = ytr
+
+        fig, ax = plt.subplots()
+
+        cntr1 = ax.tricontourf(x1ts, x2ts, yts, levels=12, cmap="RdBu_r")
+        divider = make_axes_locatable(ax)
+        cax1 = divider.append_axes("right", size="8%", pad=0.1)
+        cbar1 = fig.colorbar(cntr1, cax1)
+        ax.set_title('Ground simulation results', pad=10.0)
+        ax.set_xlabel(r'$x_{1}$')
+        ax.set_ylabel(r'$ x_{2}$')
+        # cbar1.set_label(r'$y$')
+        ax.set_aspect('equal')
+
+        ax.plot(x1tr, x2tr, 'ko', ms=3)
+        n_iter = len(self.gp_surrogate.design_history)
+        for num, ind in enumerate(self.gp_surrogate.design_history):
+            #p_i = (x1[ind], x2[ind])
+            p_i = (x1tr[-n_iter+num], x1tr[-n_iter+num])
+            ax.annotate(str(num), p_i, textcoords="offset points", xytext=(0, 10), ha='center')
+
+        #plt.tight_layout()
+        #plt.subplots_adjust()
+
+        plt.show()
+        plt.savefig('surorrogate_seq_des.png')
         plt.close()
 
     def get_r2_score(self, X, y):
