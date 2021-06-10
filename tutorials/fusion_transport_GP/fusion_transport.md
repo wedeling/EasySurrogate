@@ -1,25 +1,78 @@
 
 #Gaussian Process for Fusion transport tutorial example
 
+In this test we use data describing profiles of tokamak plasma parameters defined by simulations converged
+to a steady-state.
+
 ## Files
 
-## Generate training data 
+All the python script for the tutorial files are located at `tests\fusion_tutorial` folder:
+
++ `tests\fusion_tutorial\load_data.py` : a script to prepare HDF5 files for surrogate, avoiding re-running numerical solutions
++ `tests\fusion_tutorial\train_gp_surrogate.py` : script to train a GPR surrogate model
++ `tests\fusion_tutorial\gp_surrogate_predict.py` : script to produce surrogate model predictions for test dataset
++ `tests\fusion_tutorial\gp_surrogate_analyse.py`  : post-processing of the surrogate predictions
+
+Executing the files in order to go through the tutorial.
+
+## Get training data 
 
 First step to apply a surrogate is to generate training data.
 
-In the first example we consider a surrogate trained on a one-shot design of numerical experiments
+In the first example we consider a surrogate trained on a one-shot design of numerical experiments.
 
-## Train the model
+In our case we run a set of transport model instances with parameter values design defined
+with a random sampler of EasyVVUQ package.
+Distribution of each parameter is described in  `define_vary()` function.
 
-To train the model load the data from the run of numerical solver 
+The repository also provides `inputs.pickle` and `outputs.pickle` file with the results of corresponding simulations
+as their solution take around 30 mins on a single-CPU system.
 
+Running `python3 tests\fusion_tutorial\load_data.py` will prepare HDF5 files suitable for surrogates 
+and further tutorial steps.
+
+## Train the Gaussian Process Regression model
+
+To train the model load the data from the numerical simulations 
+
+Next, we create a GP_Surrogate object with following:
+
+```python
+    # create a surrogate object
+    surrogate = es.methods.GP_Surrogate(n_in=ndim_in, n_out=ndim_out, backend='scikit-learn')
+```
+
+It requires to know about the dimensionality of the input and output data. We can also choose the backend 
+implementation of the regression model which we want to use.
+
+The features that we choose in this example are scalar, not considred to be located on spatial or temporal axis, and 
+of different nature. Still, the approach of Gaussian Process Regression required defining metrics on input parameter 
+space and features will be scaled to a unit standard deviation by surrogate implicitly.
+
+The following will train the model:
+
+```python
+    surrogate.train(features, target, test_frac=test_frac, basekernel='Matern', noize='fit')
+```
+
+It is necessary to specify the training consisting of feature and target data. On this phase one can also choose
+the fraction of dataset withheld for future testing with `test_frac`, which by default will be taken from 
+the end of passed datasets.
+
+# Prediction with GPR surrogate
+
+In this tutorial, we use surrogate to predict new target values for saved feature test set.
 
 ## Analysis of the surrogate performance
+
+We use test set to analyse the accuracy of the GPR model comparing target values from simulations and from 
+surrogate predictions by calculating relative absolute errors, relative mean squared error, distrbutions of QoI
+and distances between them.
 
 ### Accuracy of surrogate on testing set
 
 In case when we have only information in the quasy-steady-state of the modeled system or do not have information
-about any time evolution, we can estimate the accuracy of the surrogate as the estimator for the quantitites of 
+about any time evolution, we can estimate the accuracy of the surrogate as the estimator for the quantities of 
 interest we trained it on.
 
 In context of uncertainty quantification we will be interested in Probability Density Functions of QoI and its moments.
