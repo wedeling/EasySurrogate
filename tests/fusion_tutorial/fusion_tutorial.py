@@ -450,9 +450,9 @@ def gp_surrogate_test(order=None, ndim_in=None, ndim_out=None, n_train=None):
     # evaluate on testing data
     test_predictions = np.zeros([n_mc_l - n_train, n_out])
     test_pred_vars = np.zeros([n_mc_l - n_train, n_out])
-    for count, i in enumerate(range(n_train, n_mc_l)):
-        theta_point = [x[i] for x in theta_reod]
-        test_predictions[count], test_pred_vars[count] = surrogate_gp.predict(theta_point)
+    for i, j in enumerate(test_inds):
+        theta_point = [x[j] for x in theta_reod]
+        test_predictions[i], test_pred_vars[i] = surrogate_gp.predict(theta_point)
 
     # plot the test predictions and data
     plot_prediction_results(samples_c[test_inds].reshape(-1), test_predictions.reshape(-1),
@@ -480,14 +480,38 @@ def gp_surrogate_test(order=None, ndim_in=None, ndim_out=None, n_train=None):
     print('R2 score on testing set: {}'.format(surrogate_gp.model.instance.score(
         np.array(theta_reod)[:, [test_inds]].reshape(n_mc - n_train, ndim_in), samples_c[test_inds])))
 
+    # Save simulation and surrogate data to hdf
+    data_sim = {}
+    data_sim['Te'] = samples_c
+    for i, name in enumerate(order_orig):
+        data_sim[name] = theta_reod[i]
+    campaign.store_data_to_hdf5(data_sim, file_path='sim_data.hdf5')
+
+    predictions = np.zeros([n_mc_l, n_out])
+    pred_vars = np.zeros([n_mc_l, n_out])
+    for i in range(n_mc_l):
+        theta_point = [x[i] for x in theta_reod]
+        predictions[i], pred_vars[i] = surrogate_gp.predict(theta_point)
+
+    data_sur = {}
+    data_sur['Te'] = predictions
+    data_sur['Te_sigmasq'] = pred_vars
+    campaign.store_data_to_hdf5(data_sur, file_path='sur_data.hdf5')
+
+    data_frame_sim = campaign.load_hdf5_data(file_path='sim_data.hdf5')
+    data_frame_sur = campaign.load_hdf5_data(file_path='sur_data.hdf5')
+
+    samples = data_frame_sim['Te']
+    predictions = data_frame_sur['Te']
+
     ### SENSITIVITY ANALYSIS
     if surrogate_gp.backend == 'mogp':
         gp_derivative_based_sa(surrogate_gp, theta_reod[:][test_inds], keys=order_orig)
 
     ### QoI pdfs
     # analyse the QoI (Te(rho=0)) for test set
-    te_ax_ts_dat_dom, te_ax_ts_dat_pdf = analysis.get_pdf(samples_c[test_inds][:, 0])
-    te_ax_ts_surr_dom, te_ax_ts_surr_pdf = analysis.get_pdf(test_predictions[:, 0])
+    te_ax_ts_dat_dom, te_ax_ts_dat_pdf = analysis.get_pdf(samples[test_inds][:, 0])
+    te_ax_ts_surr_dom, te_ax_ts_surr_pdf = analysis.get_pdf(predictions[test_inds][:, 0])
     print('len of test data: {}'.format(samples_c[test_inds][:, 0].shape))
 
     te_ax_tr_dat_dom, te_ax_tr_dat_pdf = analysis.get_pdf(samples_c[train_inds][:, 0])
