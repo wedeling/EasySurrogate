@@ -1,32 +1,48 @@
 
-#Gaussian Process for Fusion transport tutorial example
+# Tutorial: Gaussian Process for Fusion transport tutorial example
 
 In this test we use data describing profiles of tokamak plasma parameters defined by simulations converged
 to a steady-state.
 
+To learn more about the the model, refer to [the EasyVVUQ tutorial page](https://easyvvuq.readthedocs.io/en/dev/fusion_tutorial.html)
+
 ## Files
 
-All the python script for the tutorial files are located at `tests\fusion_tutorial` folder:
+All the python script for the tutorial files are located at the `tests\fusion_tutorial` folder:
 
++ `tests\fusion_tutorial\save_data.py` : a script to run an ensemble of transport model solvers and save initial data
 + `tests\fusion_tutorial\load_data.py` : a script to prepare HDF5 files for surrogate, avoiding re-running numerical solutions
-+ `tests\fusion_tutorial\train_gp_surrogate.py` : script to train a GPR surrogate model
-+ `tests\fusion_tutorial\gp_surrogate_predict.py` : script to produce surrogate model predictions for test dataset
++ `tests\fusion_tutorial\train_gp_surrogate.py` : a script to train a GPR surrogate model
++ `tests\fusion_tutorial\gp_surrogate_predict.py` : a script to produce surrogate model predictions for test dataset
 + `tests\fusion_tutorial\gp_surrogate_analyse.py`  : post-processing of the surrogate predictions
 
-Executing the files in order to go through the tutorial.
+Run the script files in order to go through the tutorial.
 
 ## Get training data 
 
-First step to apply a surrogate is to generate training data.
+First step to apply a surrogate is to generate training data with `tests\fusion_tutorial\load_data.py`.
 
 In the first example we consider a surrogate trained on a one-shot design of numerical experiments.
 
 In our case we run a set of transport model instances with parameter values design defined
-with a random sampler of EasyVVUQ package.
+by a random sampler of [EasyVVUQ package](https://github.com/UCL-CCS/EasyVVUQ) `easyvvuq.sampling.RandomSampler()`.
 Distribution of each parameter is described in  `define_vary()` function.
 
 The repository also provides `inputs.pickle` and `outputs.pickle` file with the results of corresponding simulations
 as their solution take around 30 mins on a single-CPU system.
+To run the solutions of the transport equation yourself, execute this part of `save_data.py`:
+
+```python
+    n_mc = 500
+
+    data_frame, campaign, sampler = run_MC_case(n_mc = 500, local=True, dask=True, batch_size=7)
+    
+    features = save_features(campaign, sampler, n_mc)
+    pd.DataFrame(features).to_pickle('inputs.pickle')
+
+    samples = save_target(data_frame)
+    pd.DataFrame(samples).to_pickle('outputs.pickle')
+```
 
 Running `python3 tests\fusion_tutorial\load_data.py` will prepare HDF5 files suitable for surrogates 
 and further tutorial steps.
@@ -45,13 +61,14 @@ Next, we create a GP_Surrogate object with following:
 It requires to know about the dimensionality of the input and output data. We can also choose the backend 
 implementation of the regression model which we want to use.
 
-The features that we choose in this example are scalar, not considred to be located on spatial or temporal axis, and 
+The features that we choose in this example are scalar, not considered to be located on spatial or temporal axis, and 
 of different nature. Still, the approach of Gaussian Process Regression required defining metrics on input parameter 
 space and features will be scaled to a unit standard deviation by surrogate implicitly.
 
 The following will train the model:
 
 ```python
+    # train surrogate model with given data
     surrogate.train(features, target, test_frac=test_frac, basekernel='Matern', noize='fit')
 ```
 
@@ -59,19 +76,34 @@ It is necessary to specify the training consisting of feature and target data. O
 the fraction of dataset withheld for future testing with `test_frac`, which by default will be taken from 
 the end of passed datasets.
 
-# Prediction with GPR surrogate
+The parameters of resulting model can be viewed with:
+
+```python
+    # print parameters of resulting surrogate
+    surrogate.model.print_model_info()
+```
+
+The campaign together with its surrogate model can be saved via:
+
+```python
+    # save the app and the surrogate
+    campaign.add_app(name='gp_campaign', surrogate=surrogate)
+    campaign.save_state(file_path='gp_model.pickle')
+```
+
+## Prediction with GPR surrogate
 
 In this tutorial, we use surrogate to predict new target values for saved feature test set.
 
 ## Analysis of the surrogate performance
 
 We use test set to analyse the accuracy of the GPR model comparing target values from simulations and from 
-surrogate predictions by calculating relative absolute errors, relative mean squared error, distrbutions of QoI
+surrogate predictions by calculating relative absolute errors, relative mean squared error, distributions of QoI
 and distances between them.
 
 ### Accuracy of surrogate on testing set
 
-In case when we have only information in the quasy-steady-state of the modeled system or do not have information
+In case when we have only information in the quasi-steady-state of the modeled system or do not have information
 about any time evolution, we can estimate the accuracy of the surrogate as the estimator for the quantities of 
 interest we trained it on.
 
@@ -115,16 +147,19 @@ The PDF of the central temperature obtained by a Gaussian Process surrogate can 
 
 Plot of the statistics from simulations and from the surrogates are shown.
 
-<img src="pdf_Te_GP.png" alt="plot" width="200"/>
-
-[//]: # ( ![](pdf_Te_GP.png =200x) 
+<img src="pdf_Te_GP.png" alt="plot" width="350"/>
 
 Full script of the test case, including analysis of surrogate errors and plots of surrogate predictions are in 
 `tests\fusion_tutorial\fusion_tutorial.py` script.
 
 ### Sequential design.
 
-To train the surrogate sequentially and generate new samples to be added to the training dataset one should run
+One of the features that probabilistic surrogate models enables is a sequential design for numerical experiments.
+
+It uses the posterior probability inferred by a model for a set of potential feature value candidates to define
+the most suitable ones for which new simulation should be performed and added to training dataset.
+
+To train the surrogate sequentially and generate new samples to be added to the training dataset one should run:
 
 ```python
 surrogate.train_sequentially(n_iter=n, acquisition_function='f')
@@ -138,24 +173,8 @@ Currently for Gaussian Process surrogates different acquisition functions includ
 + 'mu': maximum uncertainty
 + 'poi': probability of improvement 
 
-To check the result of the sequential design procedure you can use:
+To check the result of the sequential design procedure in case of two features you can use:
 
 ```python
 analysis.plot_2d_design_history()
 ```
-
-[//]: #
-(--------------
-Measure:
- - convergence rate \(error reduction per iteration\)
- - number of iterations to reach desired tolerance \(i.e. the same as previous\)
- - computational cost of single iteration
- - time to reach desired tolerance 
- Risk/Loss:
-  for dynamical systems:
-   - Distance between long-term distribution of QoI
-   for UQ:
-   - Error in statistics for analytical functions
- Examples:
-   g-function
-   )
