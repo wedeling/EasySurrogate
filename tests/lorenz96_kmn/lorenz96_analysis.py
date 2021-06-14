@@ -46,6 +46,7 @@ plt.yticks([])
 plt.legend(loc=0)
 
 plt.tight_layout()
+plt.savefig('replay_pdf.png')
 
 #############
 # Plot ACFs #
@@ -83,6 +84,7 @@ ax2.plot(dom_acf, acf_B_sol, label='kmn')
 leg = plt.legend(loc=0)
 
 plt.tight_layout()
+plt.savefig('acf_s.png')
 
 #############
 # Plot CCFs #
@@ -120,3 +122,4 @@ ax2.plot(dom_ccf, ccf_B_sol, label='kmn')
 leg = plt.legend(loc=0)
 
 plt.tight_layout()
+plt.savefig('ccf_s.png')

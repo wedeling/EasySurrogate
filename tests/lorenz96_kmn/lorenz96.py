@@ -274,6 +274,8 @@ else:
     ax.plot(theta, np.append(X_data[-1, :], X_data[-1, 0]), label='X')
     ax.plot(theta_Y, np.append(Y_data[-1, :].flatten(), Y_data[-1, 0, 0]), label='Y')
 
+    plt.savefig('orig_data.png')
+
 #############
 # Plot PDEs #
 #############
@@ -292,3 +294,5 @@ plt.legend(loc=0)
 plt.tight_layout()
 
 plt.show()
+
+plt.savefig('orig_pdf.png')

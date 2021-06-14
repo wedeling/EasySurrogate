@@ -12,7 +12,9 @@ setup(
 
     author='CWI',
 
-    install_requires=['numpy', 'scipy', 'matplotlib', 'h5py', 'sklearn'],
+    install_requires=['numpy', 'scipy', 'matplotlib', 'h5py', 'sklearn', 'mogp_emulator'],
+    
+    #package_dir={'':'easysurrogate'},
 
     packages=find_packages(),
 

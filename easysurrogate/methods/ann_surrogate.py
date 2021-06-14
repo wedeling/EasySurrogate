@@ -64,10 +64,10 @@ class ANN_Surrogate(Campaign):
         self.test_frac = test_frac
 
         # prepare the training data
-        X_train, y_train = self.feat_eng.get_training_data(feats, target, lags=lags, local=local,
-                                                           test_frac=test_frac)
+        X_train, y_train, _, _ = self.feat_eng.get_training_data(feats, target, lags=lags, local=local,
+                                                           test_frac=test_frac, train_first=True)
         # get the maximum lag that was specified
-        self.max_lag = self.feat_eng.max_lag
+        self.max_lag = self.feat_eng.max_lag  #TODO for 20 grid points returns (n_samples x n_features) as training dataset
 
         # number of output neurons
         n_out = y_train.shape[1]
