@@ -1,8 +1,9 @@
 """
 CLASS TO PERFORM ANALYSIS ON RESULTS FROM A DEEP ACTIVE SUBSPACE NETWORK
 """
-from .base import BaseAnalysis
+
 import numpy as np
+from .base import BaseAnalysis
 
 
 class DAS_analysis(BaseAnalysis):
@@ -16,9 +17,9 @@ class DAS_analysis(BaseAnalysis):
 
     def sensitivity_measures(self, feats):
         """
-        Compute global derivative-based sensitivity measures using the derivative of
-        squared L2 norm of the output, computing usoing back propagation. Integration
-        of the derivatives over the input space is done via MC on the provided
+        EXPERIMENTAL: Compute global derivative-based sensitivity measures using the
+        derivative of squared L2 norm of the output, computing usoing back propagation.
+        Integration of the derivatives over the input space is done via MC on the provided
         input features in feats.
 
         Parameters

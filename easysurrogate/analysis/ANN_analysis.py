@@ -1,8 +1,8 @@
 """
 CLASS TO PERFORM ANALYSIS ON RESULTS FROM An ARTIFICIAL NEURAL NETWORK.
 """
-from .base import BaseAnalysis
 import numpy as np
+from .base import BaseAnalysis
 
 
 class ANN_analysis(BaseAnalysis):
@@ -10,15 +10,15 @@ class ANN_analysis(BaseAnalysis):
     ANN analysis class
     """
 
-    def __init__(self, ann_surrogate, **kwargs):
+    def __init__(self, ann_surrogate):
         print('Creating ANN_analysis object')
         self.ann_surrogate = ann_surrogate
 
     def sensitivity_measures(self, feats):
         """
-        Compute global derivative-based sensitivity measures using the derivative of
-        squared L2 norm of the output, computing usoing back propagation. Integration
-        of the derivatives over the input space is done via MC on the provided
+        EXPERIMENTAL: Compute global derivative-based sensitivity measures using the
+        derivative of squared L2 norm of the output, computing usoing back propagation.
+        Integration of the derivatives over the input space is done via MC on the provided
         input features in feats.
 
         Parameters
