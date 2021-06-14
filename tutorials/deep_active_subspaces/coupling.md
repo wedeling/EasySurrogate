@@ -12,12 +12,46 @@ For computational efficiency we will consider the analytical Sobol G function, s
 * `tests/deep_active_subspaces/generate_easyvvuq_dataframe.py`: script that generates the training data using EasyVVUQ.
 * `tests/deep_active_subspaces/train_DAS_surrogate.py`: script that trains a Deep Active Subspace (DAS) surrogate on the EasyVVUQ data frame.
 
-## Deep Active subspaces
+## Active subspaces
 
 The Active Subspace method, introduced in [1], is a class of methods for forward propagation of uncertainty in high-dimensional input spaces. It attempts to circumvent the curse of dimensionality by
 dimension reduction of the input space. Specifically, it projects the input vector x (of size `D`) to a lower-dimensional subspace y of size `d` (`d < D`), via a tall-and-skinny matrix `W_1` of orthogonal basis vectors. The active subspace is thus given by
 
 ![equation](https://latex.codecogs.com/svg.latex?%7B%5Cbf%20y%7D%20%3D%20W_1%5ET%7B%5Cbf%20x%7D%20%5Cin%5Cmathbb%7BR%7D%5Ed%2C)
+
+where the main idea is that the dimension reduction simplifies the task of obtaining an accurate surrogate model. If we denote this surrogate by `g(y)`, and the full code as `f(x)`, we thus want to find a model that satisfies
+
+![equation](https://latex.codecogs.com/svg.latex?f%28%7B%5Cbf%20x%7D%29%5Capprox%20g%5Cleft%28%7B%5Cbf%20y%7D%5Cright%29%20%3D%20g%5Cleft%28W_1%5ET%7B%5C%20%5Cbf%20x%7D%5Cright%29.)
+
+Because `y` is a linear transformation of the inputs `x`, it opens up the possibility of findings directions along which the model varies most. This is especially useful if a model varies significantly in a direction that is not aligned with the coordinate axes of `x`. In `classical' active subspaces [1], dimension reduction is achieved by rotating the coordinate system such that it is aligned with the directions of most variability, after which only the most dominant directions are retained. To find these directions, the following average gradient matrix is constructed:
+
+![equation](https://latex.codecogs.com/svg.latex?C%20%3D%20%5Cint%20%5Cleft%28%5Cnabla%20f%5Cleft%28%7B%5Cbf%20x%7D%5Cright%29%5Cright%29%5Cleft%28%5Cnabla%20f%5Cleft%28%7B%5Cbf%20x%7D%5Cright%29%5Cright%29%5ET%20p%28%5Cbf%20x%29d%7B%5Cbf%20x%7D)
+
+Here, `p(x)` is the chosen probability density function (pdf) of the inputs `x`. Since `C` is a symmetric, positive semi-definite matrix, it has the following spectral decomposition
+
+![equation](https://latex.codecogs.com/svg.latex?C%20%3D%20%5BW_1%20W_2%5D%5Cleft%5B%20%5Cbegin%7Bmatrix%7D%20%5CLambda_1%20%26%200%20%5C%5C%200%20%26%20%5CLambda_2%20%5Cend%7Bmatrix%7D%20%5Cright%5D%5BW_1%20W_2%5D%5ET.)
+
+Hence the matrix `W_1`, used to project `x` to `y` are the first `d` eigenvectors of `C`, which in turn correspond to the `d` largest eigenvalues. These `d` eigenvectors form an orthonormal basis aligned with the directions of most variability. Note that `C` is averaged over `p(x)`, and that in practise, the integral in `C` is often approximated using a Monte Carlo approach.
+
+The approach described here is intuitive, and has nice theoretical properties, such as computable error bounds. The downside however, is that the gradient of `f` must be available. This requires the availability of an adjoint solver, or one must approximate the gradients using for instance finite differences. This downside has prompted the development of other active subspace methods which do not require access to the gradient. Some of these methods involve Gaussian processes [2], whereas others use deep learning. We will focus on the latter.
+
+## Deep Active Subspaces
+
+In [3], an approach is described in which artificial neural networks (ANNs) are used for `g`, and where `W_1` is found using back propagation. The column vectors of `W_1` still form an orthogonal basis. The difference is that these column vectors are no longer the eigenvectors of the gradient matrix `C`, but instead are constructed using Gram-Schmidt orthogonalization. As such, `W_1` is parametrized by a matrix `Q` of the same dimension, where the non-orthonormal column vectors `q_i` (size D) are made orthonormal via:
+
+![equation](https://latex.codecogs.com/svg.latex?%7B%5Cbf%20w%7D_i%20%3D%20%7B%5Cbf%20q%7D_i%20-%20%5Csum_%7Bj%3D1%7D%5E%7Bi-1%7D%5Cleft%28%5Cfrac%7B%7B%5Cbf%20w%7D_j%5ET%7B%5Cbf%20q%7D_i%7D%7B%7B%5Cbf%20w%7D_j%5ET%7B%5Cbf%20w%7D_j%7D%5Cright%29%7B%5Cbf%20w%7D_j%2C%20%5Cquad%20i%20%3D%201%2C%5Ccdots%2C%20d.)
+
+That is, we start with $\wb_1 := \qb_1$, and for all subsequent vectors $\qb_i$ we subtract the projections of $\qb_i$ onto each vector $\wb_j$ which has previously been orthogonalized. This leaves us with a orthogonal basis:
+
+![equation](https://latex.codecogs.com/svg.latex?%5Cleft%5B%7B%5Cbf%20w%7D_1%28%7B%5Cbf%20q%7D_1%29%5C%3B%5C%3B%7B%5Cbf%20w%7D_2%28%7B%5Cbf%20q%7D_1%2C%20%7B%5Cbf%20q%7D_2%29%5C%3B%5C%3B%5Ccdots%5C%3B%5C%3B%7B%5Cbf%20w%7D_d%28%7B%5Cbf%20q%7D_1%2C%7B%5Cbf%20q%7D_2%5C%2C%5Ccdots%2C%7B%5Cbf%20q%7D_d%29%5Cright%5D)
+
+Finally, to obtain an orthonormal basis, each column vector is divided by its length. such that our final weight matrix becomes
+
+![equation](https://latex.codecogs.com/svg.latex?W_1%28Q%29%20%3D%20%5Cleft%5B%5Cfrac%7B%7B%5Cbf%20w%7D_1%28%7B%5Cbf%20q%7D_1%29%7D%7B%5ClVert%7B%5Cbf%20w%7D_1%28%7B%5Cbf%20q%7D_1%29%5CrVert_2%7D%5C%3B%5C%3B%5Cfrac%7B%7B%5Cbf%20w%7D_2%28%7B%5Cbf%20q%7D_1%2C%20%7B%5Cbf%20q%7D_2%29%7D%7B%5ClVert%7B%5Cbf%20w%7D_2%28%7B%5Cbf%20q%7D_1%2C%20%7B%5Cbf%20q%7D_2%29%5CrVert_2%7D%5C%3B%5C%3B%5Ccdots%5C%3B%5C%3B%5Cfrac%7B%7B%5Cbf%20w%7D_d%28%7B%5Cbf%20q%7D_1%2C%7B%5Cbf%20q%7D_2%5C%2C%5Ccdots%2C%7B%5Cbf%20q%7D_d%29%7D%7B%5ClVert%7B%5Cbf%20w%7D_d%28%7B%5Cbf%20q%7D_1%2C%7B%5Cbf%20q%7D_2%5C%2C%5Ccdots%2C%7B%5Cbf%20q%7D_d%29%5CrVert_2%7D%5Cright%5D.)
+
+Note that the projection `y = W_1^Tx` also occurs in a layer of a neural network if the activation function is linear. Thus, we can interpret the matrix `W_1` as a weight matrix of the first hidden layer (with `d` neurons and linear activation), connected to an input layer through which `x` is passed. Each column vector `w_i` contains the all weights connecting the input layer to the i-th neuron of the first hidden layer, see Figure below. Since the first hidden layer has only `d` neurons, and its weight matrix is determined from a Gram-Schmidt procedure, we call the layer the Deep Active Subspace (DAS) layer.
+
+![](nn.png)
 
 ## EasyVVUQ Latin Hypercube campaign
 
