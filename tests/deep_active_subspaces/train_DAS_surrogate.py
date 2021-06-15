@@ -27,33 +27,38 @@ surr_campaign = es.Campaign(name=ID)
 # load the training data
 params, samples = surr_campaign.load_easyvvuq_data(campaign, output_columns)
 samples = samples[output_columns[0]]
-plt.tricontour(params[:,0], params[:, 1], samples.flatten(), 50)
 
 # input dimension (15)
 D = params.shape[1]
-
 # assumed dimension active subspace
 d = 1
 
+# create DAS surrogate object
 surrogate = es.methods.DAS_Surrogate()
+# train the DAS surrogate
 surrogate.train(params, samples, 
                 d, n_iter=10000, n_layers=4, n_neurons=100, 
                 test_frac = 0.2)
+
+# useful dimensions related to the surrogate
 dims = surrogate.get_dimensions()
 
-# plot contour if problem is two-dimensional
+# plot contours if problem is two-dimensional
 if D == 2:
     fig = plt.figure()
-    ax = fig.add_subplot(111)
-    ax.tricontour(params[:, 0], params[:, 1], samples.flatten(), 50)
+    ax = fig.add_subplot(111, xlabel=r'$x_1$', ylabel=r'$x_2$')
+    ax.tricontour(params[:, 0], params[:, 1], samples.flatten(), 30)
     # Extract the coordinate vector of the 1D active subspace
     # This is the weight vector of the 2nd layer
     w = surrogate.neural_net.layers[1].W.flatten()
-    # if both entries are < 0, make both positive for plotting purpose
-    if (np.sign(w) == [-1, -1]).all():
-        w = np.abs(w)
     # plot the coordinate vector
-    plt.arrow(0, 0, w[0], w[1])
+    ax.annotate("", xytext=(0, 0), xy=(-w[0], -w[1]),
+                arrowprops=dict(width=5, headwidth=10))
+    if d == D:
+        ax.annotate("", xy=(0, 0), xytext=(w[2], w[3]),
+                    arrowprops=dict(width=5, headwidth=10, color='r'))
+    plt.axis('equal')
+    plt.tight_layout()
 
 #########################
 # Compute error metrics #
@@ -88,8 +93,8 @@ print('================================')
 analysis = es.analysis.DAS_analysis(surrogate)
 
 n_mc = 10**4
-params = np.array([p.sample(n_mc) for p in sampler.vary.get_values()]).T
-idx, mean = analysis.sensitivity_measures(params)
+params_mc = np.array([p.sample(n_mc) for p in sampler.vary.get_values()]).T
+idx, mean = analysis.sensitivity_measures(params_mc)
 params_ordered = np.array(list(sampler.vary.get_keys()))[idx[0]]
 
 fig = plt.figure('sensitivity', figsize=[4, 8])

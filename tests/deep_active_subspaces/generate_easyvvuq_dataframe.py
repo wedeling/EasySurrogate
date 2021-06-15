@@ -44,6 +44,17 @@ params["out_file"] = {"type": "string", "default": "output.csv"}
 output_filename = params["out_file"]["default"]
 output_columns = ["f"]
 
+# the a vector determines the importance of each input
+# a = np.ones(10) * 99
+a = np.zeros(10)
+a[0] = 1
+a[1] = 0.5
+for i in range(10):
+    params["a%d" % (i + 1)] = {"type": "float",
+                               "min": 0.0,
+                               "max": 100.0,
+                               "default": a[i]}
+
 # create encoder, decoder, and execute locally
 encoder = uq.encoders.GenericEncoder(template_fname=HOME + '/model/g_func.template',
                                      delimiter='$',

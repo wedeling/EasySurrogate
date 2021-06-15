@@ -78,7 +78,7 @@ This will output:
 Extracting features ['x1', 'x2', 'x3', 'x4', 'x5']
 Extracting output data ['f'] 
 ```
-indicating that it has read samples drawn 5 input variables, which will be used as features. The output data is in this case a single column of the CSV output file of the G function, named 'f'. If you which the read multiple columns, specify a list of names under the `qoi_cols` parameter of `load_easyvvuq_data`. Note that `features` is an array, wheres `samples` is a dictionary indexed by the `qoi_cols`. In this case, `samples['f']` will return an array with all outut values of the G function. From this point onward we can simply use this data as training data for any surrogate. Here, we will use it to train an ANN surrogate:
+indicating that it has read samples drawn from 5 input variables, which will be used as features. The output data is in this case a single column of the CSV output file of the G function, named 'f'. If you wish to read multiple columns, specify a list of names under the `qoi_cols` parameter of `load_easyvvuq_data`. Note that `features` is an array, wheres `samples` is a dictionary indexed by the `qoi_cols`. In this case, `samples['f']` will return an array with all output values of the G function. From this point onward we can simply use this data as training data for any surrogate. Here, we will use it to train an ANN surrogate:
 
 ```python
 # Create artificial neural network surrogate
