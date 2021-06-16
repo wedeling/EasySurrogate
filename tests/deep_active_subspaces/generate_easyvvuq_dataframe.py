@@ -30,7 +30,7 @@ DB_LOCATION = "sqlite:///" + WORK_DIR + "/campaign%s.db" % ID
 ########################
 
 # choose a number of uncertain parameters (< 10)
-D = 10
+D = 2
 
 # Define parameter space
 params = {}
@@ -45,11 +45,9 @@ output_filename = params["out_file"]["default"]
 output_columns = ["f"]
 
 # the a vector determines the importance of each input
-# a = np.linspace(0, np.sqrt(100), 10)**2
-a = np.array([1 / 2 ** i for i in range(10)])
-# a = np.zeros(10)
-# a[0] = 1
-# a[1] = 0.5
+# a = np.array([1 / 2 ** i for i in range(10)])
+a = np.ones(10)*99
+a[0] = 0
 for i in range(10):
     params["a%d" % (i + 1)] = {"type": "float",
                                "min": 0.0,

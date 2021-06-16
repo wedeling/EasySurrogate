@@ -29,13 +29,13 @@ output_columns = ["f"]
 surr_campaign = es.Campaign(name=ID)
 
 # load the training data
-params, samples = surr_campaign.load_easyvvuq_data(campaign, output_columns)
+params, samples = surr_campaign.load_easyvvuq_data(campaign, qoi_cols=output_columns)
 samples = samples[output_columns[0]]
 
 # input dimension (15)
 D = params.shape[1]
 # assumed dimension active subspace
-d = 5
+d = 2
 
 # create DAS surrogate object
 surrogate = es.methods.DAS_Surrogate()
@@ -47,23 +47,6 @@ surrogate.train(params, samples,
 
 # useful dimensions related to the surrogate
 dims = surrogate.get_dimensions()
-
-# plot contours if problem is two-dimensional
-if D == 2:
-    fig = plt.figure()
-    ax = fig.add_subplot(111, xlabel=r'$x_1$', ylabel=r'$x_2$')
-    ax.tricontour(params[:, 0], params[:, 1], samples.flatten(), 30)
-    # Extract the coordinate vector of the 1D active subspace
-    # This is the weight vector of the 2nd layer
-    w = surrogate.neural_net.layers[1].W.flatten()
-    # plot the coordinate vector
-    ax.annotate("", xytext=(0, 0), xy=(-w[0], -w[1]),
-                arrowprops=dict(width=5, headwidth=10))
-    if d == D:
-        ax.annotate("", xy=(0, 0), xytext=(w[2], w[3]),
-                    arrowprops=dict(width=5, headwidth=10, color='r'))
-    plt.axis('equal')
-    plt.tight_layout()
 
 #########################
 # Compute error metrics #
@@ -105,7 +88,7 @@ params_ordered = np.array(list(sampler.vary.get_keys()))[idx[0]]
 
 fig = plt.figure('sensitivity', figsize=[4, 8])
 ax = fig.add_subplot(111)
-ax.set_ylabel(r'$\frac{\partial ||y||^2_2}{\partial x_i}$', fontsize=14)
+ax.set_ylabel(r'$\int\frac{\partial ||y||^2_2}{\partial x_i}p(x)dx$', fontsize=14)
 # find max quad order for every parameter
 ax.bar(range(mean_grad.size), height = mean_grad[idx].flatten())
 ax.set_xticks(range(mean_grad.size))
