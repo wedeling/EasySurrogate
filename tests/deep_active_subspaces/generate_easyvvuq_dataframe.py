@@ -46,7 +46,7 @@ output_columns = ["f"]
 
 # the a vector determines the importance of each input
 # a = np.array([1 / 2 ** i for i in range(10)])
-a = np.ones(10)*99
+a = np.ones(10) * 99
 a[0] = 0
 for i in range(10):
     params["a%d" % (i + 1)] = {"type": "float",

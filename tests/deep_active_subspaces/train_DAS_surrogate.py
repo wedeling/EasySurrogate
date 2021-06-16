@@ -41,9 +41,9 @@ d = 2
 surrogate = es.methods.DAS_Surrogate()
 
 # train the DAS surrogate
-surrogate.train(params, samples, 
-                d, n_iter=10000, n_layers=4, n_neurons=100, 
-                test_frac = 0.2)
+surrogate.train(params, samples,
+                d, n_iter=10000, n_layers=4, n_neurons=100,
+                test_frac=0.2)
 
 # useful dimensions related to the surrogate
 dims = surrogate.get_dimensions()
@@ -56,17 +56,17 @@ dims = surrogate.get_dimensions()
 n_mc = dims['n_train']
 pred = np.zeros([n_mc, dims['n_out']])
 for i in range(n_mc):
-    pred[i,:] = surrogate.predict(params[i])
-   
+    pred[i, :] = surrogate.predict(params[i])
+
 train_data = samples[0:dims['n_train']]
-rel_err_train = np.linalg.norm(train_data - pred)/np.linalg.norm(train_data)
+rel_err_train = np.linalg.norm(train_data - pred) / np.linalg.norm(train_data)
 
 # run the trained model forward at test locations
 pred = np.zeros([dims['n_test'], dims['n_out']])
 for idx, i in enumerate(range(dims['n_train'], dims['n_samples'])):
     pred[idx] = surrogate.predict(params[i])
 test_data = samples[dims['n_train']:]
-rel_err_test = np.linalg.norm(test_data - pred)/np.linalg.norm(test_data)
+rel_err_test = np.linalg.norm(test_data - pred) / np.linalg.norm(test_data)
 
 print('================================')
 print('Relative error on training set = %.4f' % rel_err_train)
@@ -90,7 +90,7 @@ fig = plt.figure('sensitivity', figsize=[4, 8])
 ax = fig.add_subplot(111)
 ax.set_ylabel(r'$\int\frac{\partial ||y||^2_2}{\partial x_i}p(x)dx$', fontsize=14)
 # find max quad order for every parameter
-ax.bar(range(mean_grad.size), height = mean_grad[idx].flatten())
+ax.bar(range(mean_grad.size), height=mean_grad[idx].flatten())
 ax.set_xticks(range(mean_grad.size))
 ax.set_xticklabels(params_ordered)
 plt.xticks(rotation=90)

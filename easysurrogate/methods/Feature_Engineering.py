@@ -11,6 +11,7 @@ from scipy import stats
 from scipy.optimize import minimize
 import statistics
 
+
 class Feature_Engineering:
     """
     Feature_Engineering class. containing several generic methods for the manipulation of features
@@ -169,8 +170,16 @@ class Feature_Engineering:
 
         return x_min, x_min_ind_test, x_min_ind_glob
 
-    def get_training_data(self, feats, target, lags=None, local=False, test_frac=0.0, valid_frac=0.0,
-                          train_first=True, index=None):
+    def get_training_data(
+            self,
+            feats,
+            target,
+            lags=None,
+            local=False,
+            test_frac=0.0,
+            valid_frac=0.0,
+            train_first=True,
+            index=None):
         """
         Generate training data. Training data can be made (time) lagged and/or local.
 
@@ -237,14 +246,17 @@ class Feature_Engineering:
         self.n_test = np.int(self.n_samples - self.n_train)
         # get indices of samples  to be used for training
         # 1) train_first True: choose first (1-test_frac) fraction of the data set points, if points arranged in time
-        # 2) train_first False: choose (1-test_frac) fraction of data set at random without replacement
+        # 2) train_first False: choose (1-test_frac) fraction of data set at
+        # random without replacement
         if train_first:
-            self.train_indices = np.arange(self.n_samples)[:self.n_train]  # chose train fraction from first sims
+            # chose train fraction from first sims
+            self.train_indices = np.arange(self.n_samples)[:self.n_train]
             self.test_indices = np.arange(self.n_samples)[self.n_train:]
         else:
             self.train_indices = np.random.choice(self.n_samples, self.n_train, replace=False)
             self.train_indices = np.sort(self.train_indices)
-            self.test_indices = np.array([el for el in list(range(0, self.n_samples)) if el not in self.train_indices])
+            self.test_indices = np.array(
+                [el for el in list(range(0, self.n_samples)) if el not in self.train_indices])
 
         # TODO: for GP and other models bad for extrapolation:
         #  add option to prioritize training samples at the border of presented parameter space
@@ -254,7 +266,8 @@ class Feature_Engineering:
             self.n_train = len(index)
             self.n_test = self.n_samples - self.n_train
             self.train_indices = index
-            self.test_indices = np.array([el for el in list(range(0, self.n_samples)) if el not in self.train_indices])
+            self.test_indices = np.array(
+                [el for el in list(range(0, self.n_samples)) if el not in self.train_indices])
 
         X = {}
         y = {}

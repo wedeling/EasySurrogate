@@ -35,6 +35,7 @@ def plot_er_time(errors, times):
     plt.savefig('err_and_time.png')
     plt.close()
 
+
 def main(order_num=None):
 
     campaign = es.Campaign(load_state=True, file_path='mogp_10_model_1006_full_100.pickle')
@@ -46,12 +47,22 @@ def main(order_num=None):
     data_frame_sur = campaign.load_hdf5_data(file_path='sur_data.hdf5')
 
     # defining name of input features
-    feature_names = ["Qe_tot", "H0", "Hw", "chi", "Te_bc", "b_pos", "b_height", "b_sol", "b_width", "b_slope"]
+    feature_names = [
+        "Qe_tot",
+        "H0",
+        "Hw",
+        "chi",
+        "Te_bc",
+        "b_pos",
+        "b_height",
+        "b_sol",
+        "b_width",
+        "b_slope"]
     # choosing all features
     features = dict((k, data_frame_sim[k]) for k in feature_names)
 
     # preparing a list of feature to train
-    theta = [v for k,v in features.items()]
+    theta = [v for k, v in features.items()]
 
     # chose target data from the loaded dictionary
     samples = data_frame_sim['Te']
@@ -72,7 +83,6 @@ def main(order_num=None):
     # getting a subset of input data, take first ndim_in features defined by order_num list
     theta_reod = campaign.surrogate.feat_eng.chose_feat_subset(theta, ndim_in, order_num)
 
-
     # list of run indices used in training
     train_inds = campaign.surrogate.feat_eng.train_indices.tolist()
     test_inds = campaign.surrogate.feat_eng.test_indices.tolist()
@@ -90,46 +100,63 @@ def main(order_num=None):
     analysis = es.analysis.GP_analysis(campaign.surrogate)
 
     # plot the train predictions and original data
-    analysis.plot_prediction_results(samples[train_inds].reshape(-1), training_predictions.reshape(-1),
-                            training_pred_vars.reshape(-1), 1.0, 'gp_train_{}_data_res.png'.format(ndim_in))
+    analysis.plot_prediction_results(samples[train_inds].reshape(-1),
+                                     training_predictions.reshape(-1),
+                                     training_pred_vars.reshape(-1),
+                                     1.0,
+                                     'gp_train_{}_data_res.png'.format(ndim_in))
 
-    rel_err_train = np.linalg.norm(training_predictions - samples[train_inds]) / np.linalg.norm(samples[train_inds])
+    rel_err_train = np.linalg.norm(
+        training_predictions - samples[train_inds]) / np.linalg.norm(samples[train_inds])
     print('Relative error on the training set is %.2f percent' % (rel_err_train * 100))
 
     # plot prediction against parameter values
     if len(theta_reod) == 1 and samples.shape[1] == 1:
         analysis.plot_prediction_results_vspar(theta_reod[0][train_inds].reshape(-1),
-                                      samples[train_inds],
-                                      training_predictions.reshape(-1),
-                                      training_pred_vars.reshape(-1),
-                                      name='gp_theta_train_{}_data_res.png'.format(ndim_in))
-
+                                               samples[train_inds],
+                                               training_predictions.reshape(-1),
+                                               training_pred_vars.reshape(-1),
+                                               name='gp_theta_train_{}_data_res.png'.format(ndim_in))
 
     # plot the test predictions and data
-    analysis.plot_prediction_results(samples[test_inds].reshape(-1), test_predictions.reshape(-1),
-                            test_pred_vars.reshape(-1), name='gp_test_{}_data_res.png'.format(ndim_in))
+    analysis.plot_prediction_results(samples[test_inds].reshape(-1),
+                                     test_predictions.reshape(-1),
+                                     test_pred_vars.reshape(-1),
+                                     name='gp_test_{}_data_res.png'.format(ndim_in))
 
     # plot a several chosen test prediction as radial dependency
-    analysis.plot_prediction_results_vectorqoi(samples[test_inds], test_predictions, test_pred_vars,
-                                      name='gp_test_{}_data_res_profiles.png'.format(ndim_in))
+    analysis.plot_prediction_results_vectorqoi(
+        samples[test_inds],
+        test_predictions,
+        test_pred_vars,
+        name='gp_test_{}_data_res_profiles.png'.format(ndim_in))
 
     # plot prediction against parameter values for testing data
     if len(theta_reod) == 1 and samples.shape[1] == 1:
         analysis.plot_prediction_results_vspar(theta_reod[0][test_inds].reshape(-1),
-                                      samples[test_inds],
-                                      test_predictions.reshape(-1),
-                                      test_pred_vars,
-                                      name='gp_theta_test_{}_data_res.png'.format(ndim_in))
+                                               samples[test_inds],
+                                               test_predictions.reshape(-1),
+                                               test_pred_vars,
+                                               name='gp_theta_test_{}_data_res.png'.format(ndim_in))
 
     # print the relative test error
-    rel_err_test = np.linalg.norm(test_predictions - samples[test_inds]) / np.linalg.norm(samples[test_inds])
+    rel_err_test = np.linalg.norm(
+        test_predictions - samples[test_inds]) / np.linalg.norm(samples[test_inds])
     print('Relative error on the test set is %.2f percent' % (rel_err_test * 100))
 
     # plot average predicted variance and R2 score on a test set
     test_pred_var_tot = test_predictions.var()
     print('Variance of predicted result means for the test set %.3f' % test_pred_var_tot)
-    print('R2 score on testing set: {}'.format(campaign.surrogate.model.instance.score(
-        np.array(theta_reod)[:, [test_inds]].reshape(n_mc_l - n_train, ndim_in), samples[test_inds])))
+    print(
+        'R2 score on testing set: {}'.format(
+            campaign.surrogate.model.instance.score(
+                np.array(theta_reod)[
+                    :,
+                    [test_inds]].reshape(
+                    n_mc_l -
+                    n_train,
+                    ndim_in),
+                samples[test_inds])))
 
     ############
     # QoI PDFs #
@@ -149,9 +176,18 @@ def main(order_num=None):
     te_ax_tt_surr_dom, te_ax_tt_surr_pdf = analysis.get_pdf(tot_pred[:, 0])
     print('len of total data: {}'.format(samples[:][:, 0].shape))
 
-    analysis.plot_pdfs(te_ax_ts_dat_dom, te_ax_ts_dat_pdf, te_ax_ts_surr_dom, te_ax_ts_surr_pdf,
-                       names=['simulation_test', 'surrogate_test', 'simulation_train', 'surrogate_train'],
-                       qoi_names=['Te(r=0)'], filename='pdf_qoi_trts_{}'.format(ndim_in))
+    analysis.plot_pdfs(
+        te_ax_ts_dat_dom,
+        te_ax_ts_dat_pdf,
+        te_ax_ts_surr_dom,
+        te_ax_ts_surr_pdf,
+        names=[
+            'simulation_test',
+            'surrogate_test',
+            'simulation_train',
+            'surrogate_train'],
+        qoi_names=['Te(r=0)'],
+        filename='pdf_qoi_trts_{}'.format(ndim_in))
     w_d = ws_dist(te_ax_ts_surr_pdf, te_ax_ts_dat_pdf)
     print('Wasserstein distance for distribution of selected QoI produced by simulation and surrogate: {}'.format(w_d))
 
@@ -166,4 +202,3 @@ def main(order_num=None):
 
 if __name__ == '__main__':
     main()
-

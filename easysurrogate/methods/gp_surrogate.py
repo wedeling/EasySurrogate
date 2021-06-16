@@ -71,9 +71,8 @@ class GP_Surrogate(Campaign):
             self.noize = kwargs['noize']
 
         # prepare the training data
-        X_train, y_train, X_test, y_test = self.feat_eng.get_training_data(feats, target,
-                                                                           local=False, test_frac=test_frac,
-                                                                           train_first=False)
+        X_train, y_train, X_test, y_test = self.feat_eng.get_training_data(
+            feats, target, local=False, test_frac=test_frac, train_first=False)
 
         # scale the training data
         X_train = self.x_scaler.fit_transform(X_train)
@@ -90,8 +89,13 @@ class GP_Surrogate(Campaign):
         # create a GP process
         print('===============================')
         print('Fitting Gaussian Process...')
-        self.model = es.methods.GP(kernel=self.base_kernel, n_in=self.n_in, n_out=self.n_out, bias=False,
-                                   noize=self.noize, backend=self.backend)
+        self.model = es.methods.GP(
+            kernel=self.base_kernel,
+            n_in=self.n_in,
+            n_out=self.n_out,
+            bias=False,
+            noize=self.noize,
+            backend=self.backend)
 
         # get dimensionality of the output
         self.n_out = y_train.shape[1]
@@ -124,7 +128,7 @@ class GP_Surrogate(Campaign):
         y = self.y_scaler.inverse_transform(y)
 
         self.y_scaler.with_mean = False
-        std = self.y_scaler.inverse_transform(std*np.ones(y.shape))
+        std = self.y_scaler.inverse_transform(std * np.ones(y.shape))
         self.y_scaler.with_mean = True
 
         return y, std
@@ -186,7 +190,8 @@ class GP_Surrogate(Campaign):
             elif acq_func_arg == 'mu':
                 acq_func_obj = self.maxunc_acquisition_function
             else:
-                raise NotImplementedError('This rule for sequential optimisation is not implemented, using default.')
+                raise NotImplementedError(
+                    'This rule for sequential optimisation is not implemented, using default.')
         else:
             acq_func_obj = self.maxunc_acquisition_function
 
@@ -203,7 +208,7 @@ class GP_Surrogate(Campaign):
             """
             0) iterate for n_iter
                 1) state on step n: object has X_train, X_test, their indices, model instance
-                2) find set of candidates at minima of acq function X_cand; now object has 
+                2) find set of candidates at minima of acq function X_cand; now object has
                 X_train:=X_train U X_cand, X_test = X_test U_ X_cand, global inidces and set sizes updated
                 3) model instance is updated : first approach to train new model for new X_train
             """
@@ -214,12 +219,14 @@ class GP_Surrogate(Campaign):
                     chose_feature_from_acquisition(acq_func_obj, self.X_test)
                 X_new = X_new.reshape(1, -1)
 
-                # x_new_inds = feats.index(X_new)  # feats is list of features, for this has to be list of samples
+                # x_new_inds = feats.index(X_new)  # feats is list of features, for this
+                # has to be list of samples
                 y_new = self.y_test[x_new_ind_test].reshape(1, -1)
 
                 self.feat_eng.train_indices = np.concatenate([self.feat_eng.train_indices,
                                                               np.array(x_new_ind_glob).reshape(-1)])
-                self.feat_eng.test_indices = np.delete(self.feat_eng.test_indices, x_new_ind_test, 0)
+                self.feat_eng.test_indices = np.delete(
+                    self.feat_eng.test_indices, x_new_ind_test, 0)
                 self.feat_eng.n_train += 1
                 self.feat_eng.n_test -= 1
 
@@ -243,7 +250,8 @@ class GP_Surrogate(Campaign):
                 self.y_test = y_test
 
                 # self.model = es.methods.GP(X_train, y_train,
-                #                            kernel=self.base_kernel, bias=False, noize=self.noize, backend=self.backend)
+                # kernel=self.base_kernel, bias=False, noize=self.noize,
+                # backend=self.backend)
 
                 self.model.train(X_train, y_train)
 
@@ -272,7 +280,8 @@ class GP_Surrogate(Campaign):
 
             _, _, der = self.feat_eng._predict(x, feed_forward=lambda t: self.model.predict(t))
         else:
-            raise NotImplementedError("Gaussian Process derivatives w.r.t. inputs are implemented only for MOGP")
+            raise NotImplementedError(
+                "Gaussian Process derivatives w.r.t. inputs are implemented only for MOGP")
 
         self.y_scaler.with_mean = False
         der = self.y_scaler.inverse_transform(der)
@@ -299,7 +308,7 @@ class GP_Surrogate(Campaign):
 
         _, uncertatinty, _ = self.model.predict(sample)
 
-        return -1.*uncertatinty
+        return -1. * uncertatinty
 
     def poi_acquisition_function(self, sample, candidates=None):
         """
@@ -321,4 +330,3 @@ class GP_Surrogate(Campaign):
         poi = np.linalg.norm(np.divide(abs(mu - f_star), std + jitter), ord=2)
 
         return -poi
-

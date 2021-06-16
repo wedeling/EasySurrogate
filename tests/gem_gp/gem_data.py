@@ -7,6 +7,7 @@ import easysurrogate as es
 features_names = ['te_value', 'ti_value', 'te_ddrho', 'ti_ddrho']
 target_names = ['te_transp_flux', 'ti_transp_flux']
 
+
 def load_csv_file(input_file='gem_data_625.txt', n_runs=625):
     input_dim = 4
     output_dim = 2
@@ -19,7 +20,7 @@ def load_csv_file(input_file='gem_data_625.txt', n_runs=625):
         i = 0
         for row in datareader:
             input_samples[i] = row[0:input_dim]
-            output_samples[i] = row[input_dim:input_dim+output_dim]
+            output_samples[i] = row[input_dim:input_dim + output_dim]
             i = i + 1
 
     data = {}
@@ -31,6 +32,7 @@ def load_csv_file(input_file='gem_data_625.txt', n_runs=625):
     data['ti_transp_flux'] = output_samples[:, 1].reshape(-1, 1)
 
     return data
+
 
 def load_csv_dict_file(input_file='gem0_lhc_res.csv', n_runs=1000, input_dim=4, output_dim=2):
     if input_dim == 4:
@@ -72,6 +74,7 @@ def load_csv_dict_file(input_file='gem0_lhc_res.csv', n_runs=1000, input_dim=4, 
 
     return data
 
+
 def load_wf_csv_file(data_dir='', input_file='AUG_gem_inoutput.txt', runs=[0, 500]):
 
     Xlabels = ['Te-ft5', 'Ti-ft5', 'dTe-ft5', 'dTi-ft5']
@@ -81,7 +84,8 @@ def load_wf_csv_file(data_dir='', input_file='AUG_gem_inoutput.txt', runs=[0, 50
     output_samples = []
 
     with open(data_dir + input_file, 'r') as inputfile:
-        datareader = csv.reader(inputfile, delimiter=' ') # Could be done with DictReader(), then no need in column numbers
+        # Could be done with DictReader(), then no need in column numbers
+        datareader = csv.reader(inputfile, delimiter=' ')
         column_names = next(datareader)
         x_column_numbers = [column_names.index(x) for x in Xlabels]
         y_column_numbers = [column_names.index(y) for y in Ylabels]
@@ -106,6 +110,7 @@ def load_wf_csv_file(data_dir='', input_file='AUG_gem_inoutput.txt', runs=[0, 50
     return data
 
 # get data to a hfd5
+
 
 # create an ES campaign
 campaign = es.Campaign(load_state=False)

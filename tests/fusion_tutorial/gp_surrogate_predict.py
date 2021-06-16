@@ -10,12 +10,22 @@ def main(order_num=None):
     data_frame = campaign.load_hdf5_data(file_path='sim_data.hdf5')
 
     # defining name of input features
-    feature_names = ["Qe_tot", "H0", "Hw", "chi", "Te_bc", "b_pos", "b_height", "b_sol", "b_width", "b_slope"]
+    feature_names = [
+        "Qe_tot",
+        "H0",
+        "Hw",
+        "chi",
+        "Te_bc",
+        "b_pos",
+        "b_height",
+        "b_sol",
+        "b_width",
+        "b_slope"]
     # choosing all features
     features = dict((k, data_frame[k]) for k in feature_names)
 
     # preparing a list of feature to train
-    theta = [v for k,v in features.items()]
+    theta = [v for k, v in features.items()]
 
     ndim_in = campaign.surrogate.n_in
     ndim_out = campaign.surrogate.n_out
@@ -28,8 +38,7 @@ def main(order_num=None):
     # getting a subset of input data, take first ndim_in features defined by order_num list
     theta_reod = campaign.surrogate.feat_eng.chose_feat_subset(theta, ndim_in, order_num)
 
-
-    ### Total dataset
+    # Total dataset
 
     predictions = np.zeros([n_mc_l, ndim_out])
     pred_vars = np.zeros([n_mc_l, ndim_out])
@@ -45,4 +54,3 @@ def main(order_num=None):
 
 if __name__ == "__main__":
     main()
-

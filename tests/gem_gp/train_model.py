@@ -58,5 +58,3 @@ if SEQDES:
     surrogate.model.print_model_info()
     campaign.add_app(name='gp_campaign_sequential', surrogate=surrogate)
     campaign.save_state()
-
-

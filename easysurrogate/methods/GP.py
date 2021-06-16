@@ -46,13 +46,14 @@ class GP:
                                          constant_value_bounds=(1e-6, 1e+6))
 
             if kernel == 'Matern':
-                self.kernel *= Matern(length_scale=[length_scale]*self.n_in,
-                                      length_scale_bounds=[length_scale * 1e-4, length_scale * 1e+4],
-                                      nu=2.5)
+                self.kernel *= Matern(length_scale=[length_scale] *
+                                      self.n_in, length_scale_bounds=[length_scale *
+                                                                      1e-4, length_scale *
+                                                                      1e+4], nu=2.5)
 
             elif kernel == 'RBF':
-                self.kernel *= RBF(length_scale=[length_scale]*self.n_in,
-                                   length_scale_bounds=[length_scale*1e-4, length_scale*1e+4])
+                self.kernel *= RBF(length_scale=[length_scale] * self.n_in,
+                                   length_scale_bounds=[length_scale * 1e-4, length_scale * 1e+4])
 
             if bias:
                 self.kernel += ConstantKernel(constant_value=1.0,
@@ -108,7 +109,8 @@ class GP:
                 raise RuntimeError('Size of training data feature is different from expected')
         except IndexError:
             if self.n_in != 1:
-                raise RuntimeError('Size of training data feature is different from expected default =1')
+                raise RuntimeError(
+                    'Size of training data feature is different from expected default =1')
 
         try:
             n_out = y.shape[1]
@@ -116,11 +118,12 @@ class GP:
                 raise RuntimeError('Size of training data target is different from expected')
         except IndexError:
             if self.n_out != 1:
-                raise RuntimeError('Size of training data target is different from expected default =1')
+                raise RuntimeError(
+                    'Size of training data target is different from expected default =1')
 
         if self.backend == 'scikit-learn':
-            self.instance = GaussianProcessRegressor(kernel=self.kernel,
-                                                     n_restarts_optimizer=self.n_iter, normalize_y=True)
+            self.instance = GaussianProcessRegressor(
+                kernel=self.kernel, n_restarts_optimizer=self.n_iter, normalize_y=True)
             self.instance.fit(X, y)
             self.kernel = self.instance.kernel_
         elif self.backend == 'mogp':

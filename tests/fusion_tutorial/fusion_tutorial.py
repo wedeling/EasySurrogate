@@ -189,7 +189,13 @@ def plot_prediction_results(original_values, predicted_values,
     plt.savefig(name)
 
 
-def plot_prediction_results_vspar(orig_x, orig_y, pred_y, pred_std, sigma_prefactor=1.0, name='gp_res_r.png'):
+def plot_prediction_results_vspar(
+        orig_x,
+        orig_y,
+        pred_y,
+        pred_std,
+        sigma_prefactor=1.0,
+        name='gp_res_r.png'):
     fig = plt.figure()
     ax = fig.add_subplot(111)
 
@@ -362,7 +368,8 @@ def ann_surrogate_test(samples_c, n_train):
     # plot_prediction_results(samples_c[I:], test_predictions)
 
     # print the relative test error
-    rel_err_test = np.linalg.norm(test_predictions - samples_c[n_train:]) / np.linalg.norm(test_predictions)
+    rel_err_test = np.linalg.norm(
+        test_predictions - samples_c[n_train:]) / np.linalg.norm(test_predictions)
     print('Relative error on the test set is %.2f percent' % (rel_err_test * 100))
 
     # perfrom derivative based surrogate
@@ -371,7 +378,7 @@ def ann_surrogate_test(samples_c, n_train):
 
 def gp_surrogate_test(order=None, ndim_in=None, ndim_out=None, n_train=None):
 
-    ### TRAINING PHASE
+    # TRAINING PHASE
     campaign = es.Campaign()
 
     surrogate_gp = es.methods.GP_Surrogate(n_in=ndim_in, n_out=ndim_out, backend='scikit-learn')
@@ -407,7 +414,7 @@ def gp_surrogate_test(order=None, ndim_in=None, ndim_out=None, n_train=None):
     # campaign = es.Campaign(load_state=True, file_path='skl_1_model_2505_full_100.pickle')
     # surrogate_gp = campaign.surrogate
 
-    ##### TRYING SEQUENTIAL OPTIMISATION - passes, but resulting model worsesns in its performance
+    # TRYING SEQUENTIAL OPTIMISATION - passes, but resulting model worsesns in its performance
     # surrogate_gp.train_sequentially(theta_reod, samples_axial, n_iter=10, acquisition_function='poi')
     # print('Indices of runs used for training: {}'.format(surrogate_gp.feat_eng.train_indices))
     #####
@@ -419,10 +426,10 @@ def gp_surrogate_test(order=None, ndim_in=None, ndim_out=None, n_train=None):
     test_inds = surrogate_gp.feat_eng.test_indices.tolist()
     n_train = surrogate_gp.feat_eng.n_train  # length of training data set
 
-    ### ANALYSIS PHASE
+    # ANALYSIS PHASE
     analysis = es.analysis.GP_analysis(surrogate_gp)
 
-    ### Training set
+    # Training set
     # evaluate the surrogate on the training data
     training_predictions = np.zeros([n_train, n_out])
     training_pred_vars = np.zeros([n_train, n_out])
@@ -432,10 +439,14 @@ def gp_surrogate_test(order=None, ndim_in=None, ndim_out=None, n_train=None):
         training_predictions[i], training_pred_vars[i] = surrogate_gp.predict(theta_point)
 
     # plot the train predictions and original data
-    plot_prediction_results(samples_c[train_inds].reshape(-1), training_predictions.reshape(-1),
-                            training_pred_vars.reshape(-1), 1.0, 'gp_train_{}_data_res.png'.format(ndim_in))
+    plot_prediction_results(samples_c[train_inds].reshape(-1),
+                            training_predictions.reshape(-1),
+                            training_pred_vars.reshape(-1),
+                            1.0,
+                            'gp_train_{}_data_res.png'.format(ndim_in))
 
-    rel_err_train = np.linalg.norm(training_predictions - samples_c[train_inds]) / np.linalg.norm(samples_c[train_inds])
+    rel_err_train = np.linalg.norm(
+        training_predictions - samples_c[train_inds]) / np.linalg.norm(samples_c[train_inds])
     print('Relative error on the training set is %.2f percent' % (rel_err_train * 100))
 
     # plot prediction against parameter values
@@ -446,7 +457,7 @@ def gp_surrogate_test(order=None, ndim_in=None, ndim_out=None, n_train=None):
                                       training_pred_vars.reshape(-1),
                                       name='gp_theta_train_{}_data_res.png'.format(ndim_in))
 
-    ## Testing set
+    # Testing set
     # evaluate on testing data
     test_predictions = np.zeros([n_mc_l - n_train, n_out])
     test_pred_vars = np.zeros([n_mc_l - n_train, n_out])
@@ -455,8 +466,10 @@ def gp_surrogate_test(order=None, ndim_in=None, ndim_out=None, n_train=None):
         test_predictions[i], test_pred_vars[i] = surrogate_gp.predict(theta_point)
 
     # plot the test predictions and data
-    plot_prediction_results(samples_c[test_inds].reshape(-1), test_predictions.reshape(-1),
-                            test_pred_vars.reshape(-1), name='gp_test_{}_data_res.png'.format(ndim_in))
+    plot_prediction_results(samples_c[test_inds].reshape(-1),
+                            test_predictions.reshape(-1),
+                            test_pred_vars.reshape(-1),
+                            name='gp_test_{}_data_res.png'.format(ndim_in))
 
     # plot a several chosen test prediction as radial dependency
     plot_prediction_results_vectorqoi(samples_c[test_inds], test_predictions, test_pred_vars,
@@ -471,14 +484,22 @@ def gp_surrogate_test(order=None, ndim_in=None, ndim_out=None, n_train=None):
                                       name='gp_theta_test_{}_data_res.png'.format(ndim_in))
 
     # print the relative test error
-    rel_err_test = np.linalg.norm(test_predictions - samples_c[test_inds]) / np.linalg.norm(samples_c[test_inds])
+    rel_err_test = np.linalg.norm(
+        test_predictions - samples_c[test_inds]) / np.linalg.norm(samples_c[test_inds])
     print('Relative error on the test set is %.2f percent' % (rel_err_test * 100))
 
     # plot average predicted variance and R2 score on a test set
     test_pred_var_tot = test_predictions.var()
     print('Variance of predicted result means for the test set %.3f' % test_pred_var_tot)
-    print('R2 score on testing set: {}'.format(surrogate_gp.model.instance.score(
-        np.array(theta_reod)[:, [test_inds]].reshape(n_mc - n_train, ndim_in), samples_c[test_inds])))
+    print(
+        'R2 score on testing set: {}'.format(
+            surrogate_gp.model.instance.score(
+                np.array(theta_reod)[
+                    :,
+                    [test_inds]].reshape(
+                    n_mc - n_train,
+                    ndim_in),
+                samples_c[test_inds])))
 
     # Save simulation and surrogate data to hdf
     data_sim = {}
@@ -504,11 +525,11 @@ def gp_surrogate_test(order=None, ndim_in=None, ndim_out=None, n_train=None):
     samples = data_frame_sim['Te']
     predictions = data_frame_sur['Te']
 
-    ### SENSITIVITY ANALYSIS
+    # SENSITIVITY ANALYSIS
     if surrogate_gp.backend == 'mogp':
         gp_derivative_based_sa(surrogate_gp, theta_reod[:][test_inds], keys=order_orig)
 
-    ### QoI pdfs
+    # QoI pdfs
     # analyse the QoI (Te(rho=0)) for test set
     te_ax_ts_dat_dom, te_ax_ts_dat_pdf = analysis.get_pdf(samples[test_inds][:, 0])
     te_ax_ts_surr_dom, te_ax_ts_surr_pdf = analysis.get_pdf(predictions[test_inds][:, 0])
@@ -523,9 +544,18 @@ def gp_surrogate_test(order=None, ndim_in=None, ndim_out=None, n_train=None):
     te_ax_tt_surr_dom, te_ax_tt_surr_pdf = analysis.get_pdf(tot_pred[:, 0])
     print('len of total data: {}'.format(samples_c[:][:, 0].shape))
 
-    analysis.plot_pdfs(te_ax_ts_dat_dom, te_ax_ts_dat_pdf, te_ax_ts_surr_dom, te_ax_ts_surr_pdf,
-                       names=['simulation_test', 'surrogate_test', 'simulation_train', 'surrogate_train'],
-                       qoi_names=['Te(r=0)'], filename='pdf_qoi_trts_{}'.format(ndim_in))
+    analysis.plot_pdfs(
+        te_ax_ts_dat_dom,
+        te_ax_ts_dat_pdf,
+        te_ax_ts_surr_dom,
+        te_ax_ts_surr_pdf,
+        names=[
+            'simulation_test',
+            'surrogate_test',
+            'simulation_train',
+            'surrogate_train'],
+        qoi_names=['Te(r=0)'],
+        filename='pdf_qoi_trts_{}'.format(ndim_in))
     w_d = ws_dist(te_ax_ts_surr_pdf, te_ax_ts_dat_pdf)
     print('Wasserstein distance for distribution of selected QoI produced by simulation and surrogate: {}'.format(w_d))
 
@@ -557,7 +587,17 @@ test_frac = 0.8
 n_train = int((1. - test_frac) * n_mc)
 
 # Defining the current ordering of parameters by sensitivity
-order_orig = ["Qe_tot", "H0", "Hw", "chi", "Te_bc", "b_pos", "b_height", "b_sol", "b_width", "b_slope"]
+order_orig = [
+    "Qe_tot",
+    "H0",
+    "Hw",
+    "chi",
+    "Te_bc",
+    "b_pos",
+    "b_height",
+    "b_sol",
+    "b_width",
+    "b_slope"]
 
 # -- If we change order of the features by their importance
 # order = get_sa_order(order_orig, order_sa_ann)

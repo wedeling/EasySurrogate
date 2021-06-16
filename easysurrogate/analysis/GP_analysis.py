@@ -9,6 +9,7 @@ from scipy import stats
 from sklearn.metrics import mean_squared_error as mse
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
+
 class GP_analysis(BaseAnalysis):
     """
     GP analysis class
@@ -51,7 +52,7 @@ class GP_analysis(BaseAnalysis):
         y_orig[x_train] = y_train_orig
         y_orig[x_test] = y_test_orig
 
-        ### --- Plotting prediction vs original test data
+        # --- Plotting prediction vs original test data
         plt.subplot(311)
         plt.title('{} training sample of size: {}'.format(type_train, str(train_n)))
 
@@ -59,8 +60,20 @@ class GP_analysis(BaseAnalysis):
         plt.plot(x_train, y_train_orig, '*', label='Simulation, train', color='green')
 
         if y_var_pred_test is not None and y_var_pred_train is not None:
-            plt.errorbar(x=x_test, y=y_test_pred, yerr=1.96*y_var_pred_test, label='GP metamodel, test', fmt='+')
-            plt.errorbar(x=x_train, y=y_train_pred, yerr=1.96*y_var_pred_train, label='GP metamodel, train', fmt='+')
+            plt.errorbar(
+                x=x_test,
+                y=y_test_pred,
+                yerr=1.96 *
+                y_var_pred_test,
+                label='GP metamodel, test',
+                fmt='+')
+            plt.errorbar(
+                x=x_train,
+                y=y_train_pred,
+                yerr=1.96 *
+                y_var_pred_train,
+                label='GP metamodel, train',
+                fmt='+')
         else:
             plt.plot(x_test, y_test_pred, '.', label='GP metamodel', color=out_color)
             plt.plot(x_train, y_train_pred, '*', label='GP metamodel', color=out_color)
@@ -71,7 +84,7 @@ class GP_analysis(BaseAnalysis):
         plt.grid()
         plt.yscale("symlog")
 
-        ### --- Plotting absolute errors
+        # --- Plotting absolute errors
         plt.subplot(312)
         err_abs = y_pred - y_orig
 
@@ -85,7 +98,7 @@ class GP_analysis(BaseAnalysis):
         # print('Indices of test data where absolute error is larger than {} : {} '
         #       .format(2e5, np.where(abs(err_abs) > 2e5)[0]))
 
-        ### --- Plotting relative errors
+        # --- Plotting relative errors
         plt.subplot(313)
         plt.plot(np.fabs(y_pred - y_orig) / y_orig * 100, '.', color=out_color)
         plt.grid()
@@ -93,8 +106,17 @@ class GP_analysis(BaseAnalysis):
         plt.ylabel('Relative error (%)')
         plt.yscale("log")
         plt.tight_layout()
-        plt.savefig(output_folder + 'GP_prediction_' + num + '_' + type_train + '_' + str(train_n) + '.png',
-                    bbox_inches='tight', dpi=100)
+        plt.savefig(
+            output_folder +
+            'GP_prediction_' +
+            num +
+            '_' +
+            type_train +
+            '_' +
+            str(train_n) +
+            '.png',
+            bbox_inches='tight',
+            dpi=100)
         plt.clf()
         plt.close()
 
@@ -165,11 +187,11 @@ class GP_analysis(BaseAnalysis):
         n_iter = len(self.gp_surrogate.design_history)
         for num, ind in enumerate(self.gp_surrogate.design_history):
             #p_i = (x1[ind], x2[ind])
-            p_i = (x1tr[-n_iter+num], x1tr[-n_iter+num])
+            p_i = (x1tr[-n_iter + num], x1tr[-n_iter + num])
             ax.annotate(str(num), p_i, textcoords="offset points", xytext=(0, 10), ha='center')
 
-        #plt.tight_layout()
-        #plt.subplots_adjust()
+        # plt.tight_layout()
+        # plt.subplots_adjust()
 
         plt.show()
         plt.savefig('surorrogate_seq_des.png')
@@ -187,7 +209,14 @@ class GP_analysis(BaseAnalysis):
 
         return self.gp_surrogate.model.instance.score(X, y)
 
-    def get_regression_error(self, X_test, y_test, X_train=None, y_train=None, index=None, **kwargs):
+    def get_regression_error(
+            self,
+            X_test,
+            y_test,
+            X_train=None,
+            y_train=None,
+            index=None,
+            **kwargs):
         """
         Compute the regression RMSE error of GP surrogate.
         Prints RMSE regression error and plots the errors of the prediction for different simulation runs/samples
@@ -209,12 +238,16 @@ class GP_analysis(BaseAnalysis):
 
         print("Prediction of new QoI")
         # TODO make predict call work on a (n_samples, n_features) np array
-        y_pred = [self.gp_surrogate.predict(X_test[i, :].reshape(-1, 1))[0] for i in range(X_test.shape[0])]
-        y_var_pred = [self.gp_surrogate.predict(X_test[i, :].reshape(-1, 1))[1] for i in range(X_test.shape[0])]
+        y_pred = [self.gp_surrogate.predict(X_test[i, :].reshape(-1, 1))[0]
+                  for i in range(X_test.shape[0])]
+        y_var_pred = [self.gp_surrogate.predict(X_test[i, :].reshape(-1, 1))[1]
+                      for i in range(X_test.shape[0])]
         y_t_len = len(y_test)
 
-        y_pred_train = [self.gp_surrogate.predict(X_train[i, :].reshape(-1, 1))[0] for i in range(X_train.shape[0])]
-        y_var_pred_train = [self.gp_surrogate.predict(X_train[i, :].reshape(-1, 1))[1] for i in range(X_train.shape[0])]
+        y_pred_train = [self.gp_surrogate.predict(
+            X_train[i, :].reshape(-1, 1))[0] for i in range(X_train.shape[0])]
+        y_var_pred_train = [self.gp_surrogate.predict(
+            X_train[i, :].reshape(-1, 1))[1] for i in range(X_train.shape[0])]
 
         # reshape the resulting arrays
         y_pred = np.squeeze(np.array(y_pred), axis=1)
@@ -223,8 +256,8 @@ class GP_analysis(BaseAnalysis):
         y_var_pred = np.squeeze(np.array(y_var_pred), axis=1)
         y_var_pred_train = np.squeeze(np.array(y_var_pred_train), axis=1)
 
-
-        # check if we a working with a vector or scalar QoI, if vector -> consider only the first component
+        # check if we a working with a vector or scalar QoI, if vector -> consider
+        # only the first component
         y_test_plot = y_test
         y_train_plot = y_train
         if y_pred.shape[1] is not 1:
@@ -240,23 +273,26 @@ class GP_analysis(BaseAnalysis):
             y_pred_train = y_pred_train.reshape(-1, 1)
 
         # calculate the errors
-        err_abs = np.subtract(y_pred[:y_t_len, :], y_test)  # test data appears smaller in length (by 1)
+        # test data appears smaller in length (by 1)
+        err_abs = np.subtract(y_pred[:y_t_len, :], y_test)
         err_rel = np.divide(err_abs, y_test)
 
         print("Printing and plotting the evaluation results")
-        self.plot_err(err_rel[:, 0], y_test[:, 0], 'rel. err. of prediction mean for test dataset in Ti fluxes')
+        self.plot_err(err_rel[:, 0], y_test[:, 0],
+                      'rel. err. of prediction mean for test dataset in Ti fluxes')
 
         train_n = self.gp_surrogate.feat_eng.n_samples - y_t_len
         self.plot_res(x_test_inds, y_pred[:y_t_len, 0], y_test_plot[:, 0],
                       x_train_inds, y_pred_train[:, 0], y_train_plot[:, 0],
                       y_var_pred, y_var_pred_train,
-                            r'$Y_i$', num='1', type_train='rand',
-                            train_n=train_n, out_color='b')
+                      r'$Y_i$', num='1', type_train='rand',
+                      train_n=train_n, out_color='b')
 
         r2_test = self.get_r2_score(X_test, y_test)
         print('R2 score for the test data is : {:.3}'.format(r2_test))
 
-        print('MSE of the GPR prediction is: {:.3}'.format(mse(y_pred[:y_t_len, 0], y_test_plot[:, 0])))
+        print('MSE of the GPR prediction is: {:.3}'.format(
+            mse(y_pred[:y_t_len, 0], y_test_plot[:, 0])))
 
         self.y_pred = y_pred
         self.err_abs = err_abs

@@ -5,6 +5,7 @@ import pandas as pd
 import time
 import os
 
+
 def write_template(params):
     str = ""
     first = True
@@ -16,6 +17,7 @@ def write_template(params):
             str += ', "%s": "$%s"' % (k, k)
     str += '}'
     print(str, file=open('fusion.template', 'w'))
+
 
 def define_params():
     return {
@@ -36,6 +38,7 @@ def define_params():
         "dt": {"type": "float", "min": 1e-3, "max": 1e3, "default": 100},
         "out_file": {"type": "string", "default": "output.csv"}
     }
+
 
 def define_vary():
     vary_all = {
@@ -77,6 +80,7 @@ def define_vary():
         "b_slope": cp.Uniform(0.005, 0.020)
     }
     return vary_10
+
 
 def run_MC_case(n_mc, local=True, dask=True, batch_size=os.cpu_count()):
     """
@@ -145,7 +149,7 @@ def run_MC_case(n_mc, local=True, dask=True, batch_size=os.cpu_count()):
 
     time_start = time.time()
     # Run the cases
-    cwd = os.getcwd().replace(' ', '\ ')  # deal with ' ' in the path
+    cwd = os.getcwd().replace(' ', '\\ ')  # deal with ' ' in the path
     cmd = f"{cwd}/fusion_model.py fusion_in.json"
 
     if dask:
@@ -162,7 +166,11 @@ def run_MC_case(n_mc, local=True, dask=True, batch_size=os.cpu_count()):
             from dask.distributed import Client
             from dask_jobqueue import SLURMCluster
             cluster = SLURMCluster(
-                job_extra=['--qos=p.tok.openmp.2h', '--mail-type=end', '--mail-user=dpc@rzg.mpg.de', '-t 2:00:00'],
+                job_extra=[
+                    '--qos=p.tok.openmp.2h',
+                    '--mail-type=end',
+                    '--mail-user=dpc@rzg.mpg.de',
+                    '-t 2:00:00'],
                 queue='p.tok.openmp',
                 cores=8,
                 memory='8 GB',
@@ -172,7 +180,9 @@ def run_MC_case(n_mc, local=True, dask=True, batch_size=os.cpu_count()):
             print(cluster.job_script())
             client = Client(cluster)
         print(client)
-        my_campaign.apply_for_each_run_dir(uq.actions.ExecuteLocal(cmd, interpret='python3'), client)
+        my_campaign.apply_for_each_run_dir(
+            uq.actions.ExecuteLocal(
+                cmd, interpret='python3'), client)
 
         client.close()
         if not local:
@@ -180,8 +190,9 @@ def run_MC_case(n_mc, local=True, dask=True, batch_size=os.cpu_count()):
         else:
             client.shutdown()
     else:  # in case there is a problem with dask
-        execution = my_campaign.apply_for_each_run_dir(uq.actions.ExecuteLocalV2(cmd, interpret='python3'),
-                                                       batch_size=batch_size)
+        execution = my_campaign.apply_for_each_run_dir(
+            uq.actions.ExecuteLocalV2(
+                cmd, interpret='python3'), batch_size=batch_size)
         execution.start()
         while my_campaign.get_active_sampler().count != execution.progress()['finished']:
             print(execution.progress())
@@ -198,6 +209,7 @@ def run_MC_case(n_mc, local=True, dask=True, batch_size=os.cpu_count()):
     results_df = my_campaign.get_collation_result()
 
     return results_df, my_campaign, my_sampler
+
 
 def save_features(campaign, sampler, n_mc):
     # number of inputs
@@ -216,6 +228,7 @@ def save_features(campaign, sampler, n_mc):
     theta = [np.array(x).reshape(-1, 1) for x in theta]
     return theta
 
+
 def save_target(data_frame):
     # Extract the QoI from the EasyVVUQ data frame, store as an array
     # Note: this should be made a subroutine in EasySurrogate, such that you can just feed it
@@ -227,6 +240,7 @@ def save_target(data_frame):
         samples.append(values.flatten())
     samples = np.array(samples)
     return samples
+
 
 def main():
 

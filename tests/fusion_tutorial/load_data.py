@@ -3,6 +3,7 @@ import numpy as np
 import chaospy as cp
 import easysurrogate as es
 
+
 def write_template(params):
     str = ""
     first = True
@@ -14,6 +15,7 @@ def write_template(params):
             str += ', "%s": "$%s"' % (k, k)
     str += '}'
     print(str, file=open('fusion.template', 'w'))
+
 
 def define_params():
     return {
@@ -113,41 +115,53 @@ def get_sa_order(feat_names_orig, feat_names_sa):
 
     return order
 
+
 def main():
 
     campaign = es.Campaign()
     feat_eng = es.methods.Feature_Engineering()
-    
+
     # reading input and output data of simulations
     theta = pd.read_pickle('inputs_2704.pickle').to_numpy()[:, :]
     theta = theta.T.tolist()
     theta = [np.array(x).reshape(-1, 1) for x in theta]
-    
+
     samples = pd.read_pickle('outputs_2704.pickle').to_numpy()[:, :]
-    
+
     # Choosing the X, Y subsets to analyse
     ndim_in = 10
     n_mc = 500
     samples_c = samples[:n_mc]
     theta_c = [t[:n_mc] for t in theta]
-    
+
     # Defining the current ordering of parameters by sensitivity
-    name_order_orig = ["Qe_tot", "H0", "Hw", "chi", "Te_bc", "b_pos", "b_height", "b_sol", "b_width", "b_slope"]
-    
+    name_order_orig = [
+        "Qe_tot",
+        "H0",
+        "Hw",
+        "chi",
+        "Te_bc",
+        "b_pos",
+        "b_height",
+        "b_sol",
+        "b_width",
+        "b_slope"]
+
     # -- If we change order of the features by their importance
     # order = get_sa_order(order_orig, order_sa_ann)
-    
+
     order_num = np.arange(len(name_order_orig))
-    
+
     theta_reod = feat_eng.chose_feat_subset(theta_c, ndim_in, order_num)
-    
+
     # save reference data as hdf
-    
+
     data_sim = {}
     data_sim['Te'] = samples_c
     for i, name in enumerate(name_order_orig):
         data_sim[name] = theta_reod[i]
     campaign.store_data_to_hdf5(data_sim, file_path='sim_data.hdf5')
-    
+
+
 if __name__ == "__main__":
     main()

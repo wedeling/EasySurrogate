@@ -58,4 +58,3 @@ class DAS_analysis(BaseAnalysis):
         print('Parameters ordered from most to least important:')
         print(idx)
         return idx, mean
-    

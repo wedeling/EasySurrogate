@@ -2,6 +2,7 @@ import numpy as np
 from itertools import product
 from scipy.optimize import minimize
 
+
 class GaussianProcess():
 
     def __init__(self):
@@ -63,7 +64,16 @@ class GaussianProcess():
     def predict_mean(self, X_new):
 
         n_star = X_new.shape[0]
-        K_star = [self.kernel(i, j, sigma_f=self.sigma_f, l=self.l) for (i, j) in product(X_new, self.X)]
+        K_star = [
+            self.kernel(
+                i,
+                j,
+                sigma_f=self.sigma_f,
+                l=self.l) for (
+                i,
+                j) in product(
+                X_new,
+                self.X)]
         K_star = np.array(K_star).reshape(n_star, self.n)
 
         f_bar_star = np.dot(K_star, np.dot(self.K_inv_tot, self.y.reshape(self.n, self.n_x_dim)))
@@ -73,10 +83,28 @@ class GaussianProcess():
 
         n_star = X_new.shape[0]
 
-        K_star2 = [self.kernel(i, j, sigma_f=self.sigma_f, l=self.l) for (i, j) in product(X_new, X_new)]
+        K_star2 = [
+            self.kernel(
+                i,
+                j,
+                sigma_f=self.sigma_f,
+                l=self.l) for (
+                i,
+                j) in product(
+                X_new,
+                X_new)]
         K_star2 = np.array(K_star2).reshape(n_star, n_star)
 
-        K_star = [self.kernel(i, j, sigma_f=self.sigma_f, l=self.l) for (i, j) in product(X_new, self.X)]
+        K_star = [
+            self.kernel(
+                i,
+                j,
+                sigma_f=self.sigma_f,
+                l=self.l) for (
+                i,
+                j) in product(
+                X_new,
+                self.X)]
         K_star = np.array(K_star).reshape(n_star, self.n)
 
         cov_f_star = K_star2 - np.dot(K_star, np.dot(self.K_inv_tot, K_star.T))
@@ -88,7 +116,7 @@ class GaussianProcess():
 
         y_mean = self.predict_mean(X)
 
-        if return_std == True:
+        if return_std:
             y_var = self.predict_var(X)
             return y_mean, y_var
 
@@ -113,11 +141,12 @@ def gibbs_ns_kernel(x, y, l, l_func=lambda x: x):
     exp_arg = 0.0
     for d in x.shape[1]:
         # multiplicatve prefactor
-        pref_val *= np.sqrt((2*l_func(x)*l_func(y))/(l_func(x)**2+l_func(y)**2))
+        pref_val *= np.sqrt((2 * l_func(x) * l_func(y)) / (l_func(x)**2 + l_func(y)**2))
         # exponential argument
-        exp_arg += (x-y)**2 / (l_func(x)**2+l_func(y)**2)
+        exp_arg += (x - y)**2 / (l_func(x)**2 + l_func(y)**2)
     exp_val = np.exp(-exp_arg)
     return pref_val * exp_val
+
 
 def sq_exp_kernel_function(x, y, sigma_f=1., l=1.):
     """Define squared exponential kernel function."""

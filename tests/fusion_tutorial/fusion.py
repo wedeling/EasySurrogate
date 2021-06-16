@@ -6,6 +6,7 @@ David.Coster@ipp.mpg.de
 """
 import numpy as np
 
+
 def F_ped(r, b_pos, b_height, b_sol, b_width, b_slope):
     """
     Create a density profile using an mtanh profile
@@ -24,7 +25,8 @@ def F_ped(r, b_pos, b_height, b_sol, b_width, b_slope):
     :return: value of density at r
     :rtype: numpy float scalar or array (sime dimensions as r)
     """
-    return (b_height - b_sol)/2*(mtanh((b_pos - r)/(2 * b_width), b_slope)+1)+b_sol
+    return (b_height - b_sol) / 2 * (mtanh((b_pos - r) / (2 * b_width), b_slope) + 1) + b_sol
+
 
 def mtanh(x, b_slope):
     """
@@ -39,9 +41,26 @@ def mtanh(x, b_slope):
     See https://pdfs.semanticscholar.org/5dc9/029eb9614a0128ae7c3f16ae6c4e54be4ac5.pdf
     for the mtanh definition
     """
-    return ((1 + b_slope * x)*np.exp(x)-np.exp(-x))/(np.exp(x)+np.exp(-x))
+    return ((1 + b_slope * x) * np.exp(x) - np.exp(-x)) / (np.exp(x) + np.exp(-x))
 
-def solve_Te(Qe_tot=2e6, H0=0, Hw=0.1, Te_bc=100, chi=1, a0=1, R0=3, E0=1.5, b_pos=0.98, b_height=6e19, b_sol=2e19, b_width=0.01, b_slope=0.01, nr=100, dt=100, plots=True):
+
+def solve_Te(
+        Qe_tot=2e6,
+        H0=0,
+        Hw=0.1,
+        Te_bc=100,
+        chi=1,
+        a0=1,
+        R0=3,
+        E0=1.5,
+        b_pos=0.98,
+        b_height=6e19,
+        b_sol=2e19,
+        b_width=0.01,
+        b_slope=0.01,
+        nr=100,
+        dt=100,
+        plots=True):
     """
     :param Qe_tot: heating power [W]
     :type Qe_tot: numpy float
@@ -90,32 +109,49 @@ def solve_Te(Qe_tot=2e6, H0=0, Hw=0.1, Te_bc=100, chi=1, a0=1, R0=3, E0=1.5, b_p
     if plots:
         import os
         import matplotlib
-        if not os.getenv("DISPLAY"): matplotlib.use('Agg')
+        if not os.getenv("DISPLAY"):
+            matplotlib.use('Agg')
         import matplotlib.pylab as plt
 
     import scipy.constants
     from fipy import Variable, FaceVariable, CellVariable, TransientTerm, DiffusionTerm, Viewer, meshes
 
-    a = a0*np.sqrt(E0)
-    V = 2*np.pi * 2*np.pi*R0
+    a = a0 * np.sqrt(E0)
+    V = 2 * np.pi * 2 * np.pi * R0
     mesh = meshes.CylindricalGrid1D(nr=nr, Lr=a)
     Te = CellVariable(name="Te", mesh=mesh, value=1e3)
-    ne = CellVariable(name="ne", mesh=mesh, value=F_ped(mesh.cellCenters.value[0]/a, b_pos, b_height, b_sol, b_width, b_slope))
-    Qe = CellVariable(name="Qe", mesh=mesh, value=np.exp(-((mesh.cellCenters.value/a-H0)/(Hw))**2)[0])
-    Qe = Qe * Qe_tot/((mesh.cellVolumes*Qe.value).sum() * V)
+    ne = CellVariable(
+        name="ne",
+        mesh=mesh,
+        value=F_ped(
+            mesh.cellCenters.value[0] /
+            a,
+            b_pos,
+            b_height,
+            b_sol,
+            b_width,
+            b_slope))
+    Qe = CellVariable(name="Qe", mesh=mesh,
+                      value=np.exp(-((mesh.cellCenters.value / a - H0) / (Hw))**2)[0])
+    Qe = Qe * Qe_tot / ((mesh.cellVolumes * Qe.value).sum() * V)
 
     print('Volume = %s m^3' % (mesh.cellVolumes.sum() * V))
-    print('Heating power = %0.3e W' % ((mesh.cellVolumes*Qe).sum() * V))
+    print('Heating power = %0.3e W' % ((mesh.cellVolumes * Qe).sum() * V))
 
     Te.constrain(Te_bc, mesh.facesRight)
-    eqI = TransientTerm(coeff=scipy.constants.e*ne*1.5) == DiffusionTerm(coeff=scipy.constants.e*ne*chi) + Qe
+    eqI = TransientTerm(coeff=scipy.constants.e * ne *
+                        1.5) == DiffusionTerm(coeff=scipy.constants.e * ne * chi) + Qe
 
-    if plots: viewer = Viewer(vars=(Te), title='Heating power = %0.3e W\nchi = %s' % (Qe.cellVolumeAverage.value * V, chi), datamin=0, datamax=5000)
+    if plots:
+        viewer = Viewer(vars=(Te), title='Heating power = %0.3e W\nchi = %s' %
+                        (Qe.cellVolumeAverage.value * V, chi), datamin=0, datamax=5000)
 
     eqI.solve(var=Te, dt=dt)
-    if plots: viewer.plot()
+    if plots:
+        viewer.plot()
 
-    return Te.value, ne.value, mesh.cellCenters.value[0], mesh.cellCenters.value[0]/a
+    return Te.value, ne.value, mesh.cellCenters.value[0], mesh.cellCenters.value[0] / a
+
 
 if __name__ == '__main__':
     Te, ne, rho, rho_norm = solve_Te()

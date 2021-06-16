@@ -3,6 +3,7 @@ import easysurrogate as es
 import time
 from datetime import date
 
+
 def gp_train(order_num=None, ndim_in=None, ndim_out=None, n_train=None, test_frac=0.0):
 
     # creat e campaign object
@@ -19,12 +20,22 @@ def gp_train(order_num=None, ndim_in=None, ndim_out=None, n_train=None, test_fra
     # samples = samples_c[:, np.arange(0, 100, 20).tolist()]
 
     # defining name of input features
-    feature_names = ["Qe_tot", "H0", "Hw", "chi", "Te_bc", "b_pos", "b_height", "b_sol", "b_width", "b_slope"]
+    feature_names = [
+        "Qe_tot",
+        "H0",
+        "Hw",
+        "chi",
+        "Te_bc",
+        "b_pos",
+        "b_height",
+        "b_sol",
+        "b_width",
+        "b_slope"]
     # choosing all features
     features = dict((k, data_frame[k]) for k in feature_names)
 
     # preparing a list of feature to train
-    features = [v for k,v in features.items()]
+    features = [v for k, v in features.items()]
 
     # number of samples
     n_mc_l = target.shape[0]

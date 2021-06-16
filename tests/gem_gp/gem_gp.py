@@ -9,8 +9,8 @@ target_names = ['te_transp_flux', 'ti_transp_flux']
 features_names_selected = features_names
 target_name_selected = target_names
 
-### PREPARING MODEL TO USE
-#load pre-trained campaign
+# PREPARING MODEL TO USE
+# load pre-trained campaign
 
 # 1) case for data from single flux tube GEM UQ campaign
 #campaign = es.Campaign(load_state=True, file_path='gp_gem_625.pickle')
@@ -36,7 +36,8 @@ data_frame_train = campaign.load_hdf5_data(file_path='gem0_lhc_256.hdf5')
 
 # getting the data
 features_train = [data_frame_train[k] for k in features_names_selected if k in data_frame_train]
-target_train = np.concatenate([data_frame_train[k] for k in target_name_selected if k in data_frame_train], axis=1)
+target_train = np.concatenate([data_frame_train[k]
+                              for k in target_name_selected if k in data_frame_train], axis=1)
 
 feat_train, targ_train, feat_test, targ_test = campaign.surrogate.feat_eng.\
     get_training_data(features_train, target_train, index=campaign.surrogate.feat_eng.train_indices)
@@ -47,7 +48,7 @@ target = np.concatenate([data_frame[k] for k in target_name_selected if k in dat
 # create analysis class
 analysis = es.analysis.GP_analysis(campaign.surrogate)
 
-### SEQ DES
+# SEQ DES
 analysis.plot_2d_design_history(x_test=feat_test, y_test=targ_test)
 
 #analysis.get_regression_error(np.concatenate([feat_train, feat_test], axis=0), np.concatenate([targ_train, targ_test], axis=0))
@@ -75,5 +76,17 @@ tevl_dom_ts, tevl_pdf_ts = analysis.get_pdf(feat_test[0])
 tivl_dom_tr, tivl_pdf_tr = analysis.get_pdf(feat_train[1])
 tivl_dom_ts, tivl_pdf_ts = analysis.get_pdf(feat_test[1])
 
-analysis.plot_pdfs(tevl_dom_tr, tevl_pdf_tr, tevl_dom_ts, tevl_pdf_ts, tivl_dom_tr, tivl_pdf_tr, tivl_dom_ts, tivl_pdf_ts,
-                   names=['tevl tr', 'tevl ts', 'tivl tr', 'tivl ts'])
+analysis.plot_pdfs(
+    tevl_dom_tr,
+    tevl_pdf_tr,
+    tevl_dom_ts,
+    tevl_pdf_ts,
+    tivl_dom_tr,
+    tivl_pdf_tr,
+    tivl_dom_ts,
+    tivl_pdf_ts,
+    names=[
+        'tevl tr',
+        'tevl ts',
+        'tivl tr',
+        'tivl ts'])

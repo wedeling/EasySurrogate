@@ -16,6 +16,7 @@ def poly_model(theta):
         # sol *= (3 * a[i] * theta[i]**2 + 1.0) / 2**D
     return sol
 
+
 # the json input file containing the values of the parameters, and the
 # output file
 json_input = sys.argv[1]
