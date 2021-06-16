@@ -47,7 +47,7 @@ In [3], an approach is described in which artificial neural networks (ANNs) are 
 
 ![equation](https://latex.codecogs.com/svg.latex?%7B%5Cbf%20w%7D_i%20%3D%20%7B%5Cbf%20q%7D_i%20-%20%5Csum_%7Bj%3D1%7D%5E%7Bi-1%7D%5Cleft%28%5Cfrac%7B%7B%5Cbf%20w%7D_j%5ET%7B%5Cbf%20q%7D_i%7D%7B%7B%5Cbf%20w%7D_j%5ET%7B%5Cbf%20w%7D_j%7D%5Cright%29%7B%5Cbf%20w%7D_j%2C%20%5Cquad%20i%20%3D%201%2C%5Ccdots%2C%20d.)
 
-That is, we start with `w_1 = q_1`, and for all subsequent vectors `q_1` we subtract the projections of `q_i` onto each vector `w_j` which has previously been orthogonalized. This leaves us with a orthogonal basis:
+That is, we start with `w_1 = q_1`, and for all subsequent vectors `q_i` we subtract the projections of `q_i` onto each vector `w_j` which has previously been orthogonalized. This leaves us with a orthogonal basis:
 
 ![equation](https://latex.codecogs.com/svg.latex?%5Cleft%5B%7B%5Cbf%20w%7D_1%28%7B%5Cbf%20q%7D_1%29%5C%3B%5C%3B%7B%5Cbf%20w%7D_2%28%7B%5Cbf%20q%7D_1%2C%20%7B%5Cbf%20q%7D_2%29%5C%3B%5C%3B%5Ccdots%5C%3B%5C%3B%7B%5Cbf%20w%7D_d%28%7B%5Cbf%20q%7D_1%2C%7B%5Cbf%20q%7D_2%5C%2C%5Ccdots%2C%7B%5Cbf%20q%7D_d%29%5Cright%5D)
 
@@ -102,11 +102,10 @@ output_filename = params["out_file"]["default"]
 output_columns = ["f"]
 
 # the a vector determines the importance of each input
-# a = np.linspace(0, np.sqrt(100), 10)**2
-a = np.array([1 / 2 ** i for i in range(10)])
-# a = np.zeros(10)
-# a[0] = 1
-# a[1] = 0.5
+# a = np.array([1 / 2 ** i for i in range(10)])
+a = np.ones(10)*99
+a[0] = 1
+
 for i in range(10):
     params["a%d" % (i + 1)] = {"type": "float",
                                "min": 0.0,
@@ -156,11 +155,12 @@ print("===========================================")
 sampler = campaign.get_active_sampler()
 campaign.set_sampler(sampler, update=True)
 
-# Create an EasySurrogate campaign
-surr_campaign = es.Campaign()
+# create an EasySurrogate campaign
+surr_campaign = es.Campaign(name=ID)
 
-# This is the main point of this test: extract training data from EasyVVUQ data frame
-features, samples = surr_campaign.load_easyvvuq_data(campaign, qoi_cols='f')
+# load the training data
+params, samples = surr_campaign.load_easyvvuq_data(campaign, qoi_cols=output_columns)
+samples = samples[output_columns[0]]
 ```
 
 Here, `DB_LOCATION` is the location of the EasyVVUQ database, which we stored in the work directory of the EasyVVUQ campaign. This will output something like:
@@ -183,13 +183,13 @@ Here, `n_iter`, `n_layers`, `n_neurons` and `test_frac` are the number of traini
 
 ### Example 1: D = 2
 
-In this example we will consider a low-dimensional problem with just 2 uncertain inputs. Normally we would not construct a DAS surrogate for `D=2`, but it does allow us to nicely visualize the concept of finding directions in the input space along which most of function variability occurs, which is the main idea behind active subspaces. If we select `d=1`, we are looking for the single most important direction in the 2D input space. In this artificial example we have som control over which inputs are important via the specification of the `a` vector. If we set `a_1=0` and `a_2=99`, we are creating a model in which virtually all the variability is aligned with the coordinate axis of the `x_1` input. In two dimensions we can plot the contour lines of the G function, as well as the coordinate vector of the 1D active subspace. Remember from the theoretical description that the active-subspace coordinate vectors are the column vectors of the weight matrix `W_1(Q)`. This weight matrix can be accessed via `w = surrogate.neural_net.layers[1].W`. The results for the case `a_1=0` and `a_2=99` are shown below.
+In this example we will consider a low-dimensional problem with just 2 uncertain inputs. Normally we would not construct a DAS surrogate for `D=2`, but it does allow us to nicely visualize the concept of finding directions in the input space along which most of function variability occurs, which is the main idea behind active subspaces. If we select `d=1`, we are looking for the single most important direction in the 2D input space. In this artificial example we have some control over which inputs are important via the specification of the `a` vector. If we set `a_1=0` and `a_2=99`, we are creating a model in which virtually all the variability is aligned with the coordinate axis of the `x_1` input. In two dimensions we can plot the contour lines of the G function, as well as the coordinate vector of the 1D active subspace. Remember from the theoretical description that the active-subspace coordinate vectors are the column vectors of the weight matrix `W_1(Q)`. This weight matrix can be accessed via `w = surrogate.neural_net.layers[1].W`. The results for the case `a_1=0` and `a_2=99` are shown below.
 
 ![](contours1.png)
 
-Clearly, the function does not change in `x_2` direction, and is therefore effectively one dimensional. The blue arrow denotes the (only) column vector of `W_1(Q)` after training, which is aligned with the `x_1` coordinate axis. 
+Clearly, the function does not change in `x_2` direction, and is therefore effectively one dimensional. The blue arrow denotes the (only) column vector of `W_1(Q)` after training, which is aligned with the `x_1` coordinate axis. The `W_1` matrix can change when training again, e.g. in this case it might change sign. Note that unlike the classical active-subspace method, the coordinate system `W_1` should therefore always be seen in conjunction with the specific neural network `q(y)` to which it is attached.
 
-Now imagine a situation where `x_2` also influences the solution, e.g. `a_1 = 0` and `a_2 = 1.0`. In this case `x_1` is still more important, yet there is no more 1D active subspace, as can be seen from the contours:
+Now imagine a situation where `x_2` also influences the solution, e.g. `a_1 = 0` and `a_2 = 1.0`. In this case `x_1` is still more important, yet there is no clear 1D active subspace, as can be seen from the contours:
 
 ![](contours2.png)
 
@@ -197,9 +197,9 @@ In this case the DAS surrogate fails to properly converge, and the active subspa
 
 ![](contours3.png)
 
-This yields an accurate surrogate (relatively low test error, see `tests/deep_active_subspaces/train_DAS_surrogate.py`). Again however, since `d=D` we can no longer speak of an active subspace. Other problems might very well have an active subspace. 
+This yields an accurate surrogate (relatively low test error, see `tests/deep_active_subspaces/train_DAS_surrogate.py`). Again however, since `d=D` we can no longer speak of an active subspace. 
 
-Let us now switch for the remainder of the tutorial to the polynomials model. To do this we simply uncomment a line in `tests/deep_active_subspaces/model/func.py`:
+Other problems might very well have an active subspace, so let us now switch for the remainder of the tutorial to the polynomial model. To do this we simply uncomment a line in `tests/deep_active_subspaces/model/func.py`:
 
 ```python
         # Uncomment for Sobol G function
@@ -262,11 +262,11 @@ Relative error on test set = 0.0333
 
 Hence, we have a relative error of about 1.2% on the training data, and about 3.3% error on the test set. Note that in order to use the code snippet above `test_frac` has to be set to a value > 0.0. You will not obtain the exact same results, due to the random initialization of the network weights, and the stochastic gradient descent employed by the back-propagation algorithm. Finding a suitable value for `d`, as well as for `n_layers`, `n_neurons` etc, is a matter of hyperparameter tuning. e.g. via a simple grid search. This is one of the downsides of machine-learning based forward uncertainty propagation methods, in addition to their lack of interpretability and high number of tunable weights. That said, these methods are not subject to the curse of dimensionality, which do affect the Stochastic Collocation and Polynomial Chaos surrogate models of EasyVVUQ. To scale these methods to higher input dimension, specialized dimension-adaptive algorithms have to be employed (also available in EasyVVUQ, see e.g. [4]). These are sequential in nature, meaning that the sampling plan is not generated in one shot. In addition, these methods only postpone the curse of dimensionality, whereas a neural network has no trouble dealing with an input of e.g. 100 dimensions. The amount of training data required to obtain a suitable machine-learning based surrogate model will depend upon the specific application, and might very well be high. In short, the best surrogate modelling technique will be application depedent. For high-dimensional input spaces, surrogate models as described here could prove to be a valid option.
 
-As a final note, let us highlight a experimental sensitivity measure, extracted from the DAS surrogate. EasyVVUQ provides global variance based sensitivity measure, i.e. the Sobol indices. Somewhat related to this are global derivative-based sensitivity measures [5]. Consider for instance the following integral:
+As a final note, let us highlight an experimental sensitivity measure, extracted from the DAS surrogate. EasyVVUQ provides global variance-based sensitivity measures, i.e. the Sobol indices. Somewhat related to this are global derivative-based sensitivity measures [5]. Consider for instance the following integral:
 
 ![equation](https://latex.codecogs.com/gif.latex?V_i%20%3D%20%5Cint%20%5Cleft%28%5Cfrac%7B%5Cpartial%20%5ClVert%20f%28%7B%5Cbf%20x%7D%29%29%5CrVert_2%5E2%7D%7B%5Cpartial%20x_i%7D%5Cright%29%5E2p%28%7B%5Cbf%20x%7D%29d%7B%5Cbf%20x%7D%2C%20%5Cquad%5Cquad%20i%3D1%2C%5Ccdots%2C%20D)
 
-Local sensivity measure are based on the derivative at a certain point. The integral above integrates a derivative over the domain of the joint input pdf, making it a global method. The derivative of the (L2 norm of) the output can be quickly computed analytically using back propagation. As such, we can approximate the integral above using a brute-force Monte Carlo approach. The following code achieves this:
+Local sensivity measures are based on the derivative at a certain point. The integral above integrates a derivative over the domain of the joint input pdf, making it a global method. The derivative of the (L2 norm of) the output can be quickly computed analytically using back propagation. As such, we can approximate the integral above using a brute-force Monte Carlo approach. The following code achieves this:
 
 ```python
 # create DAS analysis object
@@ -281,7 +281,7 @@ idx, mean_grad = analysis.sensitivity_measures(params_mc)
  
  ![](sensitivity.png)
 
-Clearly, the method does pick up on the right order of the most influential parameters. The order of the less important inputs is incorrect. How this method stacks up to Sobol indices remains to be properly investigated. 
+Clearly, the method does pick up on the right order of the most influential parameters. The order of the less important inputs is incorrect. How the performance this method stacks up to Sobol indices remains to be properly investigated.
 
 ## References
 
