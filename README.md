@@ -18,6 +18,13 @@ After cloning the repository, EasySurrogate, along with the requirements, can be
 ```
 python3 setup.py install --user
 ```
+
+To install the latest release, (not necessarily the latest verion), type
+
+```
+pip install easysurrogate
+```
+
 ## Current features
 
 + An overaching `Campaign' structure of creating surrogates, similar to [EasyVVUQ](https://github.com/UCL-CCS/EasyVVUQ), the VECMA toolkit component for forward uncertainty propagation.
