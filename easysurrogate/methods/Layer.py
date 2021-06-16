@@ -333,7 +333,10 @@ class Layer:
 
         # if this layer is the output layer
         if self.layer_rp1 is None:
-            self.delta_hy = np.ones([self.n_neurons, self.batch_size])
+            # Using this computes the derivatives of column sums of the jacobian
+            # self.delta_hy = np.ones([self.n_neurons, self.batch_size])
+            # Using this computes the derivatives of the L2^2 norm of y
+            self.delta_hy = 2 * self.h
         else:
             # get the delta_ho values of the next layer (layer r+1)
             delta_hy_rp1 = self.layer_rp1.delta_hy
@@ -442,7 +445,7 @@ class Layer:
         delta_ho_grad_Phi = self.delta_ho * self.grad_Phi
         self.L_grad_W = np.dot(h_rm1, delta_ho_grad_Phi.T)
 
-    def back_prop(self, y_i, jacobian=False):
+    def back_prop(self, y_i):
         """
         Perform the backpropogation operations of the current layer.
 
@@ -462,8 +465,3 @@ class Layer:
         else:
             self.compute_delta_ho()
         self.compute_L_grad_W()
-
-        if jacobian:
-            self.compute_delta_hy()
-            if self.r > 0:
-                self.compute_y_grad_W()

@@ -215,9 +215,7 @@ class DAS_network(ANN):
         """
 
         self.feed_forward(X_i, self.batch_size)
-        # if jacobian = True, the Q weights will be optimized using y_grad_Q,
-        # instead of L_grad_Q. Is harder to train, maybe remove this option later.
-        self.back_prop(y_i, jacobian=False)
+        self.back_prop(y_i)
 
         for r in range(1, self.n_layers + 1):
 

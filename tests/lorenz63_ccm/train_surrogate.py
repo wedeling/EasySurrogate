@@ -8,8 +8,8 @@ campaign = es.Campaign()
 data_frame = campaign.load_hdf5_data()
 
 # supervised training data set
-feats = [data_frame['X']]
-target = data_frame['Y']
+feats = [data_frame['X'].reshape([-1, 1])]
+target = data_frame['Y'].reshape([-1, 1])
 
 # create a CCM surrogate
 surrogate = es.methods.CCM_Surrogate()

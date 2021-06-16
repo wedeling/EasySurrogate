@@ -315,9 +315,10 @@ class ANN:
         # return values and index of highest probability and random samples from pmf
         return probs, idx_max, None
 
-    def jacobian(self, X_i, batch_size=1, feed_forward=True):
+    def d_norm_y_dX(self, X_i, batch_size=1, feed_forward=True):
         """
-        Compute the Jacobian of the neural net via back propagation.
+        Compute the derivatives of the squared L2 norm of the output wrt
+        the inputs.
 
         Parameters
         ----------
@@ -329,7 +330,7 @@ class ANN:
         Returns
         -------
         array
-            The Jacobian.
+            The derivatives [d||y||^2_2/dX_1, ..., d||y||^2_2/dX_n_in]
 
         """
         if feed_forward:
@@ -341,10 +342,10 @@ class ANN:
             if i > 0:
                 self.layers[i].compute_y_grad_W()
 
-        # delta_hy of the input layer = the Jacobian of the neural net
+        # delta_hy of the input layer = the derivative of the normed output
         return self.layers[0].delta_hy
 
-    def back_prop(self, y_i, jacobian=False):
+    def back_prop(self, y_i):
         """
         Back-propagation algorithm to find gradient of the loss function with respect
         to the weights of the neural network.
@@ -362,7 +363,7 @@ class ANN:
 
         # start back propagation over hidden layers, starting with output layer
         for i in range(self.n_layers, 0, -1):
-            self.layers[i].back_prop(y_i, jacobian=jacobian)
+            self.layers[i].back_prop(y_i)
 
     def batch(self, X_i, y_i, alpha=0.001, beta1=0.9, beta2=0.999):
         """
