@@ -39,7 +39,7 @@ pip install easysurrogate
 
 + Deep Active Subspace surrogates: an artificial neural network with built-in dimension reduction. Used to make surrogates for the input-output map of computational models. The corresponding article can be found [here](https://arxiv.org/abs/1902.10527).
 
-+ Gaussian Process Regression: a surrogate probabilistic model based on nonparametric Bayesian approach.
++ Gaussian Process Regression: a surrogate probabilistic model based on nonparametric Bayesian approach, including the option of sequential design.
 
 + It is possible to couple surrogates to the macroscopic model via [MUSCLE3](https://muscle3.readthedocs.io/en/latest/index.html), the third incarnation of the Multiscale Coupling Library and Environment, see the corresponding tutorial.
 
