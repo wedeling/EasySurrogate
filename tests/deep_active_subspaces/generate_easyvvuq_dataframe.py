@@ -22,7 +22,7 @@ HOME = os.path.abspath(os.path.dirname(__file__))
 WORK_DIR = '/tmp'
 
 # EasyVVUQ database location
-ID = 'g_func'
+ID = 'func'
 DB_LOCATION = "sqlite:///" + WORK_DIR + "/campaign%s.db" % ID
 
 ########################
@@ -30,7 +30,7 @@ DB_LOCATION = "sqlite:///" + WORK_DIR + "/campaign%s.db" % ID
 ########################
 
 # choose a number of uncertain parameters (< 10)
-D = 2
+D = 10
 
 # Define parameter space
 params = {}
@@ -45,10 +45,11 @@ output_filename = params["out_file"]["default"]
 output_columns = ["f"]
 
 # the a vector determines the importance of each input
-# a = np.ones(10) * 99
-a = np.zeros(10)
-a[0] = 1
-a[1] = 0.5
+# a = np.linspace(0, np.sqrt(100), 10)**2
+a = np.array([1 / 2 ** i for i in range(10)])
+# a = np.zeros(10)
+# a[0] = 1
+# a[1] = 0.5
 for i in range(10):
     params["a%d" % (i + 1)] = {"type": "float",
                                "min": 0.0,
@@ -56,12 +57,12 @@ for i in range(10):
                                "default": a[i]}
 
 # create encoder, decoder, and execute locally
-encoder = uq.encoders.GenericEncoder(template_fname=HOME + '/model/g_func.template',
+encoder = uq.encoders.GenericEncoder(template_fname=HOME + '/model/func.template',
                                      delimiter='$',
                                      target_filename='in.json')
 decoder = uq.decoders.SimpleCSV(target_filename=output_filename,
                                 output_columns=output_columns)
-execute = ExecuteLocal('{}/model/g_func.py in.json'.format(os.getcwd()))
+execute = ExecuteLocal('{}/model/func.py in.json'.format(os.getcwd()))
 actions = Actions(CreateRunDirectory(root=WORK_DIR),
                   Encode(encoder), execute, Decode(decoder))
 
@@ -70,11 +71,11 @@ vary = {}
 for i in range(D):
     vary["x%d" % (i + 1)] = cp.Uniform(0, 1)
 
-# MC sampler
+# Latin Hypercube sampler
 my_sampler = uq.sampling.quasirandom.LHCSampler(vary=vary, max_num=1000)
 
 # EasyVVUQ Campaign
-campaign = uq.Campaign(name='g_func', params=params, actions=actions,
+campaign = uq.Campaign(name='func', params=params, actions=actions,
                        work_dir=WORK_DIR, db_location=DB_LOCATION)
 
 # Associate the sampler with the campaign

@@ -6,9 +6,15 @@ In this tutorial we will create a forward uncertainty-propagation surrogate usin
 
 ## Problem definition
 
-For computational efficiency we will consider the analytical Sobol G function, see [this page](https://www.sfu.ca/~ssurjano/gfunc.html) for a desription of this function. The following files are relevant:
+For computational efficiency we will consider the analytical Sobol G function, see [this page](https://www.sfu.ca/~ssurjano/gfunc.html) for a desription of this function. In addition, we consider the following function:
 
-* `tests/deep_active_subspaces/model/g_func.py`: the implementation of the Sobol G function.
+![equation](https://latex.codecogs.com/svg.latex?f%28%7B%5Cbf%20x%7D%29%20%3D%20%5Cprod_%7Bi%3D1%7D%5ED%20%5Cfrac%7Ba_ix_i%5E2%20&plus;%201%7D%7B2%5ED%7D)
+
+This function we will denote simply as the polynomial function. Both functions have a vector of coefficients `a`. The entries`a_i` determine the importance of each input. Entries are positive and higher values indicates less significant parameters in the case of the G function. For the polynomial function, its values are in `[0, 1]` and in this case a smaller value results in the corresponding input to be less significant.
+
+The following files are relevant:
+
+* `tests/deep_active_subspaces/model/func.py`: the implementation of the polynomial / Sobol G function.
 * `tests/deep_active_subspaces/generate_easyvvuq_dataframe.py`: script that generates the training data using EasyVVUQ.
 * `tests/deep_active_subspaces/train_DAS_surrogate.py`: script that trains a Deep Active Subspace (DAS) surrogate on the EasyVVUQ data frame.
 
@@ -41,7 +47,7 @@ In [3], an approach is described in which artificial neural networks (ANNs) are 
 
 ![equation](https://latex.codecogs.com/svg.latex?%7B%5Cbf%20w%7D_i%20%3D%20%7B%5Cbf%20q%7D_i%20-%20%5Csum_%7Bj%3D1%7D%5E%7Bi-1%7D%5Cleft%28%5Cfrac%7B%7B%5Cbf%20w%7D_j%5ET%7B%5Cbf%20q%7D_i%7D%7B%7B%5Cbf%20w%7D_j%5ET%7B%5Cbf%20w%7D_j%7D%5Cright%29%7B%5Cbf%20w%7D_j%2C%20%5Cquad%20i%20%3D%201%2C%5Ccdots%2C%20d.)
 
-That is, we start with $\wb_1 := \qb_1$, and for all subsequent vectors $\qb_i$ we subtract the projections of $\qb_i$ onto each vector $\wb_j$ which has previously been orthogonalized. This leaves us with a orthogonal basis:
+That is, we start with `w_1 = q_1`, and for all subsequent vectors `q_1` we subtract the projections of `q_i` onto each vector `w_j` which has previously been orthogonalized. This leaves us with a orthogonal basis:
 
 ![equation](https://latex.codecogs.com/svg.latex?%5Cleft%5B%7B%5Cbf%20w%7D_1%28%7B%5Cbf%20q%7D_1%29%5C%3B%5C%3B%7B%5Cbf%20w%7D_2%28%7B%5Cbf%20q%7D_1%2C%20%7B%5Cbf%20q%7D_2%29%5C%3B%5C%3B%5Ccdots%5C%3B%5C%3B%7B%5Cbf%20w%7D_d%28%7B%5Cbf%20q%7D_1%2C%7B%5Cbf%20q%7D_2%5C%2C%5Ccdots%2C%7B%5Cbf%20q%7D_d%29%5Cright%5D)
 
@@ -73,7 +79,7 @@ HOME = os.path.abspath(os.path.dirname(__file__))
 WORK_DIR = '/tmp'
 
 # EasyVVUQ database location
-ID = 'g_func'
+ID = 'func'
 DB_LOCATION = "sqlite:///" + WORK_DIR + "/campaign%s.db" % ID
 
 ########################
@@ -81,7 +87,7 @@ DB_LOCATION = "sqlite:///" + WORK_DIR + "/campaign%s.db" % ID
 ########################
 
 # choose a number of uncertain parameters (< 10)
-D = 2
+D = 10
 
 # Define parameter space
 params = {}
@@ -96,21 +102,24 @@ output_filename = params["out_file"]["default"]
 output_columns = ["f"]
 
 # the a vector determines the importance of each input
-a = np.zeros(10)
-a[0] = 1.0; a[1] = 1.0
+# a = np.linspace(0, np.sqrt(100), 10)**2
+a = np.array([1 / 2 ** i for i in range(10)])
+# a = np.zeros(10)
+# a[0] = 1
+# a[1] = 0.5
 for i in range(10):
     params["a%d" % (i + 1)] = {"type": "float",
                                "min": 0.0,
-                               "max": 1.0,
+                               "max": 100.0,
                                "default": a[i]}
 
 # create encoder, decoder, and execute locally
-encoder = uq.encoders.GenericEncoder(template_fname=HOME + '/model/g_func.template',
+encoder = uq.encoders.GenericEncoder(template_fname=HOME + '/model/func.template',
                                      delimiter='$',
                                      target_filename='in.json')
 decoder = uq.decoders.SimpleCSV(target_filename=output_filename,
                                 output_columns=output_columns)
-execute = ExecuteLocal('{}/model/g_func.py in.json'.format(os.getcwd()))
+execute = ExecuteLocal('{}/model/func.py in.json'.format(os.getcwd()))
 actions = Actions(CreateRunDirectory(root=WORK_DIR),
                   Encode(encoder), execute, Decode(decoder))
 
@@ -119,11 +128,11 @@ vary = {}
 for i in range(D):
     vary["x%d" % (i + 1)] = cp.Uniform(0, 1)
 
-# MC sampler
+# Latin Hypercube sampler
 my_sampler = uq.sampling.quasirandom.LHCSampler(vary=vary, max_num=1000)
 
 # EasyVVUQ Campaign
-campaign = uq.Campaign(name='g_func', params=params, actions=actions,
+campaign = uq.Campaign(name='func', params=params, actions=actions,
                        work_dir=WORK_DIR, db_location=DB_LOCATION)
 
 # Associate the sampler with the campaign
@@ -132,8 +141,6 @@ campaign.set_sampler(my_sampler)
 # Execute runs
 campaign.execute().collate()
 ```
-
-We highlight the `a` vector of the code above. This vector, of size `D`, determines the importance of each input. Entries are positive and higher values indicates less significant parameters.
 
 ## Training a DAS surrogate on the EasyVVUQ data frame
 
@@ -190,12 +197,100 @@ In this case the DAS surrogate fails to properly converge, and the active subspa
 
 ![](contours3.png)
 
-This yields an accurate surrogate (relatively low test error, see `tests/deep_active_subspaces/train_DAS_surrogate.py`). Again however, since `d=D` we can no longer speak of an active subspace. Other problems might very well have an active subspace. Consider for instances the following function:
+This yields an accurate surrogate (relatively low test error, see `tests/deep_active_subspaces/train_DAS_surrogate.py`). Again however, since `d=D` we can no longer speak of an active subspace. Other problems might very well have an active subspace. 
 
-![equation](https://latex.codecogs.com/svg.latex?f%28%7B%5Cbf%20x%7D%29%20%3D%20%5Cprod_%7Bi%3D1%7D%5ED%20%5Cfrac%7Ba_ix_i%5E2%20&plus;%201%7D%7B2%5ED%7D)
+Let us now switch for the remainder of the tutorial to the polynomials model. To do this we simply uncomment a line in `tests/deep_active_subspaces/model/func.py`:
 
-The `a_i` coefficients play a similar role as before, except that smaller values result in a less significant input. The results, for `a_1=1`, `a_2=0.5` and `d=1` are as follows:
+```python
+        # Uncomment for Sobol G function
+        # sol *= 2.0 * (np.abs(4.0 * theta[i] - 2.0) + a[i]) / (1.0 + a[i])
+        # Uncomment for polynomial function
+        sol *= (3 * a[i] * theta[i]**2 + 1.0) / 2**D
+```
+
+The results for `a_1=1`, `a_2=0.5` and `d=1` are as follows:
 
 ![](contours4.png)
 
 Here we obtain an accurate surrogate, and it is clear that the DAS surrogate was able to find a single dominant direction along which most of the variability takes place.
+
+### Example 2: D = 10
+
+We now repeat the procedure of generating a EasyVVUQ dataframe and training a DAS surrogate for a 10 dimensional case (`D=10`). Make sure to set the following in `tests/deep_active_subspaces/generate_easyvvuq_dataframe.py`:
+
+```python
+D = 10
+a = np.array([1 / 2 ** i for i in range(10)])
+```
+The latter sets the a_i coefficients to `[1.0, 0.5, 0.25, 0125, etc]`. To compute the training and test error, we execute the following:
+
+```python
+#########################
+# Compute error metrics #
+#########################
+
+# run the trained model forward at training locations
+n_mc = dims['n_train']
+pred = np.zeros([n_mc, dims['n_out']])
+for i in range(n_mc):
+    pred[i,:] = surrogate.predict(params[i])
+   
+train_data = samples[0:dims['n_train']]
+rel_err_train = np.linalg.norm(train_data - pred)/np.linalg.norm(train_data)
+
+# run the trained model forward at test locations
+pred = np.zeros([dims['n_test'], dims['n_out']])
+for idx, i in enumerate(range(dims['n_train'], dims['n_samples'])):
+    pred[idx] = surrogate.predict(params[i])
+test_data = samples[dims['n_train']:]
+rel_err_test = np.linalg.norm(test_data - pred)/np.linalg.norm(test_data)
+
+print('================================')
+print('Relative error on training set = %.4f' % rel_err_train)
+print('Relative error on test set = %.4f' % rel_err_test)
+print('================================')
+```
+
+Here, `dims` is a dictionary containing useful dimensions of the DAS surrogate, such as the number of training and test data points, and the size of the code output (size of the output layer). For `d=5` we obtain the following output
+
+```
+================================
+Relative error on training set = 0.0121
+Relative error on test set = 0.0333
+================================
+```
+
+Hence, we have a relative error of about 1.2% on the training data, and about 3.3% error on the test set. Note that in order to use the code snippet above `test_frac` has to be set to a value > 0.0. You will not obtain the exact same results, due to the random initialization of the network weights, and the stochastic gradient descent employed by the back-propagation algorithm. Finding a suitable value for `d`, as well as for `n_layers`, `n_neurons` etc, is a matter of hyperparameter tuning. e.g. via a simple grid search. This is one of the downsides of machine-learning based forward uncertainty propagation methods, in addition to their lack of interpretability and high number of tunable weights. That said, these methods are not subject to the curse of dimensionality, which do affect the Stochastic Collocation and Polynomial Chaos surrogate models of EasyVVUQ. To scale these methods to higher input dimension, specialized dimension-adaptive algorithms have to be employed (also available in EasyVVUQ, see e.g. [4]). These are sequential in nature, meaning that the sampling plan is not generated in one shot. In addition, these methods only postpone the curse of dimensionality, whereas a neural network has no trouble dealing with an input of e.g. 100 dimensions. The amount of training data required to obtain a suitable machine-learning based surrogate model will depend upon the specific application, and might very well be high. In short, the best surrogate modelling technique will be application depedent. For high-dimensional input spaces, surrogate models as described here could prove to be a valid option.
+
+As a final note, let us highlight a experimental sensitivity measure, extracted from the DAS surrogate. EasyVVUQ provides global variance based sensitivity measure, i.e. the Sobol indices. Somewhat related to this are global derivative-based sensitivity measures [5]. Consider for instance the following integral:
+
+![equation](https://latex.codecogs.com/gif.latex?V_i%20%3D%20%5Cint%20%5Cleft%28%5Cfrac%7B%5Cpartial%20%5ClVert%20f%28%7B%5Cbf%20x%7D%29%29%5CrVert_2%5E2%7D%7B%5Cpartial%20x_i%7D%5Cright%29%5E2p%28%7B%5Cbf%20x%7D%29d%7B%5Cbf%20x%7D%2C%20%5Cquad%5Cquad%20i%3D1%2C%5Ccdots%2C%20D)
+
+Local sensivity measure are based on the derivative at a certain point. The integral above integrates a derivative over the domain of the joint input pdf, making it a global method. The derivative of the (L2 norm of) the output can be quickly computed analytically using back propagation. As such, we can approximate the integral above using a brute-force Monte Carlo approach. The following code achieves this:
+
+```python
+# create DAS analysis object
+analysis = es.analysis.DAS_analysis(surrogate)
+# draw MC samples from the inputs
+n_mc = 10**4
+params_mc = np.array([p.sample(n_mc) for p in sampler.vary.get_values()]).T
+# evaluate integral on sampling plan
+idx, mean_grad = analysis.sensitivity_measures(params_mc)
+```
+ Here, `idx` are the indices of the parameters, ordered from most to least influential, and `mean_grad` contains the MC estimates of the sensitivity integral. From this we can generate images as
+ 
+ ![](sensitivity.png)
+
+Clearly, the method does pick up on the right order of the most influential parameters. The order of the less important inputs is incorrect. How this method stacks up to Sobol indices remains to be properly investigated. 
+
+## References
+
+[1] Constantine, P. G., Dow, E., & Wang, Q. (2014). Active subspace methods in theory and practice: applications to kriging surfaces. SIAM Journal on Scientific Computing, 36(4), A1500-A1524.
+
+[2] Liu, X., & Guillas, S. (2017). Dimension reduction for Gaussian process emulation: An application to the influence of bathymetry on tsunami heights. SIAM/ASA Journal on Uncertainty Quantification, 5(1), 787-812.
+
+[3] Tripathy, R., & Bilionis, I. (2019, February). Deep active subspaces: A scalable method for high-dimensional uncertainty propagation. In ASME 2019 International Design Engineering Technical Conferences and Computers and Information in Engineering Conference. American Society of Mechanical Engineers Digital Collection.
+
+[4] Edeling, W., Arabnejad, H., Sinclair, R., Suleimenova, D., Gopalakrishnan, K., Bosak, B., ... & Coveney, P. V. (2021). The impact of uncertainty on predictions of the CovidSim epidemiological code. Nature Computational Science, 1(2), 128-135.
+
+[5] Sobol, I. M., & Kucherenko, S. (2010). Derivative based global sensitivity measures. Procedia-Social and Behavioral Sciences, 2(6), 7745-7746.

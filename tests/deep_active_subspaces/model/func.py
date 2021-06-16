@@ -10,7 +10,9 @@ def poly_model(theta):
 
     sol = 1.0
     for i in range(D):
+        # Uncomment for Sobol G function
         # sol *= 2.0 * (np.abs(4.0 * theta[i] - 2.0) + a[i]) / (1.0 + a[i])
+        # Uncomment for polynomial function
         sol *= (3 * a[i] * theta[i]**2 + 1.0) / 2**D
     return sol
 

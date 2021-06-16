@@ -1,3 +1,7 @@
+"""
+Script to train a Deep Active Subspace on a EasyVVUQ data frame
+"""
+
 import easyvvuq as uq
 import easysurrogate as es
 import numpy as np
@@ -7,7 +11,7 @@ import matplotlib.pyplot as plt
 WORK_DIR = '/tmp'
 
 # location of the EasyVVUQ database
-ID = 'g_func'
+ID = 'func'
 DB_LOCATION = "sqlite:///" + WORK_DIR + "/campaign%s.db" % ID
 
 # reload easyvvuq campaign
@@ -31,10 +35,11 @@ samples = samples[output_columns[0]]
 # input dimension (15)
 D = params.shape[1]
 # assumed dimension active subspace
-d = 1
+d = 5
 
 # create DAS surrogate object
 surrogate = es.methods.DAS_Surrogate()
+
 # train the DAS surrogate
 surrogate.train(params, samples, 
                 d, n_iter=10000, n_layers=4, n_neurons=100, 
@@ -89,20 +94,21 @@ print('================================')
 # Sensitivity experiments #
 ###########################
 
-#perform some basic analysis
+# create DAS analysis object
 analysis = es.analysis.DAS_analysis(surrogate)
-
+# draw MC samples from the inputs
 n_mc = 10**4
 params_mc = np.array([p.sample(n_mc) for p in sampler.vary.get_values()]).T
-idx, mean = analysis.sensitivity_measures(params_mc)
+# evaluate sensitivity integral on sampling plan
+idx, mean_grad = analysis.sensitivity_measures(params_mc)
 params_ordered = np.array(list(sampler.vary.get_keys()))[idx[0]]
 
 fig = plt.figure('sensitivity', figsize=[4, 8])
 ax = fig.add_subplot(111)
 ax.set_ylabel(r'$\frac{\partial ||y||^2_2}{\partial x_i}$', fontsize=14)
 # find max quad order for every parameter
-ax.bar(range(mean.size), height = mean[idx].flatten())
-ax.set_xticks(range(mean.size))
+ax.bar(range(mean_grad.size), height = mean_grad[idx].flatten())
+ax.set_xticks(range(mean_grad.size))
 ax.set_xticklabels(params_ordered)
 plt.xticks(rotation=90)
 plt.tight_layout()
