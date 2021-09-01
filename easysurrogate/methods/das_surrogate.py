@@ -45,9 +45,9 @@ class DAS_Surrogate(Campaign):
         self.d = d
 
         # prepare the training data
-        X_train, y_train = self.feat_eng.get_training_data(feats, target, test_frac=test_frac)
+        X_train, y_train, _, _ = self.feat_eng.get_training_data(
+            feats, target, test_frac=test_frac, train_first=True)
 
-        # number of output neurons
         n_out = y_train.shape[1]
 
         # create the feed-forward ANN

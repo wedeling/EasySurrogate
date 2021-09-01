@@ -334,9 +334,9 @@ class Layer:
         # if this layer is the output layer
         if self.layer_rp1 is None:
             # Using this computes the derivatives of column sums of the jacobian
-            # self.delta_hy = np.ones([self.n_neurons, self.batch_size])
+            self.delta_hy = np.ones([self.n_neurons, self.batch_size])
             # Using this computes the derivatives of the L2^2 norm of y
-            self.delta_hy = 2 * self.h
+            # self.delta_hy = 2 * self.h
         else:
             # get the delta_ho values of the next layer (layer r+1)
             delta_hy_rp1 = self.layer_rp1.delta_hy

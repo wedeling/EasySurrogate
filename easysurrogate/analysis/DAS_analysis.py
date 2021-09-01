@@ -36,7 +36,7 @@ class DAS_analysis(BaseAnalysis):
         """
 
         # standardize the features
-        feats = (feats - self.das_surrogate.feat_std) / self.das_surrogate.feat_std
+        feats = (feats - self.das_surrogate.feat_mean) / self.das_surrogate.feat_std
         N = feats.shape[0]
         # Set the batch size to 1
         self.das_surrogate.neural_net.set_batch_size(1)
