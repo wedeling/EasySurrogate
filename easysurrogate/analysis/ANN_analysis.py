@@ -35,7 +35,7 @@ class ANN_analysis(BaseAnalysis):
         """
 
         # standardize the features
-        feats = (feats - self.ann_surrogate.feat_std) / self.ann_surrogate.feat_std
+        feats = (feats - self.ann_surrogate.feat_mean) / self.ann_surrogate.feat_std
         N = feats.shape[0]
         # Set the batch size to 1
         self.ann_surrogate.neural_net.set_batch_size(1)
