@@ -320,10 +320,15 @@ class Layer:
                 print('Cannot compute loss: unknown loss and/or activation function')
                 sys.exit()
 
-    def compute_delta_hy(self):
+    def compute_delta_hy(self, norm=True):
         """
         Compute the gradient of the network output wrt the activation functions
         of this layer.
+
+        norm : Boolean, optional, default is True.
+               Compute the gradient of ||y||^2_2. If False it computes the gradient of
+               y, if y is a scalar. If False and y is a vector, the resulting gradient is the
+               column sum of the full Jacobian matrix.
 
         Returns
         -------
@@ -334,9 +339,11 @@ class Layer:
         # if this layer is the output layer
         if self.layer_rp1 is None:
             # Using this computes the derivatives of column sums of the jacobian
-            self.delta_hy = np.ones([self.n_neurons, self.batch_size])
-            # Using this computes the derivatives of the L2^2 norm of y
-            # self.delta_hy = 2 * self.h
+            if not norm:
+                self.delta_hy = np.ones([self.n_neurons, self.batch_size])
+            else:
+                # Using this computes the derivatives of the L2^2 norm of y
+                self.delta_hy = 2 * self.h
         else:
             # get the delta_ho values of the next layer (layer r+1)
             delta_hy_rp1 = self.layer_rp1.delta_hy

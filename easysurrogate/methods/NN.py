@@ -315,7 +315,7 @@ class ANN:
         # return values and index of highest probability and random samples from pmf
         return probs, idx_max, None
 
-    def d_norm_y_dX(self, X_i, batch_size=1, feed_forward=True):
+    def d_norm_y_dX(self, X_i, batch_size=1, feed_forward=True, norm = True):
         """
         Compute the derivatives of the squared L2 norm of the output wrt
         the inputs.
@@ -326,6 +326,12 @@ class ANN:
             The input features.
         batch_size : int, optional
             The batch size. The default is 1.
+        feed_forward: Boolean, optional, default is True.
+            Feed X_i forward before computing the gradient.
+        norm : Boolean, optional, default is True.
+            Compute the gradient of ||y||^2_2. If False it computes the gradient of
+            y, if y is a scalar. If False and y is a vector, the resulting gradient is the
+            column sum of the full Jacobian matrix.
 
         Returns
         -------
@@ -337,7 +343,7 @@ class ANN:
             self.feed_forward(X_i, batch_size=batch_size)
 
         for i in range(self.n_layers, -1, -1):
-            self.layers[i].compute_delta_hy()
+            self.layers[i].compute_delta_hy(norm=norm)
             # also compute the gradient of the output wrt the weights
             if i > 0:
                 self.layers[i].compute_y_grad_W()
