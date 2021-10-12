@@ -31,6 +31,8 @@ class DAS_Layer(Layer):
         bias : boolean, optional
             Add a bias neuron to the DAS layer. NOT IMPLEMENTED YET.
             The default is False.
+        lamb : float, optional
+            L2 weight regularization parameter. The default is 0.0.
         batch_size : int, optional
             The batch size. The default is 1.
 

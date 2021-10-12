@@ -36,7 +36,44 @@ class DAS_Surrogate(Campaign):
     def train(self, feats, target, d, n_iter, test_frac=0.0,
               n_layers=2, n_neurons=100,
               activation='tanh',
-              batch_size=64, lamb=0.0, **kwargs):
+              batch_size=64, lamb=0.0,
+              standardize_X=True, standardize_y=True, **kwargs):
+        """
+        Perform backpropagation to train the DAS network
+
+        Parameters
+        ----------
+        feats : array [n_samples, n_feats]
+            The feature array.
+        target : array
+            The target data.
+        d : integer
+            The dimension of the active subspace.
+        n_iter : integer
+            The number of mini batch iterations.
+        test_frac : float, optional
+            Fraction of the data to use for testing. The default is 0.0.
+        n_layers : integer, optional
+            The number of hidden layers + the output layer. The default is 2.
+        n_neurons : integer, optional
+            The number of neurons per hidden layer. The default is 100.
+        activation : string, optional
+            The activation function to use. The default is 'tanh'. Other options include 'relu',
+            'hard_tanh', 'leaky_relu', 'sigmoid', 'softplus'.
+        batch_size : integer, optional
+            The minibatch size. The default is 64.
+        lamb : float, optional
+            L2 weight regularization parameter. The default is 0.0.
+        standardize_X : Boolean, optional
+            Standardize the features. The default is True.
+        standardize_y : Boolean, optional
+            Standardize the output. The default is True.
+
+        Returns
+        -------
+        None.
+
+        """
 
         # test fraction
         self.test_frac = test_frac
@@ -57,7 +94,8 @@ class DAS_Surrogate(Campaign):
                                                  loss='squared',
                                                  activation=activation, batch_size=batch_size,
                                                  lamb=lamb, decay_step=10**4, decay_rate=0.9,
-                                                 standardize_X=True, standardize_y=True,
+                                                 standardize_X=standardize_X,
+                                                 standardize_y=standardize_y,
                                                  save=False, **kwargs)
 
         print('===============================')
@@ -153,56 +191,3 @@ class DAS_Surrogate(Campaign):
         dims['n_out'] = self.neural_net.n_out
 
         return dims
-
-    def sensitivity_measures(self, feats):
-        """
-        Compute global derivative-based sensitivity measures using the derivative of
-        squared L2 norm of the output, computing usoing back propagation. Integration
-        of the derivatives over sthe stochastic space is done via MC on the provided
-        input features in feats.
-
-        Parameters
-        ----------
-        feats : array
-            An array of input parameter values.
-
-        Returns
-        -------
-        idx : array
-            Indices corresponding to input variables, ordered from most to least
-            influential.
-
-        """
-
-        # standardize the features
-        feats = (feats - self.feat_std) / self.feat_std
-        N = feats.shape[0]
-
-        # test using measure based on wights of active subspace, see also sensitivity
-        # paper by Paul Constantine.
-        # if self.d == 1:
-        #     idx = np.fliplr(np.argsort(np.abs(self.neural_net.layers[1].W.T)))
-        #     print('Parameters ordered from most to least important:')
-        #     print(idx)
-        #     return idx
-
-        # Set the batch size to 1
-        self.neural_net.set_batch_size(1)
-        # initialize the derivatives
-        self.neural_net.d_norm_y_dX(feats[0].reshape([1, -1]))
-        # compute the squared gradient
-        norm_y_grad_x2 = self.neural_net.layers[0].delta_hy**2
-        # compute the mean gradient
-        mean = norm_y_grad_x2 / N
-        # loop over all samples
-        for i in range(1, N):
-            # compute the next (squared) gradient
-            self.neural_net.d_norm_y_dX(feats[i].reshape([1, -1]))
-            norm_y_grad_x2 = self.neural_net.layers[0].delta_hy**2
-            mean += norm_y_grad_x2 / N
-        # order parameters from most to least influential based on the mean
-        # squared gradient
-        idx = np.fliplr(np.argsort(np.abs(mean).T))
-        print('Parameters ordered from most to least important:')
-        print(idx)
-        return idx, mean

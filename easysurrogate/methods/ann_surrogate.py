@@ -29,7 +29,8 @@ class ANN_Surrogate(Campaign):
               test_frac=0.0,
               n_layers=2, n_neurons=100,
               activation='tanh',
-              batch_size=64, lamb=0.0, **kwargs):
+              batch_size=64, lamb=0.0,
+              standardize_X=True, standardize_y=True, **kwargs):
         """
         Perform back propagation to train the ANN
 
@@ -80,7 +81,8 @@ class ANN_Surrogate(Campaign):
                                          loss='squared',
                                          activation=activation, batch_size=batch_size,
                                          lamb=lamb, decay_step=10**4, decay_rate=0.9,
-                                         standardize_X=True, standardize_y=True,
+                                         standardize_X=standardize_X,
+                                         standardize_y=standardize_y,
                                          save=False, **kwargs)
 
         print('===============================')
