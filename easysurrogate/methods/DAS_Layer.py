@@ -29,7 +29,7 @@ class DAS_Layer(Layer):
         d : int
             The dimension of the active subspace.
         bias : boolean, optional
-            Add a bias neuron to the DAS layer. NOT IMPLEMENTED YET.
+            Add a bias neuron to the DAS layer.
             The default is False.
         lamb : float, optional
             L2 weight regularization parameter. The default is 0.0.

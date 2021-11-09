@@ -326,7 +326,7 @@ class Layer:
         of this layer.
 
         norm : Boolean, optional, default is True.
-               Compute the gradient of ||y||^2_2. If False it computes the gradient of
+               Compute the gradient of ||y||_2. If False it computes the gradient of
                y, if y is a scalar. If False and y is a vector, the resulting gradient is the
                column sum of the full Jacobian matrix.
 
@@ -343,7 +343,9 @@ class Layer:
                 self.delta_hy = np.ones([self.n_neurons, self.batch_size])
             else:
                 # Using this computes the derivatives of the L2^2 norm of y
-                self.delta_hy = 2 * self.h
+                # self.delta_hy = 2 * self.h
+                # Using this computes the derivatives of the L2^2 norm of y
+                self.delta_hy = self.h / np.linalg.norm(self.h)
         else:
             # get the delta_ho values of the next layer (layer r+1)
             delta_hy_rp1 = self.layer_rp1.delta_hy

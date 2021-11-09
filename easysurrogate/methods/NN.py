@@ -329,14 +329,14 @@ class ANN:
         feed_forward: Boolean, optional, default is True.
             Feed X_i forward before computing the gradient.
         norm : Boolean, optional, default is True.
-            Compute the gradient of ||y||^2_2. If False it computes the gradient of
+            Compute the gradient of ||y||_2. If False it computes the gradient of
             y, if y is a scalar. If False and y is a vector, the resulting gradient is the
             column sum of the full Jacobian matrix.
 
         Returns
         -------
         array
-            The derivatives [d||y||^2_2/dX_1, ..., d||y||^2_2/dX_n_in]
+            The derivatives [d||y||_2/dX_1, ..., d||y||_2/dX_n_in]
 
         """
         if feed_forward:

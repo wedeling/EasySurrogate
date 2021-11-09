@@ -15,9 +15,9 @@ class DAS_analysis(BaseAnalysis):
         print('Creating DAS_analysis object')
         self.das_surrogate = das_surrogate
 
-    def sensitivity_measures(self, feats):
+    def sensitivity_measures(self, feats, norm=True):
         """
-        EXPERIMENTAL: Compute global derivative-based sensitivity measures using the
+        Compute global derivative-based sensitivity measures using the
         derivative of squared L2 norm of the output, computing using back propagation.
         Integration of the derivatives over the input space is done via MC on the provided
         input features in feats.
@@ -26,6 +26,11 @@ class DAS_analysis(BaseAnalysis):
         ----------
         feats : array
             An array of input parameter values.
+
+        norm : Boolean, optional, default is True.
+            Compute the gradient of ||y||^2_2. If False it computes the gradient of
+            y, if y is a scalar. If False and y is a vector, the resulting gradient is the
+            column sum of the full Jacobian matrix.
 
         Returns
         -------
@@ -45,7 +50,8 @@ class DAS_analysis(BaseAnalysis):
         # loop over all samples
         for i in range(N):
             # compute the next (squared) gradient
-            df_dx = self.das_surrogate.neural_net.d_norm_y_dX(feats[i].reshape([1, -1]))
+            df_dx = self.das_surrogate.neural_net.d_norm_y_dX(feats[i].reshape([1, -1]),
+                                                              norm=norm)
             # norm_y_grad_x2 = self.das_surrogate.neural_net.layers[0].delta_hy**2
             mean += df_dx**2 / N
         # order parameters from most to least influential based on the mean
@@ -55,9 +61,9 @@ class DAS_analysis(BaseAnalysis):
         print(idx)
         return idx, mean
 
-    def print_errors(self, feats, data):
+    def get_errors(self, feats, data, relative = False):
         """
-        Print the relative training and test error of the ANN surrogate to screen. This method
+        Get the training and test error of the DAS surrogate to screen. This method
         uses the DAS_Surrogate.get_dimensions() dictionary to determine where the split
         between training and test data is:
 
@@ -72,10 +78,13 @@ class DAS_analysis(BaseAnalysis):
             The features.
         data : array, size = [n_samples, n_out]
             The data.
+        relative: boolean, default is False
+            Compute relative instead of absolute errors.
 
         Returns
         -------
-        None.
+        err_train, err_test : float
+            The training and test errors
 
         """
         dims = self.das_surrogate.get_dimensions()
@@ -86,13 +95,22 @@ class DAS_analysis(BaseAnalysis):
             pred[i, :] = self.das_surrogate.predict(feats[i])
 
         train_data = data[0:dims['n_train']]
-        rel_err_train = np.linalg.norm(train_data - pred) / np.linalg.norm(train_data)
-        print("Training error = %.4f %%" % (rel_err_train * 100))
+        if relative:
+            err_train = np.linalg.norm(train_data - pred) / np.linalg.norm(train_data)
+            print("Relative training error = %.4f %%" % (err_train * 100))
+        else:
+            err_train = np.linalg.norm(train_data - pred)
+            print("Training error = %.4f " % (err_train))
 
         # run the trained model forward at test locations
         pred = np.zeros([dims['n_test'], dims['n_out']])
         for idx, i in enumerate(range(dims['n_train'], dims['n_samples'])):
             pred[idx] = self.das_surrogate.predict(feats[i])
         test_data = data[dims['n_train']:]
-        rel_err_test = np.linalg.norm(test_data - pred) / np.linalg.norm(test_data)
-        print("Test error = %.4f %%" % (rel_err_test * 100))
+        if relative:
+            err_test = np.linalg.norm(test_data - pred) / np.linalg.norm(test_data)
+            print("Relative test error = %.4f %%" % (err_test * 100))
+        else:
+            err_test = np.linalg.norm(test_data - pred)
+
+        return err_train, err_test
