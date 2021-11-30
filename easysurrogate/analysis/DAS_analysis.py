@@ -61,7 +61,7 @@ class DAS_analysis(BaseAnalysis):
         print(idx)
         return idx, mean
 
-    def get_errors(self, feats, data, relative = False):
+    def get_errors(self, feats, data, relative = True):
         """
         Get the training and test error of the DAS surrogate to screen. This method
         uses the DAS_Surrogate.get_dimensions() dictionary to determine where the split
@@ -78,7 +78,7 @@ class DAS_analysis(BaseAnalysis):
             The features.
         data : array, size = [n_samples, n_out]
             The data.
-        relative: boolean, default is False
+        relative: boolean, default is True
             Compute relative instead of absolute errors.
 
         Returns
@@ -96,10 +96,11 @@ class DAS_analysis(BaseAnalysis):
 
         train_data = data[0:dims['n_train']]
         if relative:
-            err_train = np.linalg.norm(train_data - pred) / np.linalg.norm(train_data)
+            err_train = np.mean(np.linalg.norm(train_data - pred, axis=0) /
+                                np.linalg.norm(train_data, axis=0), axis=0)
             print("Relative training error = %.4f %%" % (err_train * 100))
         else:
-            err_train = np.linalg.norm(train_data - pred)
+            err_train = np.mean(np.linalg.norm(train_data - pred, axis=0), axis=0)
             print("Training error = %.4f " % (err_train))
 
         # run the trained model forward at test locations
@@ -108,9 +109,11 @@ class DAS_analysis(BaseAnalysis):
             pred[idx] = self.das_surrogate.predict(feats[i])
         test_data = data[dims['n_train']:]
         if relative:
-            err_test = np.linalg.norm(test_data - pred) / np.linalg.norm(test_data)
+            err_test = np.mean(np.linalg.norm(test_data - pred, axis=0) /
+                               np.linalg.norm(test_data,axis=0), axis=0)
             print("Relative test error = %.4f %%" % (err_test * 100))
         else:
-            err_test = np.linalg.norm(test_data - pred)
+            err_test = np.mean(np.linalg.norm(test_data - pred, axis=0), axis=0)
+            print("Test error = %.4f " % (err_test))
 
         return err_train, err_test

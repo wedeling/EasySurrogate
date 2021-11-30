@@ -64,7 +64,7 @@ class ANN_analysis(BaseAnalysis):
         print(idx)
         return idx, mean
 
-    def get_errors(self, feats, data, relative = False):
+    def get_errors(self, feats, data, relative = True, return_predictions=False):
         """
         Get the training and test error of the ANN surrogate to screen. This method
         uses the ANN_Surrogate.get_dimensions() dictionary to determine where the split
@@ -81,8 +81,10 @@ class ANN_analysis(BaseAnalysis):
             The features.
         data : array, size = [n_samples, n_out]
             The data.
-        relative: boolean, default is False
+        relative : boolean, default is True
             Compute relative instead of absolute errors.
+        return_predictions : boolean, default is False
+            Also return the traiin and test predictions.
 
         Returns
         -------
@@ -93,27 +95,33 @@ class ANN_analysis(BaseAnalysis):
         dims = self.ann_surrogate.get_dimensions()
         # run the trained model forward at training locations
         n_mc = dims['n_train']
-        pred = np.zeros([n_mc, dims['n_out']])
+        train_pred = np.zeros([n_mc, dims['n_out']])
         for i in range(n_mc):
-            pred[i, :] = self.ann_surrogate.predict(feats[i])
+            train_pred[i, :] = self.ann_surrogate.predict(feats[i])
 
         train_data = data[0:dims['n_train']]
         if relative:
-            err_train = np.linalg.norm(train_data - pred) / np.linalg.norm(train_data)
+            err_train = np.mean(np.linalg.norm(train_data - train_pred, axis=0) /
+                                np.linalg.norm(train_data, axis=0), axis=0)
             print("Relative training error = %.4f %%" % (err_train * 100))
         else:
-            err_train = np.linalg.norm(train_data - pred)
+            err_train = np.mean(np.linalg.norm(train_data - train_pred, axis=0), axis=0)
             print("Training error = %.4f " % (err_train))
 
         # run the trained model forward at test locations
-        pred = np.zeros([dims['n_test'], dims['n_out']])
+        test_pred = np.zeros([dims['n_test'], dims['n_out']])
         for idx, i in enumerate(range(dims['n_train'], dims['n_samples'])):
-            pred[idx] = self.ann_surrogate.predict(feats[i])
+            test_pred[idx] = self.ann_surrogate.predict(feats[i])
         test_data = data[dims['n_train']:]
         if relative:
-            err_test = np.linalg.norm(test_data - pred) / np.linalg.norm(test_data)
+            err_test = np.mean(np.linalg.norm(test_data - test_pred, axis=0) /
+                               np.linalg.norm(test_data,axis=0), axis=0)
             print("Relative test error = %.4f %%" % (err_test * 100))
         else:
-            err_test = np.linalg.norm(test_data - pred)
+            err_test = np.mean(np.linalg.norm(test_data - test_pred, axis=0), axis=0)
+            print("Test error = %.4f " % (err_test))
 
-        return err_train, err_test
+        if not return_predictions:
+            return err_train, err_test
+        else:
+            return err_train, err_test, train_pred, test_pred
