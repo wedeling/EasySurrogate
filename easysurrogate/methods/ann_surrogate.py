@@ -94,6 +94,45 @@ class ANN_Surrogate(Campaign):
         if lags is not None:
             self.feat_eng.initial_condition_feature_history(feats)
 
+    def derivative(self, x, norm=True):
+        """
+        Compute a derivative of the network output f(x) with respect to the inputs x.
+
+        Parameters
+        ----------
+        x : array
+            A single feature vector of shape (n_in,) or (n_in, 1), where n_in is the
+            number of input neurons.
+        norm : Boolean, optional, default is True
+            Compute the gradient of ||f||_2. If False it computes the gradient of
+            f, if f is a scalar. If False and f is a vector, the resulting gradient is of the
+            column sum of the full Jacobian matrix.
+
+        Returns
+        -------
+        df_dx : array
+            The derivatives [d||f||_2/dx_1, ..., d||f||_2/dx_n_in]
+
+        """
+        # check that x is of shape (n_in, ) or (n_in, 1)
+        assert x.shape[0] == self.neural_net.n_in, \
+        "x must be of shape (n_in,): %d != %d" % (x.shape[0], self.neural_net.n_in)
+
+        if x.ndim > 1:
+            assert x.shape[1] == 1, "Only pass 1 feature vector at a time"
+
+        # set the batch size to 1 if not done already
+        if self.neural_net.batch_size != 1:
+            self.neural_net.set_batch_size(1)
+
+        # standardize the input (if inputs were not standardized, feat_mean=0 and feat_std=1)
+        x = (x - self.feat_mean) / self.feat_std
+
+        # feed forward and compute and the derivatives
+        df_dx = self.neural_net.d_norm_y_dX(x.reshape([1, -1]), feed_forward=True, norm=norm)
+
+        return df_dx
+
     def train_online(self, n_iter=1, batch_size=1, verbose=False, sequential=False):
         """
         Perform online training, i.e. backpropagation while the surrogate is coupled
