@@ -31,7 +31,7 @@ def draw():
     ax2.plot(np.array(plot2)[:, 0], color=colors[1], label=r'$E$')
     ax2.tick_params(axis='y', labelcolor=colors[1])
     ax2.set_ylabel('E')
-    leg = ax2.legend(loc=3)
+    ax2.legend(loc=3)
 
     ax3 = ax2.twinx()
     # ax3.set_ylim([0, 1e-3])
@@ -124,9 +124,9 @@ WINDOW_LENGTH = 2
 # batch size used in inline learning
 BATCH_SIZE = 1
 # number of time steps to wait before predicting dQ with the surrogate
-SETTLING_PERIOD = 630 * 10
+SETTLING_PERIOD = 630 * 0
 # The frequency of online neural network online updates
-M = 10
+M = 1
 # set the online learning parameters
 campaign.surrogate.set_online_training_parameters(TAU_NUDGE, DT_LR, WINDOW_LENGTH)
 
@@ -152,7 +152,7 @@ plot_frame_rate = np.floor(DAY / DT_LR).astype('int')
 # RESTART from a previous stored state
 RESTART = True
 # store the data at the end
-STORE = True
+STORE = False
 
 if PLOT:
     fig = plt.figure(figsize=[8, 4])
@@ -237,12 +237,12 @@ for n in range(n_steps):
         # predict dQ using the surrogate model
         dQ_pred = ann.predict([inner_prods, c_ij, src_Q])
         # predict without subgrid scale term
-        # dQ_pred = np.zeros(N_Q)  
+        # dQ_pred = np.zeros(N_Q)
     else:
         # just the reference data in the settling period
         # dQ_pred = dQ_ref[n]
         # predict without subgrid scale term
-        dQ_pred = np.zeros(N_Q)  
+        dQ_pred = np.zeros(N_Q)
 
     # compute the reduced subgrid-scale term
     reduced_dict = surrogate.train([-psi_hat_n_LR, w_hat_n_LR], dQ_pred)
