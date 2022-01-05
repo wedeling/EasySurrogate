@@ -35,7 +35,7 @@ class DAS_Surrogate(Campaign):
 
     def train(self, feats, target, d, n_iter, test_frac=0.0,
               n_layers=2, n_neurons=100,
-              activation='tanh',
+              activation='tanh', activation_das='linear',
               batch_size=64, lamb=0.0,
               standardize_X=True, standardize_y=True, **kwargs):
         """
@@ -92,7 +92,8 @@ class DAS_Surrogate(Campaign):
                                                  n_layers=n_layers, n_neurons=n_neurons,
                                                  n_out=n_out,
                                                  loss='squared',
-                                                 activation=activation, batch_size=batch_size,
+                                                 activation=activation, activation_das=activation_das,
+                                                 batch_size=batch_size,
                                                  lamb=lamb, decay_step=10**4, decay_rate=0.9,
                                                  standardize_X=standardize_X,
                                                  standardize_y=standardize_y,

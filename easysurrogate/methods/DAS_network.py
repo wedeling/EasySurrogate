@@ -23,8 +23,9 @@ class DAS_network(ANN):
 
     def __init__(self, X, y, d, alpha=0.001, decay_rate=1.0, decay_step=10**5,
                  beta1=0.9, beta2=0.999, lamb=0.0, n_out=1,
-                 param_specific_learn_rate=True, loss='squared', activation='tanh',
-                 activation_out='linear', n_softmax=0, n_layers=2, n_neurons=16,
+                 param_specific_learn_rate=True, loss='squared', 
+                 activation='tanh', activation_out='linear', activation_das='linear',
+                 n_softmax=0, n_layers=2, n_neurons=16,
                  bias=True, batch_size=1, save=True,
                  name='DAS', on_gpu=False,
                  standardize_X=True, standardize_y=True, **kwargs):
@@ -99,6 +100,9 @@ class DAS_network(ANN):
         # the dimension of the active subspace
         self.d = d
 
+        # the activation of the DAS layer
+        self.activation_das = activation_das
+
         # set all the common parameters via the parent ANN class,
         # but overwrite the init_network subsroutine in this class
         super().__init__(X, y, alpha=alpha, decay_rate=decay_rate,
@@ -136,7 +140,7 @@ class DAS_network(ANN):
                                  lamb=self.lamb, on_gpu=self.on_gpu))
 
         # add the deep active subspace layer
-        self.layers.append(DAS_Layer(self.d, self.n_layers, True,
+        self.layers.append(DAS_Layer(self.d, self.n_layers, True, activation=self.activation_das,
                                      batch_size=self.batch_size))
 
         # add the hidden layers
