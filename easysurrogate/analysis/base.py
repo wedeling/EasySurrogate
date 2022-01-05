@@ -9,6 +9,9 @@ from sklearn.neighbors import KernelDensity
 
 
 class BaseAnalysis:
+    """
+    A Basic analysis class
+    """
 
     def __init__(self):
         """
@@ -126,3 +129,83 @@ class BaseAnalysis:
         print('done')
 
         return domain, np.exp(log_dens)
+
+    def get_confidence_intervals(self, samples, conf=0.9):
+        """
+        Compute the confidence intervals given an array of samples
+
+        Parameters
+        ----------
+        samples : array
+            Samples on which to compute the intervals.
+        conf : float, optional, must be in [0, 1].
+            The confidence interval percentage. The default is 0.9.
+
+        Returns
+        -------
+        lower : array
+            The lower confidence bound..
+        upper : array
+            The upper confidence bound.
+
+        """
+
+        # ake sure conf is in [0, 1]
+        if conf < 0.0 or conf > 1.0:
+            print('conf must be specified within [0, 1]')
+            return
+
+        # lower bound = alpha, upper bound = 1 - alpha
+        alpha = 0.5 * (1.0 - conf)
+
+        # arrays for lower and upper bound of the interval
+        n_samples = samples.shape[0]
+        N_qoi = samples.shape[1]
+        lower = np.zeros(N_qoi)
+        upper = np.zeros(N_qoi)
+
+        # the probabilities of the ecdf
+        prob = np.linspace(0, 1, n_samples)
+        # the closest locations in prob that correspond to the interval bounds
+        idx0 = np.where(prob <= alpha)[0][-1]
+        idx1 = np.where(prob <= 1.0 - alpha)[0][-1]
+
+        # for every location of qoi compute the ecdf-based confidence interval
+        for i in range(N_qoi):
+            # the sorted surrogate samples at the current location
+            samples_sorted = np.sort(samples[:, i])
+            # the corresponding confidence interval
+            lower[i] = samples_sorted[idx0]
+            upper[i] = samples_sorted[idx1]
+
+        return lower, upper
+
+    def recursive_moments(self, X_np1, mu_n, sigma2_n, N):
+        """
+        Update the mean and variance using a new data sample X_np1.
+
+        Parameters
+        ----------
+        X_np1 : aray
+            A new data point, iteration n+1
+        mu_n : array
+            The mean compute using all samples up to iteration n
+        sigma2_n : array
+            The variance compute using all samples up to iteration n.
+        N : int
+            The number of samples.
+
+        Returns
+        -------
+        mu_np1 : array
+            The new mean, updated with the latest data point.
+        sigma2_np1 : TYPE
+            The new variance, updated with the latest data point..
+
+        """
+
+        mu_np1 = mu_n + (X_np1 - mu_n) / (N + 1)
+
+        sigma2_np1 = sigma2_n + mu_n**2 - mu_np1**2 + (X_np1**2 - sigma2_n - mu_n**2) / (N + 1)
+
+        return mu_np1, sigma2_np1

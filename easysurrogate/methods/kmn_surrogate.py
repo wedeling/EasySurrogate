@@ -80,8 +80,11 @@ class KMN_Surrogate(Campaign):
         self.n_bins = self.kernel_means[0].size
 
         # prepare the training data
-        X_train, y_train = self.feat_eng.get_training_data(feats, target, lags=lags, local=local,
-                                                           test_frac=test_frac)
+        X_train, y_train, _, _ = self.feat_eng.get_training_data(feats,
+                                                                 target,
+                                                                 lags=lags,
+                                                                 local=local,
+                                                                 test_frac=test_frac)
 
         # get the maximum lag that was specified
         self.max_lag = self.feat_eng.max_lag

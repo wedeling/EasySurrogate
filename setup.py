@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 setup(
     name='easysurrogate',
 
-    version=0.12,
+    version=0.18,
 
     description=(''),
 
@@ -12,7 +12,9 @@ setup(
 
     author='CWI',
 
-    install_requires=['numpy', 'scipy', 'matplotlib', 'h5py', 'sklearn'],
+    install_requires=['numpy', 'scipy', 'matplotlib', 'h5py', 'sklearn', 'mogp_emulator'],
+    
+    #package_dir={'':'easysurrogate'},
 
     packages=find_packages(),
 

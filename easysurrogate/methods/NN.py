@@ -1,45 +1,93 @@
-import numpy as np
+"""
+Class for an artificial neural network.
+"""
+
 import pickle
 import tkinter as tk
 from tkinter import filedialog
-from scipy.stats import rv_discrete
-import h5py
+import numpy as np
+# from scipy.stats import rv_discrete
+# import h5py
 
 from .Layer import Layer
 
 
 class ANN:
+    """
+    Class for an artificial neural network.
+    """
 
-    def __init__(
-            self,
-            X,
-            y,
-            alpha=0.001,
-            decay_rate=1.0,
-            decay_step=10**5,
-            beta1=0.9,
-            beta2=0.999,
-            lamb=0.0,
-            phi=0.0,
-            lamb_J=0.0,
-            n_out=1,
-            param_specific_learn_rate=True,
-            loss='squared',
-            activation='tanh',
-            activation_out='linear',
-            n_softmax=0,
-            n_layers=2,
-            n_neurons=16,
-            bias=True,
-            neuron_based_compute=False,
-            batch_size=1,
-            save=True,
-            load=False,
-            name='ANN',
-            on_gpu=False,
-            standardize_X=True,
-            standardize_y=True,
-            **kwargs):
+    def __init__(self, X, y, alpha=0.001, decay_rate=1.0, decay_step=10**5, beta1=0.9,
+                 beta2=0.999, lamb=0.0, n_out=1, loss='squared', activation='tanh',
+                 activation_out='linear', n_softmax=0, n_layers=2, n_neurons=16,
+                 bias=True, batch_size=1, param_specific_learn_rate=True,
+                 save=True, on_gpu=False, name='ANN',
+                 standardize_X=True, standardize_y=True, **kwargs):
+        """
+        Initialize the Artificial Neural Network object.
+
+        Parameters
+        ----------
+        X : array
+            The input features.
+        y : array
+            The target data.
+        alpha : float, optional
+            The learning rate. The default is 0.001.
+        decay_rate : float, optional
+            Factor multiplying the decay rate every decay_step iterations.
+            The default is 1.0.
+        decay_step : int, optional
+            The number of training iterations after which decay_rate is lowered.
+            The default is 10**5.
+        beta1 : float, optional
+            Momentum parameter controlling the moving average of the loss gradient.
+            Used for the parameter-specific learning rate. The default is 0.9.
+        beta2 : float, optional
+            Parameter controlling the moving average of the squared gradient.
+            Used for the parameter-specific learning rate. The default is 0.999.
+        lamb : float, optional
+            L2 weight regularization parameter. The default is 0.0.
+        n_out : int, optional
+            The number of output neurons. The default is 1.
+        loss : string, optional
+            The name of the loss function. The default is 'squared'.
+        activation : string, optional
+            The name of the activation function of the hidden layers.
+            The default is 'tanh'.
+        activation_out : string, optional
+            The name of the activation function of the output layer.
+            The default is 'linear'.
+        n_softmax : int, optional
+            The number of softmax layers attached to the output. The default is 0.
+        n_layers : int, optional
+            The number of layers, not counting the input layer. The default is 2.
+        n_neurons : int, optional
+            The number of neurons per hidden layer. The default is 16.
+        bias : boolean, optional
+            Use a bias neuron. The default is True.
+        batch_size : int, optional
+            The size of the mini batch. The default is 1.
+        param_specific_learn_rate : boolean, optional
+            Use parameter-specific learing rate. The default is True.
+        save : boolean, optional
+            Save the neural network to a pickle file after training.
+            The default is True.
+        on_gpu : boolean, optional
+            Train the neural network on a GPU using cupy. NOT IMPLEMENTED IN THIS VERSION.
+            The default is False.
+        name : string, optional
+            The name of the neural network. The default is 'ANN'.
+        standardize_X : boolean, optional
+            Standardize the features. The default is True.
+        standardize_y : boolean, optional
+            Standardize the target data. The default is True.
+
+        Returns
+        -------
+        None.
+
+        """
 
         # the features
         self.X = X
@@ -101,11 +149,6 @@ class ANN:
         # L2 regularization parameter
         self.lamb = lamb
 
-        # Jacobian regularization and finite difference parameter (phi)
-        self.lamb_J = lamb_J
-        self.phi = phi
-        self.test = []
-
         # the rate of decay and decay step for alpha
         self.decay_rate = decay_rate
         self.decay_step = decay_step
@@ -135,27 +178,36 @@ class ANN:
         # additional variables/dicts etc that must be stored in the ann object
         self.aux_vars = kwargs
 
-        # determines where to compute the neuron outputs and gradients
-        # True: locally at the neuron, False: on the Layer level in one shot via linear algebra)
-        self.neuron_based_compute = neuron_based_compute
-
         # size of the mini batch used in stochastic gradient descent
         self.batch_size = batch_size
 
         self.loss_vals = []
 
+        self.init_network(**kwargs)
+
+    def init_network(self, **kwargs):
+        """
+        Set up the network structure by creating the Layer objects and
+        connecting them together.
+
+        Returns
+        -------
+        None.
+
+        """
+
         self.layers = []
 
         # add the input layer
         self.layers.append(Layer(self.n_in, 0, self.n_layers, 'linear',
-                                 self.loss, self.bias, batch_size=batch_size, lamb=lamb,
-                                 neuron_based_compute=neuron_based_compute, on_gpu=on_gpu))
+                                 self.loss, self.bias, batch_size=self.batch_size,
+                                 lamb=self.lamb, on_gpu=self.on_gpu))
 
         # add the hidden layers
         for r in range(1, self.n_layers):
             self.layers.append(Layer(self.n_neurons, r, self.n_layers, self.activation,
-                                     self.loss, self.bias, batch_size=batch_size, lamb=lamb,
-                                     neuron_based_compute=neuron_based_compute, on_gpu=on_gpu))
+                                     self.loss, self.bias, batch_size=self.batch_size,
+                                     lamb=self.lamb, on_gpu=self.on_gpu))
 
         # add the output layer
         self.layers.append(
@@ -165,19 +217,25 @@ class ANN:
                 self.n_layers,
                 self.activation_out,
                 self.loss,
-                batch_size=batch_size,
-                lamb=lamb,
-                n_softmax=n_softmax,
-                neuron_based_compute=neuron_based_compute,
-                on_gpu=on_gpu,
+                batch_size=self.batch_size,
+                lamb=self.lamb,
+                n_softmax=self.n_softmax,
+                on_gpu=self.on_gpu,
                 **kwargs))
 
         self.connect_layers()
 
         self.print_network_info()
 
-    # connect each layer in the NN with its previous and the next
     def connect_layers(self):
+        """
+         Connect each layer in the neural network with its neighbours
+
+        Returns
+        -------
+        None.
+
+        """
 
         self.layers[0].meet_the_neighbors(None, self.layers[1])
         self.layers[-1].meet_the_neighbors(self.layers[-2], None)
@@ -185,9 +243,23 @@ class ANN:
         for i in range(1, self.n_layers):
             self.layers[i].meet_the_neighbors(self.layers[i - 1], self.layers[i + 1])
 
-    # run the network forward
-    # X_i needs to have shape [batch size, number of features]
     def feed_forward(self, X_i, batch_size=1):
+        """
+        Run the network forward.
+
+        Parameters
+        ----------
+        X_i : array
+            The feauture array, needs to have shape [batch size, number of features].
+        batch_size : int, optional
+            The bath size. The default is 1.
+
+        Returns
+        -------
+        array
+            The prediction of the neural network.
+
+        """
 
         # set the features at the output of in the input layer
         if not self.bias:
@@ -197,102 +269,134 @@ class ANN:
             self.layers[0].h[0:self.n_in, :] = X_i.T
 
         for i in range(1, self.n_layers + 1):
-            if self.neuron_based_compute:
-                # compute the output locally in each neuron
-                self.layers[i].compute_output_local()
-            else:
-                # compute the output on the layer using matrix-maxtrix multiplication
-                self.layers[i].compute_output(batch_size)
+            # compute the output on the layer using matrix-maxtrix multiplication
+            self.layers[i].compute_output(batch_size)
 
         return self.layers[-1].h
 
-    # get the output of the softmax layer (so far: only works for batch_size = 1)
-    def get_softmax(self, X_i, feed_forward=True):
+    def get_softmax(self, X_i):
+        """
+        Get the output of the softmax layer.
 
-        if feed_forward:
-            # feed forward features X_i
-            h = self.feed_forward(X_i, batch_size=1)
-        else:
-            h = self.layers[-1].h
+        Parameters
+        ----------
+        X_i : array
+            The input features.
+
+        Returns
+        -------
+        probs : array
+            the probabilities of the softmax layer.
+        idx_max : int
+            The softmax output with the highest probability.
+
+        """
+        # feed forward features X_i
+        h = self.feed_forward(X_i, batch_size=1)
 
         probs = []
         idx_max = []
-        rvs = []
+        # rvs = []
 
+        # split the output of the last layer over the number of softmax layers
         for h_i in np.split(h, self.n_softmax):
+            # compute the softmax probabilities.
             o_i = np.exp(h_i) / np.sum(np.exp(h_i), axis=0)
             o_i = o_i / np.sum(o_i)
-
             probs.append(o_i)
-
+            # the softmax output w
             idx_max.append(np.argmax(o_i))
 
+            # draw a random sample from the discrete distribution o_i.
+            # TODO: Slow for some reason. Find faster implementation.
             # pmf = rv_discrete(values=(np.arange(o_i.size), o_i.flatten()))
-            #
             # rvs.append(pmf.rvs())
 
         # return values and index of highest probability and random samples from pmf
         return probs, idx_max, None
 
-    # compute jacobian of the neural net via back propagation
-    def jacobian(self, X_i, batch_size=1, feed_forward=False):
+    def d_norm_y_dX(self, X_i, batch_size=1, feed_forward=True, norm = True):
+        """
+        Compute the derivatives of the squared L2 norm of the output wrt
+        the inputs.
 
+        Parameters
+        ----------
+        X_i : array
+            The input features.
+        batch_size : int, optional
+            The batch size. The default is 1.
+        feed_forward: Boolean, optional, default is True.
+            Feed X_i forward before computing the gradient.
+        norm : Boolean, optional, default is True.
+            Compute the gradient of ||y||_2. If False it computes the gradient of
+            y, if y is a scalar. If False and y is a vector, the resulting gradient is the
+            column sum of the full Jacobian matrix.
+
+        Returns
+        -------
+        array
+            The derivatives [d||y||_2/dX_1, ..., d||y||_2/dX_n_in]
+
+        """
         if feed_forward:
             self.feed_forward(X_i, batch_size=batch_size)
 
         for i in range(self.n_layers, -1, -1):
-            self.layers[i].compute_delta_hy()
+            self.layers[i].compute_delta_hy(norm=norm)
             # also compute the gradient of the output wrt the weights
             if i > 0:
                 self.layers[i].compute_y_grad_W()
 
-        # delta_hy of the input layer = the Jacobian of the neural net
+        # delta_hy of the input layer = the derivative of the normed output
         return self.layers[0].delta_hy
 
-    # compute jacobian via finite differences
-    def jacobian_FD(self, X_i, batch_size=1):
-
-        eps = 1e-8
-
-        jac_FD = np.zeros([self.n_in, batch_size])
-
-        h1 = self.feed_forward(X_i, batch_size=batch_size)
-
-        for i in range(self.n_in):
-            X2 = np.copy(X_i)
-
-            # perturb a single feature
-            X2[:, i] += eps
-
-            h2 = self.feed_forward(X2, batch_size=batch_size)
-
-            # FD approximation of gradient of NN output wrt i-th feature
-            jac_FD[i] = (h2 - h1) / eps
-
-        return jac_FD
-
-    # back propagation algorithm
     def back_prop(self, y_i):
+        """
+        Back-propagation algorithm to find gradient of the loss function with respect
+        to the weights of the neural network.
+
+        Parameters
+        ----------
+        y_i : array
+            The target data on which to evaluate the loss funcion.
+
+        Returns
+        -------
+        None.
+
+        """
 
         # start back propagation over hidden layers, starting with output layer
         for i in range(self.n_layers, 0, -1):
             self.layers[i].back_prop(y_i)
 
-    # update step of the weights
-    def batch(self, X_i, y_i, alpha=0.001, beta1=0.9, beta2=0.999, t=0):
+    def batch(self, X_i, y_i, alpha=0.001, beta1=0.9, beta2=0.999):
+        """
+        Update the weights using a mini batch.
 
+        Parameters
+        ----------
+        X_i : array
+            The input features of the mini batch.
+        y_i : array
+            The target data of the mini batch.
+        alpha : float, optional
+            The learning rate. The default is 0.001.
+        beta1 : float, optional
+            Momentum parameter controlling the moving average of the loss gradient.
+            Used for the parameter-specific learning rate. The default is 0.9.
+        beta2 : float, optional
+            Parameter controlling the moving average of the squared gradient.
+            Used for the parameter-specific learning rate. The default is 0.999.
+
+        Returns
+        -------
+        None.
+
+        """
         self.feed_forward(X_i, self.batch_size)
-
-        if self.loss == 'hamilton':
-            jac = self.jacobian(X_i, batch_size=self.batch_size)
-            self.layers[-1].set_user_defined_value(jac)
-
         self.back_prop(y_i)
-
-        # if Jacobian regularization is used
-        if self.phi > 0.0:
-            self.jacobian(X_i, batch_size=self.batch_size)
-            # self.test.append(np.linalg.norm(self.layers[0].delta_hy)**2)
 
         for r in range(1, self.n_layers + 1):
 
@@ -300,7 +404,6 @@ class ANN:
 
             # momentum
             layer_r.V = beta1 * layer_r.V + (1.0 - beta1) * layer_r.L_grad_W
-
             # moving average of squared gradient magnitude
             layer_r.A = beta2 * layer_r.A + (1.0 - beta2) * layer_r.L_grad_W**2
 
@@ -317,41 +420,11 @@ class ANN:
                 #alpha_t = alpha*np.sqrt(1.0 - beta2**t)/(1.0 - beta1**t)
                 #alpha_i = alpha_t/(np.sqrt(layer_r.A + 1e-8))
 
-            # gradient descent update step
+            # gradient descent update step with L2 regularization
             if self.lamb > 0.0:
-                # with L2 regularization
                 layer_r.W = (1.0 - layer_r.Lamb * alpha_i) * layer_r.W - alpha_i * layer_r.V
-            elif self.phi > 0.0:
-
-                # dydx, the Jacobian of the output y
-                dydX = self.layers[0].delta_hy
-
-                # dydW
-                dydW = layer_r.y_grad_W
-
-                # regularize wrt squared Frobenius norm R ==> dRda = 2a, a = dydx
-                # This is the 'adversarial direction', direc of max. change
-                X_hat = X_i + self.phi * 2.0 * dydX.T
-
-                # double back prop
-                self.feed_forward(X_hat, batch_size=self.batch_size)
-                self.jacobian(X_i, batch_size=self.batch_size)
-
-                # output gradient wrt weights of the adversarial example
-                # CHECK THIS TERM AS FUNCTION OF PHI
-                dydW_hat = layer_r.y_grad_W
-
-                # FD approximation of the mixed partial derivative of y wrt W and X
-                # CHECK THIS TERM
-                d2y_dWdx = (dydW_hat - dydW) / self.phi
-
-                # weight update with Jacobian regularization (NO MOMENTUM TO MIXED TERM - OK??)
-                # PLOT MIXED DERIVATIVE, SEE IF NOISY, AND IF IT COULD BENEFIT FROM
-                # MOMENTUM SMOOTHING
-                layer_r.W = layer_r.W - alpha_i * layer_r.V - alpha_i * self.lamb_J * d2y_dWdx
-
+            # without regularization
             else:
-                # without regularization
                 layer_r.W = layer_r.W - alpha_i * layer_r.V
 
                 # Nesterov momentum
@@ -360,13 +433,32 @@ class ANN:
     # train the neural network
     def train(
             self,
-            n_epoch,
+            n_batch,
             store_loss=False,
-            check_derivative=False,
             sequential=False,
             verbose=True):
+        """
+        Train the neural network using stochastic gradient descent.
 
-        for i in range(n_epoch):
+        Parameters
+        ----------
+        n_batch : int
+            The number of mini-batch iterations.
+        store_loss : boolean, optional
+            Store the values of the loss function. The default is False.
+        sequential : boolean, optional
+            Sample a sequential slab of data, starting from a random point.
+            The default is False.
+        verbose : boolean, optional
+            Print information to screen while training. The default is True.
+
+        Returns
+        -------
+        None.
+
+        """
+
+        for i in range(n_batch):
 
             # select a random training instance (X, y)
             if not sequential:
@@ -388,36 +480,46 @@ class ANN:
                 self.y[rand_idx].T,
                 alpha=alpha,
                 beta1=self.beta1,
-                beta2=self.beta2,
-                t=i + 1)
-
-            if check_derivative and np.mod(i, 1000) == 0:
-                self.check_derivative(self.X[rand_idx], self.y[rand_idx], 10)
+                beta2=self.beta2)
 
             # store the loss value
             if store_loss:
-                l = 0.0
-                for k in range(self.n_out):
-                    if self.neuron_based_compute:
-                        l += self.layers[-1].neurons[k].L_i
-                    else:
-                        l += self.layers[-1].L_i
+                # l = 0.0
+                # for k in range(self.n_out):
+                # l += self.layers[-1].L_i
+
+                l = self.layers[-1].L_i
 
                 if np.mod(i, 1000) == 0:
                     loss_i = np.mean(l)
                     if verbose:
                         print('Batch', i, 'learning rate', alpha, 'loss:', loss_i)
-                    # note: appending a cupy value to a list is inefficient - if done every iteration
+                    # note: appending a cupy value to a list is inefficient -
+                    # if done every iteration
                     # it will slow down executing significantly
                     self.loss_vals.append(loss_i)
 
         if self.save:
             self.save_ANN()
 
-    # save using pickle
-    # if too large, do not store data
-    def save_ANN(self, file_path="", store_data=True):
+    def save_ANN(self, file_path="", store_data=False):
+        """
+        Save the neural network to a picke file.
 
+        Parameters
+        ----------
+        file_path : string, optional
+            The full path of the pickle file. The default is "", in which case a
+            filedialog window opens.
+        store_data : boolean, optional
+            Store the training data as well. The default is False, since storing a
+            large amount of data in a pickel file is inefficient.
+
+        Returns
+        -------
+        None.
+
+        """
         if len(file_path) == 0:
 
             root = tk.Tk()
@@ -442,8 +544,21 @@ class ANN:
 
         file.close()
 
-    # load using pickle
     def load_ANN(self, file_path=""):
+        """
+        Load the neural network from a pickle file.
+
+        Parameters
+        ----------
+        file_path : string, optional
+            The full path of the pickle file. The default is "", in which case a
+            filedialog window opens.
+
+        Returns
+        -------
+        None.
+
+        """
 
         # select file via GUI is file_path is not specified
         if len(file_path) == 0:
@@ -469,79 +584,48 @@ class ANN:
         self.print_network_info()
 
     def set_batch_size(self, batch_size):
+        """
+        Set the batch size in all the layers.
+
+        Parameters
+        ----------
+        batch_size : int
+            The batch size.
+
+        Returns
+        -------
+        None.
+
+        """
 
         self.batch_size = batch_size
 
         for i in range(self.n_layers + 1):
             self.layers[i].batch_size = batch_size
 
-    # compare a random back propagation derivative with a finite-difference approximation
-    def check_derivative(self, X_i, y_i, n_checks):
+    def compute_misclass_softmax(self, X=None, y=None):
+        """
+        Compute the number of misclassifications for the sofmax layer(s).
 
-        eps = 1e-6
-        print('==============================================')
-        print('Performing derivative check of', n_checks, 'randomly selected neurons.')
+        Parameters
+        ----------
+        X : array, optional
+            Feature array. The default is None, in which case the entire training set is used.
+        y : array, optional
+            Target data array. The default is None, in which case the entire
+            training set is used.
 
-        for i in range(n_checks):
+        Returns
+        -------
+        float
+            The misclassification percentage in [0,1] per softmax layer.
 
-            # 'align' the netwrok with the newly computed gradient and compute the loss function
-            self.feed_forward(X_i)
-            self.layers[-1].neurons[0].compute_loss(y_i)
-            L_i_old = self.layers[-1].neurons[0].L_i
-
-            # select a random neuron which has a nonzero gradient
-            L_grad_W_old = 0.0
-            while L_grad_W_old == 0.0:
-
-                # select a random neuron
-                layer_idx = np.random.randint(1, self.n_layers + 1)
-                neuron_idx = np.random.randint(self.layers[layer_idx].n_neurons)
-                weight_idx = np.random.randint(self.layers[layer_idx - 1].n_neurons)
-
-                # the unperturbed weight and gradient
-                w_old = self.layers[layer_idx].W[weight_idx, neuron_idx]
-                L_grad_W_old = self.layers[layer_idx].L_grad_W[weight_idx, neuron_idx]
-
-            # perturb weight
-            self.layers[layer_idx].W[weight_idx, neuron_idx] += eps
-
-            # run the netwrok forward and compute loss
-            self.feed_forward(X_i)
-            self.layers[-1].neurons[0].compute_loss(y_i)
-            L_i_new = self.layers[-1].neurons[0].L_i
-
-            # simple FD approximation of the gradient
-            L_grad_W_FD = (L_i_new - L_i_old) / eps
-
-            print('Back-propogation gradient:', L_grad_W_old)
-            print('FD approximation gradient:', L_grad_W_FD)
-
-            # reset weights and network
-            self.layers[layer_idx].W[weight_idx, neuron_idx] = w_old
-            self.feed_forward(X_i)
-
-        print('==============================================')
-
-    # #compute the number of misclassifications
-    # def compute_misclass(self):
-
-    #     n_misclass = 0.0
-
-    #     for i in range(self.n_train):
-    #         y_hat_i = np.sign(self.feed_forward(self.X[i]))
-
-    #         if y_hat_i != self.y[i]:
-    #             n_misclass += 1
-
-    #     print('Number of misclassifications = ', n_misclass)
-
-    # compute the number of misclassifications for a sofmax layer
-    def compute_misclass_softmax(self, X=[], y=[]):
+        """
 
         n_misclass = np.zeros(self.n_softmax)
 
         # compute misclassification error of the training set if X and y are not set
-        if y == []:
+        if y is None:
             print('Computing number of misclassifications wrt all training data.')
             X = self.X
             y = self.y
@@ -552,7 +636,7 @@ class ANN:
         n_samples = X.shape[0]
 
         for i in range(n_samples):
-            o_i, max_idx_ann, _ = self.get_softmax(X[i].reshape([1, self.n_in]))
+            _, max_idx_ann, _ = self.get_softmax(X[i].reshape([1, self.n_in]))
 
             max_idx_data = np.array([np.where(y_j == 1.0)[0]
                                      for y_j in np.split(y[i], self.n_softmax)])
@@ -570,8 +654,16 @@ class ANN:
 
         return n_misclass / n_samples
 
-    # return the number of weights
     def get_n_weights(self):
+        """
+        Return the number of weights
+
+        Returns
+        -------
+        n_weights : int
+            The number of weights.
+
+        """
 
         n_weights = 0
 
@@ -583,6 +675,14 @@ class ANN:
         return n_weights
 
     def print_network_info(self):
+        """
+        Print some characteristics of the neural network to screen.
+
+        Returns
+        -------
+        None.
+
+        """
         print('===============================')
         print('Neural net parameters')
         print('===============================')
@@ -593,6 +693,6 @@ class ANN:
         print('Number of output neurons =', self.n_out)
         print('Activation hidden layers =', self.activation)
         print('Activation output layer =', self.activation_out)
-        print('On GPU =', self.on_gpu)
+        # print('On GPU =', self.on_gpu)
         self.get_n_weights()
         print('===============================')

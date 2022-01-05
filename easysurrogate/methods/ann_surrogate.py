@@ -29,7 +29,8 @@ class ANN_Surrogate(Campaign):
               test_frac=0.0,
               n_layers=2, n_neurons=100,
               activation='tanh',
-              batch_size=64, lamb=0.0):
+              batch_size=64, lamb=0.0,
+              standardize_X=True, standardize_y=True, **kwargs):
         """
         Perform back propagation to train the ANN
 
@@ -56,13 +57,18 @@ class ANN_Surrogate(Campaign):
 
         # time lags
         self.lags = lags
+
         # flag if the surrogate is to be applied locally or not
         self.local = local
 
+        # test fraction
+        self.test_frac = test_frac
+
         # prepare the training data
-        X_train, y_train = self.feat_eng.get_training_data(feats, target, lags=lags, local=local,
-                                                           test_frac=test_frac)
+        X_train, y_train, _, _ = self.feat_eng.get_training_data(
+            feats, target, lags=lags, local=local, test_frac=test_frac, train_first=True)
         # get the maximum lag that was specified
+        # TODO for 20 grid points returns (n_samples x n_features) as training dataset
         self.max_lag = self.feat_eng.max_lag
 
         # number of output neurons
@@ -75,17 +81,57 @@ class ANN_Surrogate(Campaign):
                                          loss='squared',
                                          activation=activation, batch_size=batch_size,
                                          lamb=lamb, decay_step=10**4, decay_rate=0.9,
-                                         standardize_X=True, standardize_y=True,
-                                         save=False)
+                                         standardize_X=standardize_X,
+                                         standardize_y=standardize_y,
+                                         save=False, **kwargs)
 
         print('===============================')
         print('Training Artificial Neural Network...')
 
-        # train network for N_iter mini batches
+        # train network for n_iter mini batches
         self.neural_net.train(n_iter, store_loss=True)
         self.set_data_stats()
         if lags is not None:
             self.feat_eng.initial_condition_feature_history(feats)
+
+    def derivative(self, x, norm=True):
+        """
+        Compute a derivative of the network output f(x) with respect to the inputs x.
+
+        Parameters
+        ----------
+        x : array
+            A single feature vector of shape (n_in,) or (n_in, 1), where n_in is the
+            number of input neurons.
+        norm : Boolean, optional, default is True
+            Compute the gradient of ||f||_2. If False it computes the gradient of
+            f, if f is a scalar. If False and f is a vector, the resulting gradient is of the
+            column sum of the full Jacobian matrix.
+
+        Returns
+        -------
+        df_dx : array
+            The derivatives [d||f||_2/dx_1, ..., d||f||_2/dx_n_in]
+
+        """
+        # check that x is of shape (n_in, ) or (n_in, 1)
+        assert x.shape[0] == self.neural_net.n_in, \
+        "x must be of shape (n_in,): %d != %d" % (x.shape[0], self.neural_net.n_in)
+
+        if x.ndim > 1:
+            assert x.shape[1] == 1, "Only pass 1 feature vector at a time"
+
+        # set the batch size to 1 if not done already
+        if self.neural_net.batch_size != 1:
+            self.neural_net.set_batch_size(1)
+
+        # standardize the input (if inputs were not standardized, feat_mean=0 and feat_std=1)
+        x = (x - self.feat_mean) / self.feat_std
+
+        # feed forward and compute and the derivatives
+        df_dx = self.neural_net.d_norm_y_dX(x.reshape([1, -1]), feed_forward=True, norm=norm)
+
+        return df_dx
 
     def train_online(self, n_iter=1, batch_size=1, verbose=False, sequential=False):
         """
@@ -258,3 +304,26 @@ class ANN_Surrogate(Campaign):
         else:
             self.output_mean = 0.0
             self.output_std = 1.0
+
+    def get_dimensions(self):
+        """
+        Get some useful dimensions of the ANN surrogate. Returns a dict with the number
+        of training samples (n_train), the number of data samples (n_samples),
+        the number of test samples (n_test), the number of input neurons (n_in),
+        and the number of output_neurons (n_out).
+
+        Returns
+        -------
+        dims : dict
+            The dimensions dictionary.
+
+        """
+
+        dims = {}
+        dims['n_train'] = self.feat_eng.n_train
+        dims['n_samples'] = self.feat_eng.n_samples
+        dims['n_test'] = dims['n_samples'] - dims['n_train']
+        dims['n_in'] = self.neural_net.n_in
+        dims['n_out'] = self.neural_net.n_out
+
+        return dims
