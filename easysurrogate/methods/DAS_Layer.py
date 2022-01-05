@@ -20,7 +20,7 @@ class DAS_Layer(Layer):
         American Society of Mechanical Engineers Digital Collection, 2019.
     """
 
-    def __init__(self, d, n_layers, bias, batch_size=1):
+    def __init__(self, d, n_layers, bias, activation='linear', batch_size=1):
         """
         Initialize the DAS_layer oject.
 
@@ -41,10 +41,9 @@ class DAS_Layer(Layer):
         None.
 
         """
-        super().__init__(d, 1, n_layers, 'linear', 'none',
+        super().__init__(d, 1, n_layers, activation, 'none',
                          bias=bias, batch_size=batch_size)
         self.d = d
-        self.grad_Phi = np.ones([self.n_neurons, self.batch_size])
         self.name = 'DAS_layer'
 
     def meet_the_neighbors(self, layer_rm1, layer_rp1):
