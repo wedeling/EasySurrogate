@@ -78,7 +78,7 @@ class Reduced_Surrogate(Campaign):
         return self.reduced_r(V_hat, dQ)
 
     def generate_online_training_data(self, feats, LR_before, LR_after, HR_before, HR_after,
-                                      qoi_func, **kwargs):
+                                      qoi_func, nudge = False, **kwargs):
         """
         Compute the features and the target data for an online training step. Results are
         stored internally, and used within the 'train_online' subroutine.
@@ -103,6 +103,8 @@ class Reduced_Surrogate(Campaign):
         qoi_func : function
             A user-specfied function f(state, **kwargs) what computes the QoI from the LR
             or HR state.
+        nudge : boolean
+            Nudge the HR state to the LR state. Default is False.
 
         Returns
         -------
@@ -134,23 +136,29 @@ class Reduced_Surrogate(Campaign):
         # loop over all states
         for i in range(len(LR_before)):
 
-            # project the low-res model to the high-res grid
-            LR_before_projected = self.up_scale(LR_before[i], n_HR)
+            if nudge:
+                # project the low-res model to the high-res grid
+                LR_before_projected = self.up_scale(LR_before[i], n_HR)
 
-            # the difference between the low res and high res model (projected to low-res grid)
-            # at time n
-            delta_nudge = LR_before_projected - HR_before[i]
+                # the difference between the low res and high res model (projected to low-res grid)
+                # at time n
+                delta_nudge = LR_before_projected - HR_before[i]
 
-            # the estimated state of the (projected) HR model would there have been no nudging
-            HR_no_nudge = HR_after[i] - delta_nudge / self.tau_nudge * self.dt_LR
+                # the estimated state of the (projected) HR model would there have been no nudging
+                HR_no_nudge = HR_after[i] - delta_nudge / self.tau_nudge * self.dt_LR
 
-            # compute the HR QoI
-            Q_HR = qoi_func(HR_no_nudge, **kwargs)
-            # Q_HR = qoi_func(HR_after[i], **kwargs)
+                # compute the HR QoI
+                Q_HR = qoi_func(HR_no_nudge, **kwargs)
 
-            # compute the LR QoI
-            # Note: could store multiple functions in a list if required.
-            Q_LR = qoi_func(LR_after[i], **kwargs)
+                # compute the LR QoI
+                Q_LR = qoi_func(LR_after[i], **kwargs)
+
+            else:
+                # compute the HR QoI
+                Q_HR = qoi_func(HR_after[i], **kwargs)
+
+                # compute the LR QoI
+                Q_LR = qoi_func(LR_after[i], **kwargs)
 
             dQ.append(Q_HR - Q_LR)
 

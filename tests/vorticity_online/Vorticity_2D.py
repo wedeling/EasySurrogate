@@ -3,7 +3,11 @@ Class for solving the forced-dissipative 2D vorticity equations.
 
 Author: W. Edeling
 """
+
+from tkinter import filedialog
+import tkinter as tk
 import numpy as np
+import pickle
 from scipy import stats
 
 
