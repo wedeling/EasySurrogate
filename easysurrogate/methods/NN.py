@@ -131,10 +131,26 @@ class ANN:
         # number of layers (hidden + output)
         self.n_layers = n_layers
 
-        # number of neurons in a hidden layer
         self.n_neurons = n_neurons
 
+        # list of all layer sizes
+        self.layer_sizes = [self.n_in]
+
+        # type checking the number of neurons
+        assert type(n_neurons) is int or type(n_neurons) is list, \
+            "n_neurons must be a list or an integer"
+
+        # constant size hidden layer
+        if type(n_neurons) is int: 
+            for i in range(n_layers - 1): 
+                self.layer_sizes.append(n_neurons)
+        # variable user-specified size hidden layers
+        else:
+            for i in range(n_layers - 1): 
+                self.layer_sizes.append(n_neurons[i])
+
         # number of output neurons
+        self.layer_sizes.append(n_out)
         self.n_out = n_out
 
         # use bias neurons
@@ -205,7 +221,7 @@ class ANN:
 
         # add the hidden layers
         for r in range(1, self.n_layers):
-            self.layers.append(Layer(self.n_neurons, r, self.n_layers, self.activation,
+            self.layers.append(Layer(self.layer_sizes[r], r, self.n_layers, self.activation,
                                      self.loss, self.bias, batch_size=self.batch_size,
                                      lamb=self.lamb, on_gpu=self.on_gpu))
 
