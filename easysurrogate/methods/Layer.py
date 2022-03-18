@@ -345,7 +345,14 @@ class Layer:
                 # Using this computes the derivatives of the L2^2 norm of y
                 # self.delta_hy = 2 * self.h
                 # Using this computes the derivatives of the L2^2 norm of y
-                self.delta_hy = self.h / np.linalg.norm(self.h)
+                if self.loss == 'cross_entropy':
+                    o_i = []
+                    [o_i.append(np.exp(h_i) / np.sum(np.exp(h_i), axis=0))
+                     for h_i in np.split(self.h, self.n_softmax)]
+                    o_i = np.concatenate(o_i)
+                    self.delta_hy = o_i / np.linalg.norm(o_i)
+                else:
+                    self.delta_hy = self.h / np.linalg.norm(self.h)
         else:
             # get the delta_ho values of the next layer (layer r+1)
             delta_hy_rp1 = self.layer_rp1.delta_hy

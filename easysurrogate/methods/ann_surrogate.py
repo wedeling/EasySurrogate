@@ -28,6 +28,7 @@ class ANN_Surrogate(Campaign):
     def train(self, feats, target, n_iter, lags=None, local=False,
               test_frac=0.0,
               n_layers=2, n_neurons=100,
+              loss='squared',
               activation='tanh',
               batch_size=64, lamb=0.0,
               standardize_X=True, standardize_y=True, **kwargs):
@@ -45,6 +46,8 @@ class ANN_Surrogate(Campaign):
         n_layers : The number of layers in the neural network. Includes the
                    input layer and the hidden layers. The default is 2.
         n_neurons : The number of neurons per layer. The default is 100.
+        loss : string, optional
+            The name of the loss function. The default is 'squared'.
         activation : Type of activation function. The default is 'tanh'.
         batch_size : Mini batch size. The default is 64.
         lamb : L2 regularization parameter. The default is 0.0.
@@ -64,6 +67,9 @@ class ANN_Surrogate(Campaign):
         # test fraction
         self.test_frac = test_frac
 
+        # loss function
+        self.loss = loss
+
         # prepare the training data
         X_train, y_train, _, _ = self.feat_eng.get_training_data(
             feats, target, lags=lags, local=local, test_frac=test_frac, train_first=True)
@@ -78,7 +84,7 @@ class ANN_Surrogate(Campaign):
         self.neural_net = es.methods.ANN(X=X_train, y=y_train,
                                          n_layers=n_layers, n_neurons=n_neurons,
                                          n_out=n_out,
-                                         loss='squared',
+                                         loss=loss,
                                          activation=activation, batch_size=batch_size,
                                          lamb=lamb, decay_step=10**4, decay_rate=0.9,
                                          standardize_X=standardize_X,
@@ -260,12 +266,16 @@ class ANN_Surrogate(Campaign):
 
         """
 
-        # features were standardized during training, do so here as well
+        # if features were standardized during training, do so here as well
         feat = (feat - self.feat_mean) / self.feat_std
-        # feed forward prediction step
-        y = self.neural_net.feed_forward(feat.reshape([1, self.neural_net.n_in])).flatten()
-        # transform y back to physical domain
-        y = y * self.output_std + self.output_mean
+        if self.loss == 'cross_entropy':
+            # y = the probability mass function at the output layer
+            y, _, _ = self.neural_net.get_softmax(feat.reshape([1, self.neural_net.n_in]))
+        else:
+            # feed forward prediction step
+            y = self.neural_net.feed_forward(feat.reshape([1, self.neural_net.n_in])).flatten()
+            # transform y back to physical domain
+            y = y * self.output_std + self.output_mean
 
         return y
 

@@ -35,7 +35,7 @@ class DAS_Surrogate(Campaign):
 
     def train(self, feats, target, d, n_iter, test_frac=0.0,
               n_layers=2, n_neurons=100,
-              activation='tanh', activation_das='linear',
+              activation='tanh', activation_das='linear', loss = 'squared',
               batch_size=64, lamb=0.0,
               standardize_X=True, standardize_y=True, **kwargs):
         """
@@ -60,6 +60,11 @@ class DAS_Surrogate(Campaign):
         activation : string, optional
             The activation function to use. The default is 'tanh'. Other options include 'relu',
             'hard_tanh', 'leaky_relu', 'sigmoid', 'softplus'.
+        activation_das : string, optional
+            The activation function to use in the DAS layer. The default is 'linear'.
+        loss : string, optional
+            The loss function. The default is 'squared'. Other options include 'cross_entropy'
+            and 'logistic'.
         batch_size : integer, optional
             The minibatch size. The default is 64.
         lamb : float, optional
@@ -81,17 +86,26 @@ class DAS_Surrogate(Campaign):
         # The dimenions of the active subspace
         self.d = d
 
+        # loss function
+        self.loss = loss
+
         # prepare the training data
         X_train, y_train, _, _ = self.feat_eng.get_training_data(
             feats, target, test_frac=test_frac, train_first=True)
 
         n_out = y_train.shape[1]
 
+        if loss == 'cross_entropy': 
+            n_softmax = 1
+        else:
+            n_softmax = 0
+
         # create the feed-forward ANN
         self.neural_net = es.methods.DAS_network(X_train, y_train, d,
                                                  n_layers=n_layers, n_neurons=n_neurons,
                                                  n_out=n_out,
-                                                 loss='squared',
+                                                 loss=loss,
+                                                 n_softmax=n_softmax,
                                                  activation=activation, activation_das=activation_das,
                                                  batch_size=batch_size,
                                                  lamb=lamb, decay_step=10**4, decay_rate=0.9,
@@ -162,12 +176,16 @@ class DAS_Surrogate(Campaign):
 
         """
 
-        # features were standardized during training, do so here as well
+        # if features were standardized during training, do so here as well
         feat = (feat - self.feat_mean) / self.feat_std
-        # feed forward prediction step
-        y = self.neural_net.feed_forward(feat.reshape([1, self.neural_net.n_in])).flatten()
-        # transform y back to physical domain
-        y = y * self.output_std + self.output_mean
+        if self.loss == 'cross_entropy':
+            # y = the probability mass function at the output layer
+            y, _, _ = self.neural_net.get_softmax(feat.reshape([1, self.neural_net.n_in]))
+        else:
+            # feed forward prediction step
+            y = self.neural_net.feed_forward(feat.reshape([1, self.neural_net.n_in])).flatten()
+            # transform y back to physical domain
+            y = y * self.output_std + self.output_mean
 
         return y
 
