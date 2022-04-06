@@ -52,7 +52,7 @@ class ANN:
             The number of output neurons. The default is 1.
         loss : string, optional
             The name of the loss function. The default is 'squared'.
-        activation : string, optional
+        activation : string or list of strings, optional
             The name of the activation function of the hidden layers.
             The default is 'tanh'.
         activation_out : string, optional
@@ -60,7 +60,7 @@ class ANN:
             The default is 'linear'.
         n_softmax : int, optional
             The number of softmax layers attached to the output. The default is 0.
-        n_layers : int, optional
+        n_layers : integer or list of integers, optional
             The number of layers, not counting the input layer. The default is 2.
         n_neurons : int, optional
             The number of neurons per hidden layer. The default is 16.
@@ -153,8 +153,16 @@ class ANN:
         self.layer_sizes.append(n_out)
         self.n_out = n_out
 
+        # bias type checking
+        assert type(bias) is bool or type(bias) is list, "bias must be boolean or a list of boolan"
+
         # use bias neurons
-        self.bias = bias
+        if type(bias) is bool:
+            self.bias = []
+            for i in range(n_layers):
+                self.bias.append(bias)
+        else:
+            self.bias = bias
 
         # loss function type
         self.loss = loss
@@ -180,6 +188,21 @@ class ANN:
 
         # activation function of the hidden layers
         self.activation = activation
+
+        # type checking the activation
+        assert type(activation) is str or type(activation) is list, \
+            "activation must be a string or a list of strings"
+
+        # list of activation functions per layer
+        self.layer_activation = ['linear']
+        # same activation for each hidden layer
+        if type(activation) is str:
+            for i in range(n_layers - 1):
+                self.layer_activation.append(activation)
+        else:
+            for i in range(n_layers - 1):
+                self.layer_activation.append(activation[i])           
+        self.layer_activation.append(activation_out)
 
         # activation function of the output layer
         self.activation_out = activation_out
@@ -214,15 +237,15 @@ class ANN:
 
         self.layers = []
 
-        # add the input layer
-        self.layers.append(Layer(self.n_in, 0, self.n_layers, 'linear',
-                                 self.loss, self.bias, batch_size=self.batch_size,
-                                 lamb=self.lamb, on_gpu=self.on_gpu))
+        # # add the input layer
+        # self.layers.append(Layer(self.n_in, 0, self.n_layers, self.layer_activation[0],
+        #                          self.loss, self.bias, batch_size=self.batch_size,
+        #                          lamb=self.lamb, on_gpu=self.on_gpu))
 
-        # add the hidden layers
-        for r in range(1, self.n_layers):
-            self.layers.append(Layer(self.layer_sizes[r], r, self.n_layers, self.activation,
-                                     self.loss, self.bias, batch_size=self.batch_size,
+        # add the inputs and hidden layers
+        for r in range(self.n_layers):
+            self.layers.append(Layer(self.layer_sizes[r], r, self.n_layers, self.layer_activation[r],
+                                     self.loss, self.bias[r], batch_size=self.batch_size,
                                      lamb=self.lamb, on_gpu=self.on_gpu))
 
         # add the output layer
@@ -233,6 +256,7 @@ class ANN:
                 self.n_layers,
                 self.activation_out,
                 self.loss,
+                bias=False,
                 batch_size=self.batch_size,
                 lamb=self.lamb,
                 n_softmax=self.n_softmax,
@@ -278,7 +302,7 @@ class ANN:
         """
 
         # set the features at the output of in the input layer
-        if not self.bias:
+        if not self.bias[0]:
             self.layers[0].h = X_i.T
         else:
             self.layers[0].h = np.ones([self.n_in + 1, batch_size])
@@ -505,15 +529,15 @@ class ANN:
                 # l += self.layers[-1].L_i
 
                 l = self.layers[-1].L_i
+                loss_i = np.mean(l)
+                self.loss_vals.append(loss_i)
 
                 if np.mod(i, 1000) == 0:
-                    loss_i = np.mean(l)
                     if verbose:
                         print('Batch', i, 'learning rate', alpha, 'loss:', loss_i)
                     # note: appending a cupy value to a list is inefficient -
                     # if done every iteration
                     # it will slow down executing significantly
-                    self.loss_vals.append(loss_i)
 
         if self.save:
             self.save_ANN()
@@ -707,8 +731,7 @@ class ANN:
         print('Loss function =', self.loss)
         print('Number of neurons per hidden layer =', self.n_neurons)
         print('Number of output neurons =', self.n_out)
-        print('Activation hidden layers =', self.activation)
-        print('Activation output layer =', self.activation_out)
+        print('Activation =', self.layer_activation)
         # print('On GPU =', self.on_gpu)
         self.get_n_weights()
         print('===============================')
