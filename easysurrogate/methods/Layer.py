@@ -35,7 +35,7 @@ class Layer:
         loss : string, optional
             The name of the loss function. The default is 'squared'.
         bias : boolean, optional
-            Use a bias neuron. The default is True.
+            Use a bias neuron. The default is False.
         batch_size : int, optional
             The size of the mini batch. The default is 1.
         lamb : float, optional
