@@ -17,10 +17,12 @@ def load_csv_file(input_file='gem_data_625.txt', n_runs=625):
 
     with open(input_file, 'r') as inputfile:
         datareader = csv.reader(inputfile, delimiter=',')
+        next(datareader) #DEBUG
+        j_startcol = 2 #DEBUG
         i = 0
         for row in datareader:
-            input_samples[i] = row[0:input_dim]
-            output_samples[i] = row[input_dim:input_dim + output_dim]
+            input_samples[i] = row[j_startcol:j_startcol+input_dim]
+            output_samples[i] = row[j_startcol+input_dim:j_startcol+input_dim + output_dim]
             i = i + 1
 
     data = {}
@@ -115,18 +117,26 @@ def load_wf_csv_file(data_dir='', input_file='AUG_gem_inoutput.txt', runs=[0, 50
 # create an ES campaign
 campaign = es.Campaign(load_state=False)
 
-# 1) case for data from single flux tube GEM UQ campaign
+# 1) Case for data from single flux tube GEM UQ campaign
 #data = load_csv_file()
 #campaign.store_data_to_hdf5(data, file_path='gem_data_625.hdf5')
 
-# 2) case for data from a MFW production run
+# 2) Case for data from a MFW production run
 #data = load_wf_csv_file(input_file='AUG_gem_inoutput.txt')
 #campaign.store_data_to_hdf5(data, file_path='gem_workflow_500.hdf5')
 
-# 3) case for data generated from single flux tube GEM0 with 4 parameters (LHD, with a wrapper)
+# 3) Case for data generated from single flux tube GEM0 with 4 parameters (LHD, with a wrapper)
 #data = load_csv_dict_file()
 #campaign.store_data_to_hdf5(data, file_path='gem0_lhc.hdf5')
 
-# 4) case for from single flux tube GEM0 with 2 parameters (LHD, with a wrapper)
-data = load_csv_dict_file(input_file='gem0_lhc_256.csv', n_runs=256, input_dim=2, output_dim=1)
-campaign.store_data_to_hdf5(data, file_path='gem0_lhc_256.hdf5')
+# 4) Case for from single flux tube GEM0 with 2 parameters (LHD, with a wrapper)
+#data = load_csv_dict_file(input_file='gem0_lhc_256.csv', n_runs=256, input_dim=2, output_dim=1)
+#campaign.store_data_to_hdf5(data, file_path='gem0_lhc_256.hdf5')
+
+# 5) Case from single flux tube GEM UQ campaign (4 parameters, tensor product of grid with 2 points per DoF)
+data = load_csv_file(input_file='resuq_main_ti_transp_flux_all_moj202gj_11.csv', 
+                     n_runs=16,
+                     #input_dim=4, output_dim=1
+                     )
+campaign.store_data_to_hdf5(data, file_path='gem_uq_16.hdf5')
+
