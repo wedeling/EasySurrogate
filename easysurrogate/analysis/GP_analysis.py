@@ -260,7 +260,7 @@ class GP_analysis(BaseAnalysis):
         # only the first component
         y_test_plot = y_test
         y_train_plot = y_train
-        if y_pred.shape[1] is not 1:
+        if y_pred.shape[1] != 1:
             y_test_plot = y_test[:, [0]]
             y_train_plot = y_train[:, [0]]
             y_pred = y_pred[:, 0]
