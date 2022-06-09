@@ -19,6 +19,7 @@ class GP:
             length_scale=1.0,
             prefactor=True,
             bias=False,
+            nonstationary=False,
             noize=1e-8,
             n_iter=1,
             save=True,
@@ -28,7 +29,7 @@ class GP:
             backend='scikit-learn',
             standardize_X=True,
             standardize_y=True,
-            **kwargs):
+            **kwargs): #TODO pass a dictionary as a parameter
 
         self.n_in = n_in
         self.n_out = n_out
@@ -71,6 +72,10 @@ class GP:
             if noize is not False:
                 self.kernel += WhiteKernel(noise_level=noize_val,
                                            noise_level_bounds=bounds_val)
+
+            if nonstationary:
+                self.kernel += DotProduct(sigma_0=noize_val,
+                                          sigma_0_bounds=bounds_val)
 
             self.n_iter = n_iter
 

@@ -27,8 +27,8 @@ class GP_Surrogate(Campaign):
         self.y_scaler = StandardScaler()
         self.backend = backend
 
-        if 'noise' in kwargs:
-            self.noise = kwargs['noise']
+        if 'noize' in kwargs: #TODO: put all model-related parameters EITHER in constructor OR in .train() method
+            self.noize = kwargs['noise']
 
         if 'n_in' in kwargs:
             self.n_in = kwargs['n_in']
@@ -70,6 +70,16 @@ class GP_Surrogate(Campaign):
         else:
             self.noize = kwargs['noize']
 
+        if 'bias' not in kwargs:
+            self.bias = False
+        else:
+            self.bias = kwargs['bias']
+
+        if 'nonstationary' not in kwargs:
+            self.nonstationary = False
+        else: 
+            self.nonstationary = kwargs['nonstationary']
+
         # prepare the training data
         X_train, y_train, X_test, y_test = self.feat_eng.get_training_data(
             feats, target, local=False, test_frac=test_frac, train_first=False)
@@ -93,7 +103,8 @@ class GP_Surrogate(Campaign):
             kernel=self.base_kernel,
             n_in=self.n_in,
             n_out=self.n_out,
-            bias=False,
+            bias=self.bias, # BIAS should not matter and yield factor parameter close to zero if data is whitened
+            nonstationary=self.nonstationary,
             noize=self.noize,
             backend=self.backend)
 
