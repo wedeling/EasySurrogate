@@ -45,18 +45,29 @@ features = [data_frame[k] for k in features_names_selected if k in data_frame]
 target = np.concatenate([data_frame[k] for k in target_name_selected if k in data_frame], axis=1)
 
 time_init_start = t.time()
+
+# TODO: form a surrogate model parameter dictionary and pass starting from here  
+gp_param = {
+            'bias': True,
+            'nonstationary': False,
+           }
+
 surrogate = es.methods.GP_Surrogate(n_in=len(features))
 print('Time to initialise the surrogate: {:.3} s'.format(t.time() - time_init_start))
 
 time_train_start = t.time()
 surrogate.train(features, target, 
-                test_frac=0.5
+                test_frac=0.5,
+                bias=gp_param['bias'],
+                nonstationary=gp_param['nonstationary']
                )
 print('Time to train the surrogate: {:.3} s'.format(t.time() - time_train_start))
 surrogate.model.print_model_info()
 
+save_model_file_name = 'model_biased_05train_09062022.pickle'
+
 campaign.add_app(name='gp_campaign', surrogate=surrogate)
-campaign.save_state()
+campaign.save_state(file_path=save_model_file_name)
 
 # Sequential Design Modification
 if SEQDES:

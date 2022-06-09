@@ -38,12 +38,17 @@ target_name_selected = target_names
 #data_frame_train = campaign.load_hdf5_data(file_path='gem0_lhc_256.hdf5')
 
 # 5) Case from single flux tube GEM UQ campaign (4 parameters, tensor product of grid with 2 points per DoF)
+
+saved_model_file_path = 'model_biased_05train_09062022.pickle'
+#'model_nonst_05train_09062022.pickle'                                        
+#'mode_gem16_200522.pickle'
+#'model_05split_230522.pickle'
+#'model_biased_05train_09062022.pickle'
+
 features_names_selected = features_names
 target_name_selected = [target_names[1]]
-campaign = es.Campaign(load_state=True, file_path=
-                                         #'mode_gem16_200522.pickle'
-                                          'model_05split_230522.pickle'
-                      )
+campaign = es.Campaign(load_state=True, file_path=saved_model_file_path)
+
 data_frame = campaign.load_hdf5_data(file_path='gem_uq_16.hdf5')
 data_frame_train = campaign.load_hdf5_data(file_path='gem_uq_16.hdf5')
 
