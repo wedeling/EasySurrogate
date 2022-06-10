@@ -11,6 +11,7 @@ from scipy import stats
 from scipy.optimize import minimize
 import statistics
 
+#np.random.seed(42)
 
 class Feature_Engineering:
     """

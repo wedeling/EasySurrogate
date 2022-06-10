@@ -291,7 +291,8 @@ class GP_analysis(BaseAnalysis):
         err_rel = np.divide(err_abs, y_test)
 
         print("Printing and plotting the evaluation results")
-        self.plot_err(err_rel[:, 0], y_test[:, 0],
+        self.plot_err(err_rel[:, 0],
+                      #y_test[:, 0],
                       'rel. err. of prediction mean for test dataset in Ti fluxes')
 
         train_n = self.gp_surrogate.feat_eng.n_samples - y_t_len
