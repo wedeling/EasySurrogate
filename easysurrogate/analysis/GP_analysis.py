@@ -273,7 +273,8 @@ class GP_analysis(BaseAnalysis):
         print(y_train_plot.shape) ###DEBUG
         print(y_var_pred_train.shape) ###DEBUG
 
-        if y_pred.shape[1] is not 1:
+        if y_pred.shape[1] != 1:
+
             y_test_plot = y_test[:, [0]]
             y_train_plot = y_train[:, [0]]
             y_pred = y_pred[:, 0]
