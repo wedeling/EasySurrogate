@@ -5,12 +5,10 @@ import pandas as pd
 import easysurrogate as es
 
 features_names = ['te_value', 'ti_value', 'te_ddrho', 'ti_ddrho']
-target_names = ['te_transp_flux', 'ti_transp_flux']
+target_names = ['te_transp_flux', 'ti_transp_flux', 'te_transp_flux_std', 'ti_transp_flux_std']
 
 
-def load_csv_file(input_file='gem_data_625.txt', n_runs=625):
-    input_dim = 4
-    output_dim = 2
+def load_csv_file(input_file='gem_data_625.txt', n_runs=625, input_dim=4, output_dim=2, std=False):
 
     input_samples = np.zeros((n_runs, input_dim))
     output_samples = np.zeros((n_runs, output_dim))
@@ -26,12 +24,28 @@ def load_csv_file(input_file='gem_data_625.txt', n_runs=625):
             i = i + 1
 
     data = {}
+
     data['te_value'] = input_samples[:, 0].reshape(-1, 1)
     data['ti_value'] = input_samples[:, 1].reshape(-1, 1)
     data['te_ddrho'] = input_samples[:, 2].reshape(-1, 1)
     data['ti_ddrho'] = input_samples[:, 3].reshape(-1, 1)
-    data['te_transp_flux'] = output_samples[:, 0].reshape(-1, 1)
-    data['ti_transp_flux'] = output_samples[:, 1].reshape(-1, 1)
+
+    if not std and output_dim == 1:
+        data['ti_transp_flux'] = output_samples[:, 1].reshape(-1, 1)
+
+    if not std and output_dim == 2:
+        data['te_transp_flux'] = output_samples[:, 0].reshape(-1, 1)
+        data['ti_transp_flux'] = output_samples[:, 1].reshape(-1, 1)
+    
+    if std and output_dim == 2:
+        data['ti_transp_flux'] = output_samples[:, 0].reshape(-1, 1)
+        data['ti_transp_flux_std'] = output_samples[:, 1].reshape(-1, 1)
+    
+    if std and output_dim == 4:
+        data['te_transp_flux'] = output_samples[:, 0].reshape(-1, 1)
+        data['ti_transp_flux'] = output_samples[:, 1].reshape(-1, 1)
+        data['te_transp_flux_std'] = output_samples[:, 2].reshape(-1, 1)
+        data['ti_transp_flux_std'] = output_samples[:, 3].reshape(-1, 1)
 
     return data
 
@@ -136,7 +150,9 @@ campaign = es.Campaign(load_state=False)
 # 5) Case from single flux tube GEM UQ campaign (4 parameters, tensor product of grid with 2 points per DoF)
 data = load_csv_file(input_file='resuq_main_ti_transp_flux_all_moj202gj_11.csv', 
                      n_runs=16,
-                     #input_dim=4, output_dim=1
+                     #input_dim=4, 
+                     output_dim=2,
+                     std=True
                      )
-campaign.store_data_to_hdf5(data, file_path='gem_uq_16.hdf5')
+campaign.store_data_to_hdf5(data, file_path='gem_uq_16_std.hdf5')
 
