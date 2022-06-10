@@ -69,11 +69,12 @@ class GP:
                 noize_val = noize
                 bounds_val = (noize_val * 1e-3, noize_val * 1e+3)
 
-            if noize is not False:
+            if noize != False:
                 self.kernel += WhiteKernel(noise_level=noize_val,
                                            noise_level_bounds=bounds_val)
 
-            if nonstationary:
+            if nonstationary != False:
+                print('DEBUG: adding Dot Product kernel') ###DEBUG
                 self.kernel += DotProduct(sigma_0=noize_val,
                                           sigma_0_bounds=bounds_val)
 
