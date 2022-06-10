@@ -75,8 +75,8 @@ class GP:
 
             if nonstationary != False:
                 print('DEBUG: adding Dot Product kernel') ###DEBUG
-                self.kernel += DotProduct(sigma_0=noize_val,
-                                          sigma_0_bounds=bounds_val)
+                self.kernel += DotProduct(sigma_0=1.0,
+                                          sigma_0_bounds=(1e-8, 1e+8))
 
             self.n_iter = n_iter
 
