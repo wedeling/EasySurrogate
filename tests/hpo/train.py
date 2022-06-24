@@ -10,10 +10,12 @@ import pickle
 import time
 import numpy as np
 
+import csv
+
 # Ideally, here all the information on parameters should be accesses by sampler first
 params = {
-    "n_layers": {"type": "integer", "min": 4, "max": 4, "default": 4},
-    "n_neurons": {"type": "integer", "min": 128, "max": 256, "default": 256}, 
+    "n_layers": {"type": "string", "min": 4, "max": 4, "default": 4},
+    "n_neurons": {"type": "string", "min": 128, "max": 256, "default": 256}, 
 } 
 # TODO should be read from CSV; potentially: create a CSV from this script
 # TODO force CSVSampler to interpret entries with correct type
@@ -43,11 +45,11 @@ decoder = uq.decoders.SimpleCSV(
 
 # Execute should train a model in EasySurrogate: get the data, initalise object, call .train() and calculate the training/validation error
 execute_train = uq.actions.ExecuteLocal(
-    'python3 single_model_train.py input.json'
+    'python3 ../../single_model_train.py input.json &> train.log'
 )
 
 actions = uq.actions.Actions(
-    #uq.actions.CreateRunDirectory('/runs'),
+    uq.actions.CreateRunDirectory('/runs', flatten=True),
     uq.actions.Encode(encoder),
     execute_train,
     uq.actions.Decode(decoder),
@@ -64,8 +66,8 @@ sampler = uq.sampling.CSVSampler(filename=param_file)
 # TODO: sampler has to read numbers as integers
 campaign.set_sampler(sampler)
 
-for sample in sampler:
-    print(sample['n_layers'] == '3.0')
+#for sample in sampler:
+#    print(sample['n_layers'] == 3)
 
 # Execute: train a number of ML models
 print('> Starting to train the models')
