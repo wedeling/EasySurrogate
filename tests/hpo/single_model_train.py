@@ -30,8 +30,8 @@ surrogate.train([features],
                 target, 
                 n_iter, 
                 lags=lags, 
-                n_layers=inputs['n_layers'], 
-                n_neurons=inputs['n_neurons'],
+                n_layers=int(inputs['n_layers']), 
+                n_neurons=int(inputs['n_neurons']),
                 batch_size=512, 
                 test_frac=0.2)
 
