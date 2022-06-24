@@ -49,7 +49,7 @@ err_train, err_test,= analysis.get_errors(features, target, relative=True)
 
 print(err_train, err_test)
 
-# Writing an output
+# writing an output
 output = {'test_error': err_test}
 with open('output.json', 'w') as of:
     json_string = json.dumps(output)

@@ -41,17 +41,14 @@ decoder = uq.decoders.JSONDecoder(
 )
 
 # Execute should train a model in EasySurrogate: get the data, initalise object, call .train() and calculate the training/validation error
-# TODO encoding fails!
 execute_train = uq.actions.ExecuteLocal(
-    'python3 ../../../single_model_train.py input.json &> train.log'
+    'python3 ../../../single_model_train.py input.json > train.log'
 )
 # TODO get rid of hard-coding relative paths
 
 actions = uq.actions.Actions(
     uq.actions.CreateRunDirectory('/runs', flatten=True),
-    #uq.actions.ExecuteLocal('echo RUNDIR_CREATED'),
     uq.actions.Encode(encoder),
-    #uq.actions.ExecuteLocal('echo ENCODING_DONE'),
     execute_train,
     uq.actions.Decode(decoder),
 )
@@ -66,11 +63,6 @@ campaign.add_app(
 sampler = uq.sampling.CSVSampler(filename=param_file) 
 # TODO: sampler has to read numbers as integers
 campaign.set_sampler(sampler)
-
-"""
-for sample in sampler:
-    print(sample)
-"""
 
 # Execute: train a number of ML models
 print('> Starting to train the models')
