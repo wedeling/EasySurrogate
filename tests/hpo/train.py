@@ -5,12 +5,8 @@ Varying parameters are the Hyperparameters of the surrogate models.
 
 import os
 import easyvvuq as uq
-import chaospy as cp
 import pickle
 import time
-import numpy as np
-
-import csv
 
 # Ideally, here all the information on parameters should be accesses by sampler first
 params = {
@@ -32,25 +28,30 @@ param_file = 'hp_values.csv'
 
 # Encoder should take a value from the sampler and pass it to EasySurrogate es.methos.*_Surrogate().train(...) as kwargs
 encoder = uq.encoders.GenericEncoder(
-    template_fname='hpo_template',
+    template_fname='hpo.template',
     delimiter='$',
     target_filename='input.json'
 )
 
 # Decoder should take a training, or better validation, loss values from an ML model for given hyperparameter value
-decoder = uq.decoders.SimpleCSV(
+qoi = ['test_error']
+decoder = uq.decoders.JSONDecoder(
     target_filename='output.json',
-    output_columns=['RMSE']
+    output_columns=qoi,
 )
 
 # Execute should train a model in EasySurrogate: get the data, initalise object, call .train() and calculate the training/validation error
+# TODO encoding fails!
 execute_train = uq.actions.ExecuteLocal(
-    'python3 ../../single_model_train.py input.json &> train.log'
+    'python3 ../../../single_model_train.py input.json &> train.log'
 )
+# TODO get rid of hard-coding relative paths
 
 actions = uq.actions.Actions(
     uq.actions.CreateRunDirectory('/runs', flatten=True),
+    #uq.actions.ExecuteLocal('echo RUNDIR_CREATED'),
     uq.actions.Encode(encoder),
+    #uq.actions.ExecuteLocal('echo ENCODING_DONE'),
     execute_train,
     uq.actions.Decode(decoder),
 )
@@ -66,17 +67,33 @@ sampler = uq.sampling.CSVSampler(filename=param_file)
 # TODO: sampler has to read numbers as integers
 campaign.set_sampler(sampler)
 
-#for sample in sampler:
-#    print(sample['n_layers'] == 3)
+"""
+for sample in sampler:
+    print(sample)
+"""
 
 # Execute: train a number of ML models
 print('> Starting to train the models')
 start_time = time.time()
 
-campaign.execute()
+campaign.execute().collate()
 
 train_time=time.time() - start_time
 print('> Finished training the models, time={}'.format(train_time))
 
-# Next: analysis, create a separate class to choose the best ML model
+# Collate the results of all training runs
+collation_results = campaign.get_collation_result()
+print(collation_results)
 
+# TODO Next: analysis, create a separate class to choose the best ML model
+analysis = uq.analysis.BasicStats(qoi_cols=qoi)
+campaign.apply_analysis(analysis)
+results = campaign.get_last_analysis()
+
+res_file = os.path.join(work_dir, "hpo_res.pickle")
+with open(res_file, "bw") as rf:
+    pickle.dump(results, rf)
+
+# TODO check if error is read as a string
+#test_error = results.describe('test_error')
+#print(test_error)
