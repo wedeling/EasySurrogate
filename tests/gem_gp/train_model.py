@@ -45,6 +45,7 @@ surrogate = es.methods.GP_Surrogate(n_in=len(features))
 print('Time to initialise the surrogate: {:.3} s'.format(t.time() - time_init_start))
 
 time_train_start = t.time()
+# TODO pass hyperparameters here!
 surrogate.train(features, target, test_frac=0.9)
 print('Time to train the surrogate: {:.3} s'.format(t.time() - time_train_start))
 surrogate.model.print_model_info()
