@@ -47,8 +47,6 @@ analysis = es.analysis.ANN_analysis(ann_surrogate=surrogate)
 err_train, err_test,= analysis.get_errors(features, target, relative=True)
 #TODO: check how training set is generated, and how error is defined
 
-print(err_train, err_test)
-
 # writing an output
 output = {'test_error': err_test}
 with open('output.json', 'w') as of:

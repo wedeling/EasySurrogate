@@ -1,1 +1,1 @@
-{"n_layers": "n_layers", "n_neurons": "n_neurons"}
+{"n_layers": "$n_layers", "n_neurons": "$n_neurons"}

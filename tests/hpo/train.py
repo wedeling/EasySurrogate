@@ -8,10 +8,16 @@ import easyvvuq as uq
 import pickle
 import time
 
+#TODO do the same for GPR: 
+# parameters like noize_level and Matern lengthscale in CSV, pass in script of the highest level
+# train on GEM data
+# input HPs and output validation R2 and RMSE JSON for training script
+
 # Ideally, here all the information on parameters should be accesses by sampler first
 params = {
-    "n_layers": {"type": "string", "min": 4, "max": 4, "default": 4},
-    "n_neurons": {"type": "string", "min": 128, "max": 256, "default": 256}, 
+    "n_layers": {"type": "string", "min": 1, "max": 16, "default": 4},
+    "n_neurons": {"type": "string", "min": 4, "max": 516, "default": 256}, 
+
 } 
 # TODO should be read from CSV; potentially: create a CSV from this script
 # TODO force CSVSampler to interpret entries with correct type
