@@ -216,6 +216,7 @@ class GP_analysis(BaseAnalysis):
             X_train=None,
             y_train=None,
             index=None,
+            flag_plot=True,
             **kwargs):
         """
         Compute the regression RMSE error of GP surrogate.
@@ -256,8 +257,8 @@ class GP_analysis(BaseAnalysis):
         y_var_pred = np.squeeze(np.array(y_var_pred), axis=1)
         y_var_pred_train = np.squeeze(np.array(y_var_pred_train), axis=1)
 
-        # check if we a working with a vector or scalar QoI, if vector -> consider
-        # only the first component
+        # check if we a working with a vector or scalar QoI, if it is vector 
+        # then consider only the first component
         y_test_plot = y_test
         y_train_plot = y_train
         if y_pred.shape[1] != 1:
@@ -298,3 +299,5 @@ class GP_analysis(BaseAnalysis):
         self.err_abs = err_abs
         self.err_rel = err_rel
         self.r2_test = r2_test
+
+        return err_abs, err_rel

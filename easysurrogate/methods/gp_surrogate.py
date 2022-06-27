@@ -27,8 +27,8 @@ class GP_Surrogate(Campaign):
         self.y_scaler = StandardScaler()
         self.backend = backend
 
-        if 'noise' in kwargs:
-            self.noise = kwargs['noise']
+        if 'noize' in kwargs:
+            self.noize = kwargs['noize']
 
         if 'n_in' in kwargs:
             self.n_in = kwargs['n_in']
