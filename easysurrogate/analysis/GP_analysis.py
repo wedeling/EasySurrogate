@@ -236,6 +236,10 @@ class GP_analysis(BaseAnalysis):
 
         x_test_inds = self.gp_surrogate.feat_eng.test_indices
         x_train_inds = self.gp_surrogate.feat_eng.train_indices
+        
+        print("x_test_inds: {0}".format(x_test_inds)) ###DEBUG
+        if len(x_test_inds) <= 0:
+            x_test_inds = x_train_inds ###DEBUG
 
         print("Prediction of new QoI")
         # TODO make predict call work on a (n_samples, n_features) np array
@@ -251,6 +255,7 @@ class GP_analysis(BaseAnalysis):
             X_train[i, :].reshape(-1, 1))[1] for i in range(X_train.shape[0])]
 
         # reshape the resulting arrays
+        print("y_pred shape in GP_analysis: {0}".format(np.array(y_pred).shape)) ###DEBUG
         y_pred = np.squeeze(np.array(y_pred), axis=1)
         y_pred_train = np.squeeze(np.array(y_pred_train), axis=1)
 
@@ -261,7 +266,16 @@ class GP_analysis(BaseAnalysis):
         # then consider only the first component
         y_test_plot = y_test
         y_train_plot = y_train
+ 
+        print(y_pred.shape) ###DEBUG
+        print(y_pred_train.shape) ###DEBUG
+        print(y_var_pred.shape) ###DEBUG
+        print(y_test_plot.shape) ###DEBUG
+        print(y_train_plot.shape) ###DEBUG
+        print(y_var_pred_train.shape) ###DEBUG
+
         if y_pred.shape[1] != 1:
+
             y_test_plot = y_test[:, [0]]
             y_train_plot = y_train[:, [0]]
             y_pred = y_pred[:, 0]
@@ -279,13 +293,15 @@ class GP_analysis(BaseAnalysis):
         err_rel = np.divide(err_abs, y_test)
 
         print("Printing and plotting the evaluation results")
-        self.plot_err(err_rel[:, 0], y_test[:, 0],
+        self.plot_err(err_rel[:, 0],
+                      #y_test[:, 0],
                       'rel. err. of prediction mean for test dataset in Ti fluxes')
 
         train_n = self.gp_surrogate.feat_eng.n_samples - y_t_len
         self.plot_res(x_test_inds, y_pred[:y_t_len, 0], y_test_plot[:, 0],
                       x_train_inds, y_pred_train[:, 0], y_train_plot[:, 0],
-                      y_var_pred, y_var_pred_train,
+                      #y_var_pred, y_var_pred_train,
+                      y_var_pred[:,0], y_var_pred_train[:,0], #DEBUG
                       r'$Y_i$', num='1', type_train='rand',
                       train_n=train_n, out_color='b')
 
