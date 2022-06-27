@@ -37,7 +37,7 @@ surrogate.train(
     target,  
     n_iter=10,
     test_frac=0.5,
-    kernel='Matern',
+    kernel=inputs['kernel'],
     length_scale=float(inputs['length_scale']),
     noize=float(inputs['noize']),
     bias=float(inputs['bias'])
