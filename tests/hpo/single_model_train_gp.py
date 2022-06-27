@@ -29,17 +29,18 @@ target = np.concatenate([data_frame[k] for k in target_name_selected if k in dat
 
 # create a GP surrogate
 surrogate = es.methods.GP_Surrogate(
-    kernel='Matern',
     n_in=4,
-    length_scale=float(inputs['length_scale']),
-    noize=float(inputs['noize']),
-    n_iter=10,
     )
 
 surrogate.train(
     features, 
     target,  
-    test_frac=0.2
+    n_iter=10,
+    test_frac=0.5,
+    kernel='Matern',
+    length_scale=float(inputs['length_scale']),
+    noize=float(inputs['noize']),
+    bias=float(inputs['bias'])
     )
 
 campaign.add_app(name='gp_campaign', surrogate=surrogate)
@@ -59,8 +60,10 @@ err_test_abs, err_test,= analysis.get_regression_error(
     )
 #TODO: check how training set is generated, and how error is defined
 
+err_test_tot = float(np.abs(err_test).mean())
+
 # writing an output
-output = {'test_error': err_test}
+output = {'test_error': err_test_tot}
 with open('output.json', 'w') as of:
     json_string = json.dumps(output)
     of.write(json_string)

@@ -17,7 +17,7 @@ import time
 params = {
     "length_scale": {"type": "string", "min": 1e-6, "max": 1e+6, "default": 1.0},
     "noize": {"type": "string", "min": 1e-16, "max": 1e+3, "default": 1e-8}, 
-
+    "bias":{"type": "string", "min": -1e+4, "max": 1e+4, "default": 1.0},
 } 
 # TODO should be read from CSV; potentially: create a CSV from this script
 # TODO force CSVSampler to interpret entries with correct type
@@ -88,9 +88,13 @@ analysis = uq.analysis.BasicStats(qoi_cols=qoi)
 campaign.apply_analysis(analysis)
 results = campaign.get_last_analysis()
 
+
 res_file = os.path.join(work_dir, "hpo_res.pickle")
 with open(res_file, "bw") as rf:
     pickle.dump(results, rf)
+
+print(results)
+print(collation_results.min('test_error'))
 
 # TODO check if error is read as a string
 #test_error = results.describe('test_error')

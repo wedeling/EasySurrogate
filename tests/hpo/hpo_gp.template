@@ -1,1 +1,1 @@
-{"length_scale":"$length_scale", "noize":"$noize"}
+{"length_scale":"$length_scale", "noize":"$noize", "bias":"$bias"}
