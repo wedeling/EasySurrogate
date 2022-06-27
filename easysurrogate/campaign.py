@@ -2,6 +2,7 @@
 EasySurrogate campaign class
 """
 
+#from msilib.schema import Error
 from tkinter import filedialog
 import tkinter as tk
 import pickle
@@ -325,3 +326,24 @@ class Campaign:
         print('Saving state to %s.' % file.name)
         pickle.dump(state, file)
         file.close()
+
+def add_hp_tuner(self, **kwargs):
+    """
+    Let this campaign object aggregate a single object inherited from Hyperparameter_tuner
+
+    Parameters
+        ----------
+    **kwargs :
+        Can contain hp_tuner=<name_of_hp_tuner_object>
+
+        Returns
+        -------
+        None.
+    """
+
+    if 'hp_tuner' in kwargs:
+        self.hp_tuner = kwargs['hp_tuner']
+    else:
+        #Error('There was no Hyper-parameter tuner passed')
+        print('There was no Hyper-parameter tuner passed')
+        
