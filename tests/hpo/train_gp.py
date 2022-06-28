@@ -5,7 +5,6 @@ Varying parameters are the Hyperparameters of the surrogate models.
 
 import os
 import pickle
-from re import template
 import time
 
 import easyvvuq as uq
@@ -25,10 +24,13 @@ params = {
 # TODO force CSVSampler to interpret entries with correct type
 vary = {}
 
+# If run on HPC, should be called from the scheduler like SLURM
+# for which an environmental variable HPC_EXECUTION should be specified
 HPC_EXECUTION = os.environ['HPC_EXECUTION']
 
 campaign_name = 'hpo_easysurrogate_'
 work_dir = ''
+#TODO specify flexible paths
 
 campaign = uq.Campaign(name=campaign_name, work_dir=work_dir)
 
@@ -81,7 +83,7 @@ start_time = time.time()
 if HPC_EXECUTION:
 
     with QCGPJPool(
-            qcgpj_executor=QCGPJExecutor(),
+            #qcgpj_executor=QCGPJExecutor(),
             template=EasyVVUQParallelTemplate(),
             template_params={
                 'numCores':1           
@@ -95,7 +97,7 @@ else:
     campaign.execute().collate()
 
 train_time=time.time() - start_time
-print('> Finished training the models, time={}'.format(train_time))
+print('> Finished training the models, time={} s'.format(train_time))
 
 # Collate the results of all training runs
 collation_results = campaign.get_collation_result()
