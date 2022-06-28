@@ -43,6 +43,8 @@ surrogate.train(
     bias=float(inputs['bias'])
     )
 
+surrogate.model.print_model_info()
+
 campaign.add_app(name='gp_campaign', surrogate=surrogate)
 campaign.save_state(file_path='model.pickle')
 
@@ -58,7 +60,6 @@ err_test_abs, err_test,= analysis.get_regression_error(
     targ_train,
     flag_plot=False,
     )
-#TODO: check how training set is generated, and how error is defined
 
 err_test_tot = float(np.abs(err_test).mean())
 

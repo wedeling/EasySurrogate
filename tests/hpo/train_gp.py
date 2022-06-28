@@ -4,16 +4,17 @@ Varying parameters are the Hyperparameters of the surrogate models.
 """
 
 import os
-import easyvvuq as uq
 import pickle
+from re import template
 import time
 
-#TODO do the same for GPR: 
-# parameters like noize_level and Matern lengthscale in CSV, pass in script of the highest level
-# train on GEM data
-# input HPs and output validation R2 and RMSE JSON for training script
+import easyvvuq as uq
+from easyvvuq.actions import QCGPJPool
+from easyvvuq.actions.execute_qcgpj import EasyVVUQParallelTemplate
 
-# Ideally, here all the information on parameters should be accesses by sampler first
+from qcg.pilotjob.executor_api.qcgpj_executor import QCGPJExecutor
+
+# Ideally, here all the information on parameters should be accesses by the sampler first
 params = {
     "length_scale": {"type": "string", "min": 1e-6, "max": 1e+6, "default": 1.0},
     "noize": {"type": "string", "min": 1e-16, "max": 1e+3, "default": 1e-8}, 
@@ -24,8 +25,10 @@ params = {
 # TODO force CSVSampler to interpret entries with correct type
 vary = {}
 
+HPC_EXECUTION = os.environ['HPC_EXECUTION']
+
 campaign_name = 'hpo_easysurrogate_'
-work_dir = '' #os.path.dirname('/hpo')
+work_dir = ''
 
 campaign = uq.Campaign(name=campaign_name, work_dir=work_dir)
 
@@ -66,7 +69,7 @@ campaign.add_app(
     actions=actions,
 )
 
-# Sampler should read hyperparameter-value dictionary from a CSV on a harddrive
+# Sampler should read hyperparameter-value dictionary from a CSV file
 sampler = uq.sampling.CSVSampler(filename=param_file) 
 # TODO: sampler has to read numbers as integers
 campaign.set_sampler(sampler)
@@ -75,7 +78,21 @@ campaign.set_sampler(sampler)
 print('> Starting to train the models')
 start_time = time.time()
 
-campaign.execute().collate()
+if HPC_EXECUTION:
+
+    with QCGPJPool(
+            qcgpj_executor=QCGPJExecutor(),
+            template=EasyVVUQParallelTemplate(),
+            template_params={
+                'numCores':1           
+            }
+        ) as qcgpj:
+        
+        print('>> Executing on a HPC machine')
+        campaign.execute(pool=qcgpj).collate()
+else:
+
+    campaign.execute().collate()
 
 train_time=time.time() - start_time
 print('> Finished training the models, time={}'.format(train_time))
