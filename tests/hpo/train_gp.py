@@ -13,6 +13,8 @@ from easyvvuq.actions.execute_qcgpj import EasyVVUQParallelTemplate
 
 from qcg.pilotjob.executor_api.qcgpj_executor import QCGPJExecutor
 
+#TODO: ADD A RANDOM SEED
+
 # Ideally, here all the information on parameters should be accesses by the sampler first
 params = {
     "length_scale": {"type": "string", "min": 1e-6, "max": 1e+6, "default": 1.0},
@@ -44,17 +46,18 @@ campaign = uq.Campaign(name=campaign_name, work_dir=work_dir)
 # A file specifying a table of hyperparameter values (or their ranges/distributions) to pass for a number of ML models
 # Mind: delimeter is ',' w/o spaces
 
-param_file = 'hp_values_gp.csv'
+#param_file = 'hp_values_gp.csv'
 # For testset_frac=0.5 and kernel K=C(s0)*Matern(l1)+W(s1)+C(s2) best (default) parameters are l1=0.5, s1=0.001, s2=0.0
-### 42n__z3x run_11: 0.5 0.001 0.0
+### 42n__z3x run_11 : 0.5 0.001 0.0
 
 #param_file = 'hp_values_gp_tfrac.csv'
-# For kernel parameters given above, lowering test dataset fraction to 0.5 gives ~0.33*Err and platoeing
-### run_: 
+# For kernel parameters given above, a) lowering test dataset fraction to 0.5 gives ~0.33*|Err| decrease and platoeing
+#                                    b) has a local minimum for test_frac=0.4
+### _rdb0knh run_5 : 0.4
 
 param_file = 'hp_values_gp_niter.csv'
-# For kernel parameters and test dataset fraction given above, the training curve saturates for n_iter=...
-### run_ :
+# For kernel parameters and test dataset fraction given above, the training gives best values for n_iter=10
+### lvr0_0w2 run_6: 10; BUT single iteration could be enough
 
 # Encoder should take a value from the sampler and pass it to EasySurrogate es.methos.*_Surrogate().train(...) as kwargs
 encoder = uq.encoders.GenericEncoder(
