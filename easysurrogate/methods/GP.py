@@ -57,7 +57,10 @@ class GP:
                                    length_scale_bounds=[length_scale * 1e-4, length_scale * 1e+4])
 
             if bias:
-                self.kernel += ConstantKernel(constant_value=1.0,
+                bias_value = 1.0
+                if isinstance(bias, float):
+                    bias_value=bias
+                self.kernel += ConstantKernel(constant_value=bias_value,
                                               constant_value_bounds=(1e-5, 1e+5))
 
             noize_val = 1e-8
