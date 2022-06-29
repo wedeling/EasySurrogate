@@ -17,12 +17,17 @@ from qcg.pilotjob.executor_api.qcgpj_executor import QCGPJExecutor
 params = {
     "length_scale": {"type": "string", "min": 1e-6, "max": 1e+6, "default": 1.0},
     "noize": {"type": "string", "min": 1e-16, "max": 1e+3, "default": 1e-8}, 
-    "bias":{"type": "string", "min": -1e+4, "max": 1e+4, "default": 1.0},
-    "kernel":{"type": "string", "default": "Matern"},
-} 
+    "bias": {"type": "string", "min": -1e+4, "max": 1e+4, "default": 0.0},
+    "kernel": {"type": "string", "default": "Matern"},
+    "testset_fraction": {"type": "string", "min": 0.0, "max": 1.0, "default": "0.5"},
+    "n_iter" : {"type": "string", "min": 1, "default": "10"},
+}
+# looks like EasyVVUQ checks for a need in a default value after sampler is initialized 
+
 # TODO should be read from CSV; potentially: create a CSV from this script
 # TODO force CSVSampler to interpret entries with correct type
-vary = {}
+
+vary = {} #TODO maybe: use vary to create CSV for non-categorical hyperparameters
 
 # If run on HPC, should be called from the scheduler like SLURM
 # for which an environmental variable HPC_EXECUTION should be specified
@@ -34,9 +39,22 @@ work_dir = ''
 
 campaign = uq.Campaign(name=campaign_name, work_dir=work_dir)
 
+# Optimising hyperparamters for GEM data 
+
 # A file specifying a table of hyperparameter values (or their ranges/distributions) to pass for a number of ML models
 # Mind: delimeter is ',' w/o spaces
+
 param_file = 'hp_values_gp.csv'
+# For testset_frac=0.5 and kernel K=C(s0)*Matern(l1)+W(s1)+C(s2) best (default) parameters are l1=0.5, s1=0.001, s2=0.0
+### 42n__z3x run_11: 0.5 0.001 0.0
+
+#param_file = 'hp_values_gp_tfrac.csv'
+# For kernel parameters given above, lowering test dataset fraction to 0.5 gives ~0.33*Err and platoeing
+### run_: 
+
+param_file = 'hp_values_gp_niter.csv'
+# For kernel parameters and test dataset fraction given above, the training curve saturates for n_iter=...
+### run_ :
 
 # Encoder should take a value from the sampler and pass it to EasySurrogate es.methos.*_Surrogate().train(...) as kwargs
 encoder = uq.encoders.GenericEncoder(

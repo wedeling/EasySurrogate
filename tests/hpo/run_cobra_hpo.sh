@@ -19,14 +19,14 @@
 
 ## grant
 #SBATCH --mail-type=ALL
-#SBATCH --mail-user=[enter your email]
+#SBATCH --mail-user=yyudin@ipp.mpg.de
 
 ######################################
 # Loading modules
 module load anaconda/3/2021.11 
 
 # Python set-up
-source activate $HOME/[your environment]
+source activate $HOME/conda-envs/python394
 
 export SYS=COBRA
 export SCRATCH=$SCRATCH

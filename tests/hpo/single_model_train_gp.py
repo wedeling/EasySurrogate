@@ -29,14 +29,14 @@ target = np.concatenate([data_frame[k] for k in target_name_selected if k in dat
 
 # create a GP surrogate
 surrogate = es.methods.GP_Surrogate(
-    n_in=4,
+    n_in=len(features_names_selected),
     )
 
 surrogate.train(
     features, 
     target,  
-    n_iter=10,
-    test_frac=0.5,
+    n_iter=int(inputs['n_iter']),
+    test_frac=float(inputs['testset_fraction']),
     kernel=inputs['kernel'],
     length_scale=float(inputs['length_scale']),
     noize=float(inputs['noize']),
