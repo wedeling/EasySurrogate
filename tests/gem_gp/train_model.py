@@ -71,7 +71,7 @@ surrogate.train(features, target,
 print('Time to train the surrogate: {:.3} s'.format(t.time() - time_train_start))
 surrogate.model.print_model_info()
 
-save_model_file_name = 'model_STD_05train_02082022.pickle'
+save_model_file_name = 'model_STP_02082022.pickle'
 
 campaign.add_app(name='gp_campaign', surrogate=surrogate)
 campaign.save_state(file_path=save_model_file_name)
