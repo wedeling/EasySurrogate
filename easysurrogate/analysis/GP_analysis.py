@@ -2,6 +2,7 @@
 CLASS TO PERFORM ANALYSIS ON RESULTS FROM A GAUSSIAN PROCESS SURROGATE
 """
 
+from shutil import which
 from .base import BaseAnalysis
 import matplotlib.pyplot as plt
 import numpy as np
@@ -81,7 +82,9 @@ class GP_analysis(BaseAnalysis):
         plt.xlabel('Run number')
         plt.ylabel('Prediction of {}'.format(name))
         plt.legend()
-        plt.grid()
+        plt.grid(which='both')
+        plt.tight_layout()
+        #plt.yticks(axis='y')
         plt.yscale("symlog")
 
         # --- Plotting absolute errors

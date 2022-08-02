@@ -9,6 +9,7 @@ import numpy as np
 from itertools import product
 from scipy.optimize import minimize
 
+from scipy.special import gamma
 
 class GaussianProcess():
 
@@ -40,6 +41,8 @@ class GaussianProcess():
         self.sigma_f = 1.0
         self.sigma_n = 0.1
         self.l = 1.0
+
+        self.nu = 1
 
     def set_covariance(self, K):
 
@@ -81,7 +84,7 @@ class GaussianProcess():
         self.X_train = X_train
         self.y_train = y_train
 
-        hp_curval = np.array([self.sigma_f, self.sigma_n, self.l])
+        hp_curval = np.array([self.sigma_f, self.sigma_n, self.l, self.nu])
 
         if loss == 'r2':
             loss_func = self.r2_score_hp
@@ -97,6 +100,8 @@ class GaussianProcess():
         self.sigma_f = hp_optval[0]
         self.sigma_n = hp_optval[1]
         self.l = hp_optval[2]
+        
+        self.nu = hp_optval[3]
 
     def fit(self, X, y):
 
@@ -264,11 +269,11 @@ class GaussianProcess():
 
         return beta_hat
 
-    def neg_marg_log_likelihood(self, y, X, theta, sigma_n, beta=0., h=lambda x:x):
+    def neg_marg_log_likelihood(self, y, X, theta, sigma_n, beta=0., h=lambda x:x, likelihood='gaussian'):
         """
         Returns:
-            mml: float
-            p(y|X, kernel_params)
+            nmml: float
+            -log p(y|X, theta, sigma, beta)
         """
         
         # y - observable QoI values
@@ -302,19 +307,22 @@ class GaussianProcess():
         #print('M1.shape = {0}'.format(M1.shape))
 
         # Option for GPR
-        mll = -0.5 * M1 \
+        if likelihood == 'gaussian':
+            mll = -0.5 * M1 \
               - 0.5 * n * np.log2(2*np.pi) \
               - 0.5 * np.log2(np.linalg.det(K_modif))
 
         # Option for STP
-        """
-        mll = np.log2(np.gamma((theta['nu'] + n) / 2.)) \
-                - np.log2(np.gamma(theta['nu'] / 2.)) \
-                - n / 2. * np.log2(theta['nu'] * np.pi) \
-                - 0.5 * np.log2(((theta['nu'] - 2.) / theta['nu']) * K) \
-                - ((theta['nu'] + n) / 2.) * np.log2(1. + np.dot(y.T, np.dot(np.linalg.inv(K), y)) / theta['nu']))
+        elif likelihood == 'student_t':
+            nu = theta['nu'] 
+            mll = np.log2(gamma(0.5 * (nu + n))) \
+                - np.log2(gamma(0.5 * nu)) \
+                - 0.5 * n * np.log2(nu * np.pi) \
+                - 0.5 * np.log2(((nu - 2.) / nu) * np.linalg.det(K)) \
+                - (0.5 * (nu + n)) * np.log2(1. + np.dot(y.T, np.dot(np.linalg.inv(K), y)) / nu)
                 # K should include nugget and be K + sigma_n**2 * I_n ?
-        """
+                # also y should be y-H*beta
+        
 
         # Use to find argmax of MLE over {beta, theta, sigma_n} 
 
@@ -332,10 +340,12 @@ class GaussianProcess():
         sigma_n = hpval[1]
         theta['sigma_f'] = hpval[0]
         theta['l'] = hpval[2]
+        
+        theta['nu'] = hpval[3]
 
         self.fit_cov(self.X_train)
 
-        return self.neg_marg_log_likelihood(self.y_train, self.X_train, theta, sigma_n)
+        return self.neg_marg_log_likelihood(self.y_train, self.X_train, theta, sigma_n, likelihood='student_t')
 
 ########################################
 ### Kernel functions implementations ###
