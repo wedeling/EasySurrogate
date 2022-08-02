@@ -1,3 +1,10 @@
+"""
+Class and functions for Gaussian Process Regression model
+------------------------------------------------------------------------------
+Author: Y. Yudin
+==============================================================================
+"""
+
 import numpy as np
 from itertools import product
 from scipy.optimize import minimize
@@ -6,26 +13,52 @@ from scipy.optimize import minimize
 class GaussianProcess():
 
     def __init__(self):
+        """
+        Initializing default attributes of the object
+        """
         self.n_x_dim = 1
 
     def set_kernel(self, kernel='sq_exp'):
+        """
+        Setting type of the kernel function and its default parameters
+        """
+
         if kernel == 'gibbs':
             self.kernel = gibbs_ns_kernel
+        elif kernel == 'sq_exp':
+            self.kernel = sq_exp_kernel_function
         else:
             self.kernel = sq_exp_kernel_function
 
+        # default values of kernel parameters
         self.sigma_f = 1.0
         self.sigma_n = 0.1
         self.l = 1.0
 
     def set_covariance(self, K):
+
         self.K = K
         self.n = K.shape[0]
 
+    def calc_covariance(self, X, kernel, sigma_f, l, n):
+        """
+        Returns:
+             K: array_like
+             covaraince defined element-wise as kernel function of X
+        """
+
+        K = [kernel(i, j, sigma_f=sigma_f, l=l) for (i, j) in product(X, X)]
+
+        K = np.array(K).reshape(n, n)
+
+        return K
+
     def fit_cov(self, X, covariance='regular'):
 
-        K = [self.kernel(i, j, sigma_f=self.sigma_f, l=self.l) for (i, j) in product(X, X)]
-        K = np.array(K).reshape(self.n, self.n)
+        #K = [self.kernel(i, j, sigma_f=self.sigma_f, l=self.l) for (i, j) in product(X, X)]
+        #K = np.array(K).reshape(self.n, self.n)
+
+        K = self.calc_covariance(X, self.kernel, self.sigma_f, self.l, self.n)
         self.set_covariance(K)
 
         K_inv_tot = np.linalg.inv(self.K + (self.sigma_n ** 2) * np.eye(self.n))
@@ -34,10 +67,11 @@ class GaussianProcess():
     def optmize_hyperparameters(self, X_train, y_train):
         """
         Optimizes hyperparamter values for minimum of R^2 score on training dataset
-        #TODO has to optimise form MLE or MAP
+        #TODO has to optimise from MLE or MAP
         Uses scipy .minimize() to find the optimum
         Reassigns the attributes of the object after optimization
         """
+
         self.X_train = X_train
         self.y_train = y_train
 
@@ -113,6 +147,12 @@ class GaussianProcess():
         return var_f_star
 
     def predict(self, X, return_std=True):
+        """
+        Returns
+        -------
+            y_mean: array_like
+            An array of values withe the same length as X meaning the mean of the p(y|X) posterior of the regression model
+        """
 
         y_mean = self.predict_mean(X)
 
@@ -123,20 +163,112 @@ class GaussianProcess():
         return y_mean
 
     def r2_score(self, X, y):
+        """
+        Returns
+        -------
+            r2: float
+            A real value r e [0.;1.] with 1. meaning that regression model fully captures data variance
+        """
         f = self.predict_mean(X)
         y_mean = y.mean()
         r2 = 1 - np.multiply(y - f, y - f).sum() / (np.multiply(y - y_mean, y - y_mean).sum())
         return r2
 
     def r2_score_hp(self, hpval):
+        """
+        Calculates R2 variance explanation coefficent.
+        Function signature complies with scipy.optimize.minimize() 
+        """
+
         self.sigma_f = hpval[0]
         self.sigma_n = hpval[1]
         self.l = hpval[2]
         self.fit_cov(self.X_train)
         return self.r2_score(self.X_train, self.y_train)
 
+    def calc_H(self, X, h=lambda x:x):
+        """
+        Calculate matrix of basis vectors for the model of form: y = h(x)*beta+f(x)
+        """
+
+        n = len(X)
+        #H = [h(x) for x in list(X)]
+        #H = np.array(H).reshape((n,n))
+        H = np.ones((n,n))
+        return H
+
+    def beta_of_theta(self, y, sigma_n, sigma_f, l):
+        """
+        Estimate optimal beta (coefficient vector for y = h(x)*beta+f(x)) for given parameters of kernel theata: (sigma_f, l) 
+        """
+
+        n = len(y)
+
+        K = self.calc_covariance(self.X, sigma_f, l, n)
+        K_modif = K + sigma_n**2 * np.eye(n)
+
+        H = self.calc_H(self.X)
+        
+        beta_hat = np.linalg.inv(H * np.linalg.inv(K_modif) * H) \
+                   * H.T * np.linalg.inv(K_modif) * y
+
+        return beta_hat
+
+    def marg_log_likelihood(self, y, X, beta, theta, sigma_n, h=lambda x:x):
+        """
+        Returns:
+            mml: float
+            p(y|X, kernel_params)
+        """
+        
+        # y - observable QoI values
+        # H - matrix of vector functions, after whitening could be identity functions
+        # beta - model coefficient vector (in basis functions)
+        # K - covariance matrix K(X,X|theta)
+        # sigma_n - nugget value
+        
+        # theta - parameters of the kernel (sigma_f, l, [nu])
+        # use logarithm with base 2
+        # recalculate K based on X, and theta 
+        # mind fast matrix inversion or decomposition
+
+        n = len(y)
+
+        K = self.calc_covariance(X, self.kernel, theta['sigma_f'], theta['l'], n)
+
+        H = self.calc_H(self.X)
+
+        # use this to reduce optimisation space for GPR MLE fitting
+        beta_hat = self.beta_of_theta(y, sigma_n, theta['simga_f'], theta['l'])
+        beta = beta_hat
+
+        # Option for GPR
+        mml = -0.5 * (y - H*beta).T * np.linalg.inv(K + sigma_n**2 * np.eye(n)) * (y - H*beta) \
+              - n/2. * np.log2(2*np.pi) \
+              - 0.5 * np.log2(np.abs(K + sigma_n**2 * np.eye(n)))
+
+        # Option for STP
+        """
+        mml = np.log2(np.gamma((theta['nu'] + n) / 2.)) \
+                - np.log2(np.gamma(theta['nu'] / 2.)) \
+                - n / 2. * np.log2(theta['nu'] * np.pi) \
+                - 0.5 * np.log2(((theta['nu'] - 2.) / theta['nu']) * K) \
+                - ((theta['nu'] + n) / 2.) * np.log2(1. + ((y.T * np.linalg.inv(K) *y) / theta['nu']))
+                # K should include nugget and be K + sigma_n**2 * I_n ?
+        """
+
+        # use to find argmax of MLE over {beta, theta, sigma_n} 
+
+        return mml
+
+########################################
+### Kernel functions implementations ###
+########################################
 
 def gibbs_ns_kernel(x, y, l, l_func=lambda x: x):
+    """
+    Defines Gibbs kernel function
+    """
     pref_val = 1.0
     exp_arg = 0.0
     for d in x.shape[1]:
@@ -149,6 +281,9 @@ def gibbs_ns_kernel(x, y, l, l_func=lambda x: x):
 
 
 def sq_exp_kernel_function(x, y, sigma_f=1., l=1.):
-    """Define squared exponential kernel function."""
+    """
+    Defines squared exponential kernel function
+    """
     kernel = sigma_f * np.exp(- (np.linalg.norm(x - y)**2) / (2 * l**2))
     return kernel
+
