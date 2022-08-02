@@ -52,7 +52,11 @@ gp_param = {
             'nonstationary': True,
            }
 
-surrogate = es.methods.GP_Surrogate(n_in=len(features))
+surrogate = es.methods.GP_Surrogate(
+                            backend='local',
+                            n_in=len(features),
+                                   )
+
 print('Time to initialise the surrogate: {:.3} s'.format(t.time() - time_init_start))
 
 time_train_start = t.time()
