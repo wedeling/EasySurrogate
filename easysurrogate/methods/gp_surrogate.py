@@ -27,7 +27,6 @@ class GP_Surrogate(Campaign):
         self.y_scaler = StandardScaler()
         self.backend = backend
 
-
         if 'noize' in kwargs: #TODO: put all model-related parameters EITHER in constructor OR in .train() method
             self.noize = kwargs['noize']
         if 'n_in' in kwargs:
@@ -268,8 +267,10 @@ class GP_Surrogate(Campaign):
 
         elif self.backend == 'mogp':
             pass
+        elif self.backend == 'local':
+            pass
         else:
-            raise NotImplementedError('Currently supporting only scikit-learn and mogp backend')
+            raise NotImplementedError('Currently supporting only scikit-learn, mogp, and custom backend')
 
     def derivative_x(self, X):
         """

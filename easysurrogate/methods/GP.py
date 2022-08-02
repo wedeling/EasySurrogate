@@ -8,6 +8,8 @@ import mogp_emulator as mogp
 from mogp_emulator import GaussianProcess, MultiOutputGP
 from mogp_emulator.MeanFunction import Coefficient, LinearMean, MeanFunction
 
+from gaussian_process_regressor import GaussianProcess
+
 
 class GP:
 
@@ -105,8 +107,13 @@ class GP:
 
             # self.mean = Coefficient() + Coefficient() * LinearMean()
 
+        elif self.backend == 'local':
+
+            if kernel == 'RBF':
+                self.kernel = 'sq_exp_kernel_function'
+
         else:
-            raise NotImplementedError('Currently supporting only scikit-learn and mogp backend')
+            raise NotImplementedError('Currently supporting only scikit-learn, mogp, and custom backend')
 
     def train(self, X, y):
 
@@ -135,6 +142,7 @@ class GP:
                 kernel=self.kernel, n_restarts_optimizer=self.n_iter, normalize_y=True)
             self.instance.fit(X, y)
             self.kernel = self.instance.kernel_
+        
         elif self.backend == 'mogp':
             if self.n_out == 1:
                 self.instance = GaussianProcess(X, y.reshape(-1), kernel=self.kernel_argument,
@@ -143,6 +151,13 @@ class GP:
                 self.instance = MultiOutputGP(X, y.T, kernel=self.kernel_argument,
                                               nugget=self.noize_argument)
             self.instance = mogp.fit_GP_MAP(self.instance)
+        
+        elif self.backend == 'local':
+            self.instance = GaussianProcess()
+            self.instance.fit(X,y)
+        
+        else:
+            raise NotImplementedError('Currently supporting only scikit-learn, mogp, and custom backend')
 
     def predict(self, X_i):
 
@@ -150,10 +165,17 @@ class GP:
             # for single sample X_i should be nparray(1, n_feat)
             m, v = self.instance.predict(X_i.reshape(1, -1), return_std=True)
             d = np.zeros(m.shape)
+        
         elif self.backend == 'mogp':
             m, v, d = self.instance.predict(X_i, unc=True, deriv=True)
+        
+        elif self.backend == 'local':
+            m, v = self.instance.predict(X_i, return_std=True)
+            d = np.zeros(m.shape)
+
         else:
-            raise NotImplementedError('Non-stationary kernels are not implemented in MOGP')
+            raise NotImplementedError('Currently supporting only scikit-learn, mogp, and custom backend')
+            #raise NotImplementedError('Non-stationary kernels are not implemented in MOGP')
 
         return m, v, d
 
@@ -162,20 +184,32 @@ class GP:
         return m  # for single sample should be nparray(1,n_feat)
 
     def print_model_info(self):
+
         print('===============================')
         print('Gaussian Process parameters')
         print('===============================')
+
         if self.backend == 'scikit-learn':
             # print('Kernel params =', self.instance.kernel_.get_params())
             print('Kernel =', self.instance.kernel_)
             print('Kernel theta =', self.instance.kernel_.theta)
             print('Surrogate model parameters :', self.instance.get_params())
+        
         elif self.backend == 'mogp':
             if isinstance(self.instance, MultiOutputGP):
                 print('Model parameter printed not implemented for MOGP vector QoI models')
             else:
                 print('Kernel =', self.instance.kernel)
                 print('Kernel theta =', self.instance.theta)
+        
+        elif self.backend == 'local':
+            print('Kernel =', self.instance.kernel)
+            print('Kernel parameters : {0}'.format(
+                [self.instance.sigma_n, self.instance.sigma_f, self.instance.l])
+                )
+        else:
+            raise NotImplementedError('Currently supporting only scikit-learn, mogp, and custom backend')
+            
         print('Output dimensionality =', self.n_out)
         print('Input dimensionality =', self.n_in)
         print('On GPU =', self.on_gpu)
