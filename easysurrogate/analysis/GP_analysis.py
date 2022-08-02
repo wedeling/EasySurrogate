@@ -265,7 +265,6 @@ class GP_analysis(BaseAnalysis):
 
         # Reshape the resulting arrays
         # TODO here an error occures when testfrac==0.0 -> add a check...
-        #print('line 255: y_pred = {0}'.format(y_pred)) ### DEBUG
 
         y_pred = np.squeeze(np.array(y_pred), axis=1)
         y_pred_train = np.squeeze(np.array(y_pred_train), axis=1)

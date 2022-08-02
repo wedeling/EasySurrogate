@@ -70,9 +70,9 @@ class GaussianProcess():
         K_inv_tot = np.linalg.inv(self.K + (self.sigma_n ** 2) * np.eye(self.n))
         self.K_inv_tot = K_inv_tot
 
-    def optmize_hyperparameters(self, X_train, y_train):
+    def optmize_hyperparameters(self, X_train, y_train, loss='r2'):
         """
-        Optimizes hyperparamter values for minimum of R^2 score on training dataset
+        Optimizes hyperparamter values for minimum of R^2 score on training dataset OR perform MLE
         #TODO has to optimise from MLE or MAP
         Uses scipy .minimize() to find the optimum
         Reassigns the attributes of the object after optimization
@@ -83,7 +83,14 @@ class GaussianProcess():
 
         hp_curval = np.array([self.sigma_f, self.sigma_n, self.l])
 
-        hp_optval_res = minimize(self.r2_score_hp, hp_curval, options={'maxiter': 100})
+        if loss == 'r2':
+            loss_func = self.r2_score_hp
+        elif loss == 'nmll':
+            loss_func = self.nmll_hp
+        else:
+            loss_func == 'r2'
+
+        hp_optval_res = minimize(loss_func, hp_curval, options={'maxiter': 100})
 
         hp_optval = hp_optval_res.x
 
@@ -99,7 +106,7 @@ class GaussianProcess():
 
         self.fit_cov(X)
 
-        self.optmize_hyperparameters(X, y)
+        self.optmize_hyperparameters(X, y, 'nmll')
 
     def predict_mean(self, X_new):
 
@@ -131,7 +138,6 @@ class GaussianProcess():
         
         K_star = np.array(K_star).reshape((n_star, self.n))
 
-        # TODO: y after reshaping gives wrong output dimensionality
         #print('self.y = {0} ; self.n = {1} ; self.n_x_dim = {2} ; n_star = {3}'.
         #       format(self.y, self.n, self.n_x_dim, n_star)) ###DEBUG
 
@@ -248,17 +254,17 @@ class GaussianProcess():
 
         n = len(y)
 
-        K = self.calc_covariance(self.X, sigma_f, l, n)
+        K = self.calc_covariance(self.X, self.kernel, sigma_f, l, n)
         K_modif = K + sigma_n**2 * np.eye(n)
 
         H = self.calc_H(self.X)
         
-        beta_hat = np.linalg.inv(H * np.linalg.inv(K_modif) * H) \
-                   * H.T * np.linalg.inv(K_modif) * y
+        beta_hat = np.linalg.inv(H.dot(np.linalg.inv(K_modif).dot(H)))\
+                   .dot(H.T.dot(np.linalg.inv(K_modif).dot(y)))
 
         return beta_hat
 
-    def marg_log_likelihood(self, y, X, beta, theta, sigma_n, h=lambda x:x):
+    def neg_marg_log_likelihood(self, y, X, theta, sigma_n, beta=0., h=lambda x:x):
         """
         Returns:
             mml: float
@@ -266,44 +272,70 @@ class GaussianProcess():
         """
         
         # y - observable QoI values
-        # H - matrix of vector functions, after whitening could be identity functions
-        # beta - model coefficient vector (in basis functions)
+        # H - matrix of vector functions -> after whitening could be identity functions?
+        # beta - model coefficient vector (in basis functions) -> a function of theta
         # K - covariance matrix K(X,X|theta)
         # sigma_n - nugget value
         
         # theta - parameters of the kernel (sigma_f, l, [nu])
         # use logarithm with base 2
         # recalculate K based on X, and theta 
-        # mind fast matrix inversion or decomposition
+        # mind fast matrix inversion or decomposition -> np.linalg.cholesky
 
         n = len(y)
 
         K = self.calc_covariance(X, self.kernel, theta['sigma_f'], theta['l'], n)
+        K_modif = K + sigma_n**2 * np.eye(n)
 
         H = self.calc_H(self.X)
 
-        # use this to reduce optimisation space for GPR MLE fitting
-        beta_hat = self.beta_of_theta(y, sigma_n, theta['simga_f'], theta['l'])
-        beta = beta_hat
+        # Use this to reduce optimisation space for GPR MLE fitting
+        #beta_hat = self.beta_of_theta(y, sigma_n, theta['sigma_f'], theta['l'])
+        #beta = beta_hat
+        beta = np.zeros((n, self.n_x_dim)) # use assuming constant zero model y=0+f(x)
+
+        M11 = y - np.dot(H, beta)
+        #print('M11.shape = {0}'.format(M11.shape))
+        M12 = np.dot(np.linalg.inv(K_modif), M11)
+        #print('M12.shape = {0}'.format(M12.shape))
+        M1 = np.dot(M11.T, M12)
+        #print('M1.shape = {0}'.format(M1.shape))
 
         # Option for GPR
-        mml = -0.5 * (y - H*beta).T * np.linalg.inv(K + sigma_n**2 * np.eye(n)) * (y - H*beta) \
-              - n/2. * np.log2(2*np.pi) \
-              - 0.5 * np.log2(np.abs(K + sigma_n**2 * np.eye(n)))
+        mll = -0.5 * M1 \
+              - 0.5 * n * np.log2(2*np.pi) \
+              - 0.5 * np.log2(np.linalg.det(K_modif))
 
         # Option for STP
         """
-        mml = np.log2(np.gamma((theta['nu'] + n) / 2.)) \
+        mll = np.log2(np.gamma((theta['nu'] + n) / 2.)) \
                 - np.log2(np.gamma(theta['nu'] / 2.)) \
                 - n / 2. * np.log2(theta['nu'] * np.pi) \
                 - 0.5 * np.log2(((theta['nu'] - 2.) / theta['nu']) * K) \
-                - ((theta['nu'] + n) / 2.) * np.log2(1. + ((y.T * np.linalg.inv(K) *y) / theta['nu']))
+                - ((theta['nu'] + n) / 2.) * np.log2(1. + np.dot(y.T, np.dot(np.linalg.inv(K), y)) / theta['nu']))
                 # K should include nugget and be K + sigma_n**2 * I_n ?
         """
 
-        # use to find argmax of MLE over {beta, theta, sigma_n} 
+        # Use to find argmax of MLE over {beta, theta, sigma_n} 
 
-        return mml
+        #print('nmll = {0}'.format(-mll))
+        return -mll[0][0]
+
+    def nmll_hp(self, hpval):
+        """
+        Calculates marginal log likelohood for given data and kernel parameter value
+        Function signature complies with scipy.optimize.minimize() 
+        """  
+        
+        theta = {}
+
+        sigma_n = hpval[1]
+        theta['sigma_f'] = hpval[0]
+        theta['l'] = hpval[2]
+
+        self.fit_cov(self.X_train)
+
+        return self.neg_marg_log_likelihood(self.y_train, self.X_train, theta, sigma_n)
 
 ########################################
 ### Kernel functions implementations ###
