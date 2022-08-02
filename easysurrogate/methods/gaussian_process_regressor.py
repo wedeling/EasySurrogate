@@ -103,9 +103,22 @@ class GaussianProcess():
 
     def predict_mean(self, X_new):
 
-        n_star = X_new.shape[0]
+        # Size of the new sample
+        #print('X_new.shape={0}'.format(X_new.shape)) ###DEBUG
+
+        if len(X_new.shape) == 1:
+            X_new = np.array(X_new).reshape((1, X_new.shape[0]))
+            n_star = 1
+        else:   
+            n_star = X_new.shape[0]
+        
+        #print('X_new.shape={0}'.format(X_new.shape)) ###DEBUG
+        #print('n_star={0}'.format(n_star)) ###DEBUG
+        #print('X.shape={0}'.format(self.X.shape)) ###DEBUG
+
+        # Covariance matrix of new and old sample K_*=K(X_new,X) e R^(n x N)
         K_star = [
-            self.kernel(
+           self.kernel(
                 i,
                 j,
                 sigma_f=self.sigma_f,
@@ -113,15 +126,32 @@ class GaussianProcess():
                 i,
                 j) in product(
                 X_new,
-                self.X)]
-        K_star = np.array(K_star).reshape(n_star, self.n)
+                self.X)
+                 ]
+        
+        K_star = np.array(K_star).reshape((n_star, self.n))
+
+        # TODO: y after reshaping gives wrong output dimensionality
+        #print('self.y = {0} ; self.n = {1} ; self.n_x_dim = {2} ; n_star = {3}'.
+        #       format(self.y, self.n, self.n_x_dim, n_star)) ###DEBUG
 
         f_bar_star = np.dot(K_star, np.dot(self.K_inv_tot, self.y.reshape(self.n, self.n_x_dim)))
+
+        #print('X_new.shape = {1} ; y.shape = {2} ; f_bar_star.shape = {0} ; K_star.shape = {3}, K_inv_tot.shape = {4} \n'.
+        #       format(f_bar_star.shape, X_new.shape, self.y.shape, K_star.shape, self.K_inv_tot.shape)) ### DEBUG
+        
+        #print(' X_new = {1} \n y = {2} \n f_bar_star = {0} \n'.format(f_bar_star, X_new, self.y)) ### DEBUG
+        
         return f_bar_star
 
     def predict_var(self, X_new):
 
-        n_star = X_new.shape[0]
+        # Size of the new sample
+        if len(X_new.shape) == 1:
+            X_new = np.array(X_new).reshape((1, X_new.shape[0]))
+            n_star = 1
+        else:   
+            n_star = X_new.shape[0]
 
         K_star2 = [
             self.kernel(
@@ -133,7 +163,8 @@ class GaussianProcess():
                 j) in product(
                 X_new,
                 X_new)]
-        K_star2 = np.array(K_star2).reshape(n_star, n_star)
+
+        K_star2 = np.array(K_star2).reshape((n_star, n_star))
 
         K_star = [
             self.kernel(
@@ -145,7 +176,8 @@ class GaussianProcess():
                 j) in product(
                 X_new,
                 self.X)]
-        K_star = np.array(K_star).reshape(n_star, self.n)
+
+        K_star = np.array(K_star).reshape((n_star, self.n))
 
         cov_f_star = K_star2 - np.dot(K_star, np.dot(self.K_inv_tot, K_star.T))
         var_f_star = np.diag(cov_f_star)
@@ -191,6 +223,12 @@ class GaussianProcess():
         self.l = hpval[2]
         self.fit_cov(self.X_train)
         return self.r2_score(self.X_train, self.y_train)
+
+    def score(self, X, y):
+        """
+        Synonim for r2_score
+        """
+        return self.r2_score(X, y)
 
     def calc_H(self, X, h=lambda x:x):
         """
@@ -285,11 +323,9 @@ def gibbs_ns_kernel(x, y, l, l_func=lambda x: x):
     exp_val = np.exp(-exp_arg)
     return pref_val * exp_val
 
-
 def sq_exp_kernel_function(x, y, sigma_f=1., l=1.):
     """
     Defines squared exponential kernel function
     """
     kernel = sigma_f * np.exp(- (np.linalg.norm(x - y)**2) / (2 * l**2))
     return kernel
-

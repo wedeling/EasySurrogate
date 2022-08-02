@@ -200,14 +200,27 @@ class GP_analysis(BaseAnalysis):
     def get_r2_score(self, X, y):
         """
         Compute R^2 score of the regression for the test data
-        Returns: vale of R^2 score
+          Returns
+          -------
+            r2: float
+            value of R^2 score
         """
 
         # f = gpr.predict(X)
         # y_mean = y.mean()
         # r2 = 1 - np.multiply(y - f, y - f).sum() / (np.multiply(y - y_mean, y - y_mean).sum())
+        
+        """
+        if self.gp_surrogate.backend == 'scikit-learn':
+            r2 = self.gp_surrogate.model.instance.score(X, y)
+        elif self.gp_surrogate.backend == 'local:
+            r2 = self.gp_surrogate.model.instance.r2_score(X, y)
+        else:
+            r2 = 0.
+        """
 
-        return self.gp_surrogate.model.instance.score(X, y)
+        r2 = self.gp_surrogate.model.instance.score(X, y)
+        return r2
 
     def get_regression_error(
             self,
@@ -250,7 +263,10 @@ class GP_analysis(BaseAnalysis):
         y_var_pred_train = [self.gp_surrogate.predict(
             X_train[i, :].reshape(-1, 1))[1] for i in range(X_train.shape[0])]
 
-        # reshape the resulting arrays
+        # Reshape the resulting arrays
+        # TODO here an error occures when testfrac==0.0 -> add a check...
+        #print('line 255: y_pred = {0}'.format(y_pred)) ### DEBUG
+
         y_pred = np.squeeze(np.array(y_pred), axis=1)
         y_pred_train = np.squeeze(np.array(y_pred_train), axis=1)
 
@@ -279,15 +295,19 @@ class GP_analysis(BaseAnalysis):
         err_rel = np.divide(err_abs, y_test)
 
         print("Printing and plotting the evaluation results")
+  
         if flag_plot:
+  
             self.plot_err(err_rel[:, 0], y_test[:, 0],
                       'rel. err. of prediction mean for test dataset in Ti fluxes')
 
         train_n = self.gp_surrogate.feat_eng.n_samples - y_t_len
+
         if flag_plot:
+
             self.plot_res(x_test_inds, y_pred[:y_t_len, 0], y_test_plot[:, 0],
                       x_train_inds, y_pred_train[:, 0], y_train_plot[:, 0],
-                      y_var_pred, y_var_pred_train,
+                      y_var_pred.reshape(y_pred[:y_t_len, 0].shape), y_var_pred_train.reshape(y_pred_train[:, 0].shape),
                       r'$Y_i$', num='1', type_train='rand',
                       train_n=train_n, out_color='b')
 
