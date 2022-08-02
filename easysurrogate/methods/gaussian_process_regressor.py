@@ -12,11 +12,17 @@ from scipy.optimize import minimize
 
 class GaussianProcess():
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         """
         Initializing default attributes of the object
         """
         self.n_x_dim = 1
+        
+        kernel_name = 'sq_exp'
+        if 'kernel' in kwargs:
+            kernel_name = kwargs['kernel']
+
+        self.set_kernel(kernel_name)
 
     def set_kernel(self, kernel='sq_exp'):
         """
@@ -160,7 +166,7 @@ class GaussianProcess():
             y_var = self.predict_var(X)
             return y_mean, y_var
 
-        return y_mean
+        return y_mean, y_var
 
     def r2_score(self, X, y):
         """

@@ -8,7 +8,8 @@ import mogp_emulator as mogp
 from mogp_emulator import GaussianProcess, MultiOutputGP
 from mogp_emulator.MeanFunction import Coefficient, LinearMean, MeanFunction
 
-from gaussian_process_regressor import GaussianProcess
+#from gaussian_process_regressor import GaussianProcess
+import easysurrogate as es
 
 
 class GP:
@@ -108,9 +109,11 @@ class GP:
             # self.mean = Coefficient() + Coefficient() * LinearMean()
 
         elif self.backend == 'local':
-
+            
+            self.kernel = ''
+            
             if kernel == 'RBF':
-                self.kernel = 'sq_exp_kernel_function'
+                self.kernel += 'sq_exp'
 
         else:
             raise NotImplementedError('Currently supporting only scikit-learn, mogp, and custom backend')
@@ -153,7 +156,7 @@ class GP:
             self.instance = mogp.fit_GP_MAP(self.instance)
         
         elif self.backend == 'local':
-            self.instance = GaussianProcess()
+            self.instance = es.methods.GaussianProcess(kernel=self.kernel)
             self.instance.fit(X,y)
         
         else:
