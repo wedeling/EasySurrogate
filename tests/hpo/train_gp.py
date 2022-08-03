@@ -19,7 +19,7 @@ from qcg.pilotjob.executor_api.qcgpj_executor import QCGPJExecutor
 params = {
     "length_scale": {"type": "string", "min": 1e-6, "max": 1e+6, "default": 1.0},
     "noize": {"type": "string", "min": 1e-16, "max": 1e+3, "default": 1e-8}, 
-    "bias": {"type": "string", "min": -1e+4, "max": 1e+4, "default": 0.0},
+    "bias": {"type": "string", "min": -1e+4, "max": 1e+4, "default": "0.0"},
     "kernel": {"type": "string", "default": "Matern"},
     "testset_fraction": {"type": "string", "min": 0.0, "max": 1.0, "default": "0.5"},
     "n_iter" : {"type": "string", "min": 1, "default": "10"},
@@ -31,7 +31,6 @@ params = {
 # TODO force CSVSampler to interpret entries with correct type
 
 # For Grid Search: form carthesian product of variables
-
 
 vary = {} #TODO maybe: use vary to create CSV for non-categorical hyperparameters
 
@@ -59,9 +58,11 @@ campaign = uq.Campaign(name=campaign_name, work_dir=work_dir)
 #                                    b) has a local minimum for test_frac=0.4
 ### _rdb0knh run_5 : 0.4
 
-param_file = 'hp_values_gp_niter.csv'
+#param_file = 'hp_values_gp_niter.csv'
 # For kernel parameters and test dataset fraction given above, the training gives best values for n_iter=10
 ### lvr0_0w2 run_6: 10; BUT single iteration could be enough
+
+param_file = 'hp_values_gp_stp.csv'
 
 # Encoder should take a value from the sampler and pass it to EasySurrogate es.methos.*_Surrogate().train(...) as kwargs
 encoder = uq.encoders.GenericEncoder(
@@ -143,7 +144,10 @@ print(results)
 analysis.analyse(collation_results)
 analysis.analyse(results)
 
-print(results.min(col='tes_error')) # TODO look min() at pandas...
+minrowidx = results['tes_error'].idxmin()
+print(results.iloc[minrowidx,:])
+# TODO look min() at pandas -> this one does not work
+
 #print(collation_results.min('test_error'))
 
 # TODO check if error is read as a string
