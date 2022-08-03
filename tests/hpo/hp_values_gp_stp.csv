@@ -1,0 +1,17 @@
+length_scale,noize,kernel,process_type
+0.5,0.000001,Matern,gaussian
+2.0,0.000001,Matern,gaussian
+0.5,0.001,Matern,gaussian
+2.0,0.001,Matern,gaussian
+0.5,0.000001,RBF,gaussian
+2.0,0.000001,RBF,gaussian
+0.5,0.001,RBF,gaussian
+2.0,0.001,RBF,gaussian
+0.5,0.000001,Matern,student_t
+2.0,0.000001,Matern,student_t
+0.5,0.001,Matern,student_t
+2.0,0.001,Matern,student_t
+0.5,0.000001,RBF,student_t
+2.0,0.000001,RBF,student_t
+0.5,0.001,RBF,student_t
+2.0,0.001,RBF,student_t

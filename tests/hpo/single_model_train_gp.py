@@ -1,3 +1,4 @@
+from py import process
 import easysurrogate as es
 import sys
 import json
@@ -40,7 +41,8 @@ surrogate.train(
     kernel=inputs['kernel'],
     length_scale=float(inputs['length_scale']),
     noize=float(inputs['noize']),
-    bias=float(inputs['bias'])
+    bias=float(inputs['bias']),
+    process_type=str(inputs['process_type'])
     )
 
 surrogate.model.print_model_info()

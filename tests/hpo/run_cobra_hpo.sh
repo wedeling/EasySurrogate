@@ -8,7 +8,7 @@
 #SBATCH --error=hpo-gpr-err.%j
 
 ## wall time in format (HOURS):MINUTES:SECONDS
-#SBATCH --time=1:00:00
+#SBATCH --time=2:00:00
 
 ## number of nodes and tasks per node
 #SBATCH --nodes=1

@@ -15,7 +15,7 @@ from qcg.pilotjob.executor_api.qcgpj_executor import QCGPJExecutor
 
 #TODO: ADD A RANDOM SEED
 
-# Ideally, here all the information on parameters should be accesses by the sampler first
+# List all possible hyperparamters of a surrogate of this type, together with their types and default values
 params = {
     "length_scale": {"type": "string", "min": 1e-6, "max": 1e+6, "default": 1.0},
     "noize": {"type": "string", "min": 1e-16, "max": 1e+3, "default": 1e-8}, 
@@ -23,11 +23,15 @@ params = {
     "kernel": {"type": "string", "default": "Matern"},
     "testset_fraction": {"type": "string", "min": 0.0, "max": 1.0, "default": "0.5"},
     "n_iter" : {"type": "string", "min": 1, "default": "10"},
+    "process_type" : {"type": "string", "default": "gaussian"},
 }
 # looks like EasyVVUQ checks for a need in a default value after sampler is initialized 
 
 # TODO should be read from CSV; potentially: create a CSV from this script
 # TODO force CSVSampler to interpret entries with correct type
+
+# For Grid Search: form carthesian product of variables
+
 
 vary = {} #TODO maybe: use vary to create CSV for non-categorical hyperparameters
 
@@ -47,7 +51,7 @@ campaign = uq.Campaign(name=campaign_name, work_dir=work_dir)
 # Mind: delimeter is ',' w/o spaces
 
 #param_file = 'hp_values_gp.csv'
-# For testset_frac=0.5 and kernel K=C(s0)*Matern(l1)+W(s1)+C(s2) best (default) parameters are l1=0.5, s1=0.001, s2=0.0
+# For testset_frac=0.5 and kernel K=C(s0)*RBF(l1)+W(s1)+C(s2) best (default) parameters are l1=0.5, s1=0.001, s2=0.0
 ### 42n__z3x run_11 : 0.5 0.001 0.0
 
 #param_file = 'hp_values_gp_tfrac.csv'
@@ -133,7 +137,13 @@ res_file = os.path.join(work_dir, "hpo_res.pickle")
 with open(res_file, "bw") as rf:
     pickle.dump(results, rf)
 
+# DEBUG, what to do with outputs; get mininmal-error-surrogate 
 print(results)
+
+analysis.analyse(collation_results)
+analysis.analyse(results)
+
+print(results.min(col='tes_error')) # TODO look min() at pandas...
 #print(collation_results.min('test_error'))
 
 # TODO check if error is read as a string

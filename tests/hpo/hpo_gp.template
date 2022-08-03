@@ -1,1 +1,1 @@
-{"kernel":"$kernel", "length_scale":"$length_scale", "noize":"$noize", "bias":"$bias", "testset_fraction":"$testset_fraction", "n_iter": "$n_iter"}
+{"kernel":"$kernel", "length_scale":"$length_scale", "noize":"$noize", "bias":"$bias", "testset_fraction":"$testset_fraction", "n_iter": "$n_iter", "process_type":"$process_type"}
