@@ -57,6 +57,14 @@ class GP_analysis(BaseAnalysis):
         plt.subplot(311)
         plt.title('{} training sample of size: {}'.format(type_train, str(train_n)))
 
+        plt.xlabel('Run number')
+        plt.ylabel('Prediction of {}'.format(name))
+        plt.legend()
+        plt.grid(which='both')
+        plt.tight_layout()
+        #plt.yticks(axis='y')
+        plt.yscale("symlog")
+
         plt.plot(x_test, y_test_orig, '.', label='Simulation, test', color='red')
         plt.plot(x_train, y_train_orig, '*', label='Simulation, train', color='green')
 
@@ -79,24 +87,17 @@ class GP_analysis(BaseAnalysis):
             plt.plot(x_test, y_test_pred, '.', label='GP metamodel', color=out_color)
             plt.plot(x_train, y_train_pred, '*', label='GP metamodel', color=out_color)
 
-        plt.xlabel('Run number')
-        plt.ylabel('Prediction of {}'.format(name))
-        plt.legend()
-        plt.grid(which='both')
-        plt.tight_layout()
-        #plt.yticks(axis='y')
-        plt.yscale("symlog")
-
         # --- Plotting absolute errors
         plt.subplot(312)
-        err_abs = y_pred - y_orig
-
-        plt.plot(err_abs, '.', color=out_color)
 
         plt.grid()
         plt.yscale("symlog")
         plt.xlabel('Run number')
         plt.ylabel('Error')
+
+        err_abs = y_pred - y_orig
+
+        plt.plot(err_abs, '.', color=out_color)
 
         # print('Indices of test data where absolute error is larger than {} : {} '
         #       .format(2e5, np.where(abs(err_abs) > 2e5)[0]))

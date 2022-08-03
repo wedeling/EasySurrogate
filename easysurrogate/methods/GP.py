@@ -11,7 +11,6 @@ from mogp_emulator.MeanFunction import Coefficient, LinearMean, MeanFunction
 #from gaussian_process_regressor import GaussianProcess
 import easysurrogate as es
 
-
 class GP:
 
     def __init__(
@@ -114,14 +113,13 @@ class GP:
                 self.process_type = kwargs['process_type']
             else:
                 self.process_type = 'gaussian'
-
-            self.kernel = ''           
+         
             if kernel == 'RBF':
-                self.kernel += 'sq_exp'
+                self.kernel_argument += 'sq_exp'
             elif kernel == 'Matern':
-                self.kernel += 'matern'
+                self.kernel_argument += 'matern'
             elif kernel == 'Gibbs':
-                self.kernel += 'gibbs'
+                self.kernel_argument += 'gibbs'
 
             if bias:
                 pass
@@ -181,7 +179,7 @@ class GP:
         
         elif self.backend == 'local':
             self.instance = es.methods.GaussianProcess(
-                                            kernel=self.kernel, 
+                                            kernel=self.kernel_argument, 
                                             process_type=self.process_type,
                                             sigma_n=float(self.noize_argument),
                                             l=float(self.length_scale),
@@ -237,8 +235,8 @@ class GP:
         elif self.backend == 'local':
             print('Kernel =', self.instance.kernel)
             print('Kernel name =', self.kernel_argument)
-            print('Kernel parameters : sigma_n={0}; sigma_f={1}; l={2}'.format(
-                self.instance.sigma_n, self.instance.sigma_f, self.instance.l)
+            print('Kernel parameters : sigma_n={0}; sigma_f={1}; l={2}'
+               .format(self.instance.sigma_n, self.instance.sigma_f, self.instance.l)
                 )
         else:
             raise NotImplementedError('Currently supporting only scikit-learn, mogp, and custom backend')

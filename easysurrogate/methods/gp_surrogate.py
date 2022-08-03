@@ -29,11 +29,14 @@ class GP_Surrogate(Campaign):
 
         if 'noize' in kwargs: #TODO: put all model-related parameters EITHER in constructor OR in .train() method
             self.noize = kwargs['noize']
+        else:
+            self.noize = False
+
         if 'n_in' in kwargs:
             self.n_in = kwargs['n_in']
         else:
             self.n_in = 1
-
+        
         if 'n_out' in kwargs:
             self.n_out = kwargs['n_out']
         else:
@@ -64,10 +67,10 @@ class GP_Surrogate(Campaign):
         None.
         """
 
-        if 'basekernel' not in kwargs:
-            self.base_kernel = 'Matern'
+        if 'kernel' not in kwargs:
+            self.kernel = 'Matern'
         else:
-            self.base_kernel = kwargs['basekernel']
+            self.kernel = kwargs['kernel']
 
         if 'length_scale' not in kwargs:
             self.length_scale = 1.0
@@ -114,7 +117,7 @@ class GP_Surrogate(Campaign):
         print('===============================')
         print('Fitting Gaussian Process...')
         self.model = es.methods.GP(
-            kernel=self.base_kernel,
+            kernel=self.kernel,
             n_in=self.n_in,
             n_out=self.n_out,
             bias=self.bias, # BIAS should not matter and yield factor parameter close to zero if data is whitened
