@@ -69,6 +69,11 @@ class GP_Surrogate(Campaign):
         else:
             self.base_kernel = kwargs['basekernel']
 
+        if 'length_scale' not in kwargs:
+            self.length_scale = 1.0
+        else:
+            self.length_scale = kwargs['length_scale']
+
         if 'noize' not in kwargs:
             self.noize = 'True'
         else:
@@ -115,6 +120,7 @@ class GP_Surrogate(Campaign):
             bias=self.bias, # BIAS should not matter and yield factor parameter close to zero if data is whitened
             nonstationary=self.nonstationary,
             noize=self.noize,
+            length_scale=self.length_scale,
             backend=self.backend,
             process_type=self.process_type,
                                   ) 

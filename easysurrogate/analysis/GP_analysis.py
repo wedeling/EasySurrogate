@@ -319,6 +319,8 @@ class GP_analysis(BaseAnalysis):
         print('MSE of the GPR prediction is: {:.3}'.format(
             mse(y_pred[:y_t_len, 0], y_test_plot[:, 0])))
 
+        print('Mean relative test error is {:.3}'.format(err_rel.mean()))
+
         self.y_pred = y_pred
         self.err_abs = err_abs
         self.err_rel = err_rel

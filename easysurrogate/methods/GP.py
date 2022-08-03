@@ -130,6 +130,11 @@ class GP:
                 self.noize_argument = noize
             else:
                 self.noize_argument = 0.0
+
+            if 'length_scale' in kwargs:
+                self.length_scale = kwargs['length_scale']
+            else:
+                self.length_scale = 1.0
             
         else:
             raise NotImplementedError('Currently supporting only scikit-learn, mogp, and custom backend')
@@ -178,7 +183,8 @@ class GP:
             self.instance = es.methods.GaussianProcess(
                                             kernel=self.kernel, 
                                             process_type=self.process_type,
-                                            sigma_n=float(self.noize_argument)
+                                            sigma_n=float(self.noize_argument),
+                                            l=float(self.length_scale),
                                                       )
             self.instance.fit(X,y)
         
@@ -230,8 +236,9 @@ class GP:
         
         elif self.backend == 'local':
             print('Kernel =', self.instance.kernel)
-            print('Kernel parameters : {0}'.format(
-                [self.instance.sigma_n, self.instance.sigma_f, self.instance.l])
+            print('Kernel name =', self.kernel_argument)
+            print('Kernel parameters : sigma_n={0}; sigma_f={1}; l={2}'.format(
+                self.instance.sigma_n, self.instance.sigma_f, self.instance.l)
                 )
         else:
             raise NotImplementedError('Currently supporting only scikit-learn, mogp, and custom backend')

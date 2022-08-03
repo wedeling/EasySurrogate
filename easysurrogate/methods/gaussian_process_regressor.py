@@ -410,7 +410,7 @@ def sq_exp_kernel_function(x, y, sigma_f=1., l=1.):
     
     return kernel
 
-def matern_kernel(x, y, sigma_f=1., l=1., nu=1):
+def matern_kernel(x, y, sigma_f=1., l=1., nu=1.5):
     """
     Defines Mater kernel function
     """
