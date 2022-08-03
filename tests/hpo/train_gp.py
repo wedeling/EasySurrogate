@@ -144,9 +144,8 @@ print(results)
 analysis.analyse(collation_results)
 analysis.analyse(results)
 
-minrowidx = collation_results['tes_error'].idxmin()
+minrowidx = collation_results['test_error'].idxmin()
 print(collation_results.iloc[minrowidx,:])
-# TODO look min() at pandas -> this one does not work
 
 # TODO check if error is read as a string
 #test_error = results.describe('test_error')

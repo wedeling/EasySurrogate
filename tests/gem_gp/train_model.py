@@ -55,7 +55,6 @@ gp_param = {
 surrogate = es.methods.GP_Surrogate(
                             backend='local',
                             n_in=len(features),
-                            #process_type='student_t',
                                    )
 
 print('Time to initialise the surrogate: {:.3} s'.format(t.time() - time_init_start))
@@ -63,18 +62,21 @@ print('Time to initialise the surrogate: {:.3} s'.format(t.time() - time_init_st
 time_train_start = t.time()
 
 # TODO pass hyperparameters here!
-surrogate.train(features, target, 
+surrogate.train(features, 
+                target, 
                 test_frac=0.5,
                 bias=gp_param['bias'],
+                length_scale=0.5,
+                noize=0.000001,
                 nonstationary=gp_param['nonstationary'],
-                process_type='student_t',
-                basekernel='Matern',
+                process_type='gaussian',
+                kernel='Matern',
                )
 
 print('Time to train the surrogate: {:.3} s'.format(t.time() - time_train_start))
 surrogate.model.print_model_info()
 
-save_model_file_name = 'model_STP_03082022.pickle'
+save_model_file_name = 'model_N_M_03082022.pickle'
 
 campaign.add_app(name='gp_campaign', surrogate=surrogate)
 campaign.save_state(file_path=save_model_file_name)
