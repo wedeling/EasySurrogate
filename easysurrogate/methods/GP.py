@@ -110,11 +110,27 @@ class GP:
 
         elif self.backend == 'local':
             
-            self.kernel = ''
-            
+            if 'process_type' in kwargs:
+                self.process_type = kwargs['process_type']
+            else:
+                self.process_type = 'gaussian'
+
+            self.kernel = ''           
             if kernel == 'RBF':
                 self.kernel += 'sq_exp'
+            elif kernel == 'Matern':
+                self.kernel += 'matern'
+            elif kernel == 'Gibbs':
+                self.kernel += 'gibbs'
 
+            if bias:
+                pass
+
+            if isinstance(noize, float):
+                self.noize_argument = noize
+            else:
+                self.noize_argument = 0.0
+            
         else:
             raise NotImplementedError('Currently supporting only scikit-learn, mogp, and custom backend')
 
@@ -142,7 +158,10 @@ class GP:
 
         if self.backend == 'scikit-learn':
             self.instance = GaussianProcessRegressor(
-                kernel=self.kernel, n_restarts_optimizer=self.n_iter, normalize_y=True)
+                                            kernel=self.kernel, 
+                                            n_restarts_optimizer=self.n_iter, 
+                                            normalize_y=True
+                                                    )
             self.instance.fit(X, y)
             self.kernel = self.instance.kernel_
         
@@ -156,7 +175,11 @@ class GP:
             self.instance = mogp.fit_GP_MAP(self.instance)
         
         elif self.backend == 'local':
-            self.instance = es.methods.GaussianProcess(kernel=self.kernel)
+            self.instance = es.methods.GaussianProcess(
+                                            kernel=self.kernel, 
+                                            process_type=self.process_type,
+                                            sigma_n=float(self.noize_argument)
+                                                      )
             self.instance.fit(X,y)
         
         else:

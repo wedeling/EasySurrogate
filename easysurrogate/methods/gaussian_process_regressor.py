@@ -9,7 +9,7 @@ import numpy as np
 from itertools import product
 from scipy.optimize import minimize
 
-from scipy.special import gamma
+from scipy.special import gamma, kv
 
 class GaussianProcess():
 
@@ -17,32 +17,51 @@ class GaussianProcess():
         """
         Initializing default attributes of the object
         """
+
+        # Dimensionality of output
         self.n_x_dim = 1
         
+        # Kernel type
         kernel_name = 'sq_exp'
         if 'kernel' in kwargs:
             kernel_name = kwargs['kernel']
-
         self.set_kernel(kernel_name)
 
-    def set_kernel(self, kernel='sq_exp'):
+        # Default values of kernel parameters
+        if 'sigma_f' not in kwargs:
+            self.sigma_f = 1.0
+        else:
+            self.sigma_f = kwargs['sigma_f']
+
+        if 'sigma_n' not in kwargs:
+            self.sigma_n = 1.0
+        else:
+            self.sigma_n = kwargs['sigma_n']
+
+        if 'l' not in kwargs:
+            self.l = 1.0
+        else:
+            self.l = kwargs['l']
+
+        self.nu = 1
+
+        # Type of the stochastic process
+        if 'process_type' in kwargs:
+            self.process_type = kwargs['process_type']
+        else:
+            self.process_type = 'gaussian'
+
+    def set_kernel(self, kernel='sq_exp', **kwargs):
         """
         Setting type of the kernel function and its default parameters
         """
 
         if kernel == 'gibbs':
             self.kernel = gibbs_ns_kernel
-        elif kernel == 'sq_exp':
-            self.kernel = sq_exp_kernel_function
+        elif kernel == 'matern':
+            self.kernel = matern_kernel
         else:
             self.kernel = sq_exp_kernel_function
-
-        # default values of kernel parameters
-        self.sigma_f = 1.0
-        self.sigma_n = 0.1
-        self.l = 1.0
-
-        self.nu = 1
 
     def set_covariance(self, K):
 
@@ -155,7 +174,9 @@ class GaussianProcess():
         
         return f_bar_star
 
-    def predict_var(self, X_new):
+    def predict_var(self, X_new, likelihood='gaussian'):
+
+        likelihood = self.process_type
 
         # Size of the new sample
         if len(X_new.shape) == 1:
@@ -190,7 +211,14 @@ class GaussianProcess():
 
         K_star = np.array(K_star).reshape((n_star, self.n))
 
-        cov_f_star = K_star2 - np.dot(K_star, np.dot(self.K_inv_tot, K_star.T))
+        M1 = K_star2 - np.dot(K_star, np.dot(self.K_inv_tot, K_star.T))
+
+        if likelihood == 'gaussian':
+            cov_f_star = M1
+        elif likelihood == 'student_t':
+            M2 = np.dot(self.y.T, np.dot(self.K_inv_tot, self.y))
+            cov_f_star = np.dot((self.nu + M2 - 2)/(self.nu + self.n - 2), M1)
+
         var_f_star = np.diag(cov_f_star)
 
         return var_f_star
@@ -275,6 +303,8 @@ class GaussianProcess():
             nmml: float
             -log p(y|X, theta, sigma, beta)
         """
+
+        likelihood = self.process_type
         
         # y - observable QoI values
         # H - matrix of vector functions -> after whitening could be identity functions?
@@ -306,6 +336,11 @@ class GaussianProcess():
         M1 = np.dot(M11.T, M12)
         #print('M1.shape = {0}'.format(M1.shape))
 
+        # TODO: Think of better polymorphism with Python: 
+        # - different function passed
+        # - different class implemenetation for GPR/STP
+        # - decorators? 
+        
         # Option for GPR
         if likelihood == 'gaussian':
             mll = -0.5 * M1 \
@@ -318,12 +353,10 @@ class GaussianProcess():
             mll = np.log2(gamma(0.5 * (nu + n))) \
                 - np.log2(gamma(0.5 * nu)) \
                 - 0.5 * n * np.log2(nu * np.pi) \
-                - 0.5 * np.log2(((nu - 2.) / nu) * np.linalg.det(K)) \
-                - (0.5 * (nu + n)) * np.log2(1. + np.dot(y.T, np.dot(np.linalg.inv(K), y)) / nu)
+                - 0.5 * np.log2(((nu - 2.) / nu) * np.linalg.det(K_modif)) \
+                - (0.5 * (nu + n)) * np.log2(1. + ((nu - 2.) / nu) * M1 / nu)
                 # K should include nugget and be K + sigma_n**2 * I_n ?
-                # also y should be y-H*beta
         
-
         # Use to find argmax of MLE over {beta, theta, sigma_n} 
 
         #print('nmll = {0}'.format(-mll))
@@ -355,19 +388,37 @@ def gibbs_ns_kernel(x, y, l, l_func=lambda x: x):
     """
     Defines Gibbs kernel function
     """
+
     pref_val = 1.0
     exp_arg = 0.0
+
     for d in x.shape[1]:
         # multiplicatve prefactor
         pref_val *= np.sqrt((2 * l_func(x) * l_func(y)) / (l_func(x)**2 + l_func(y)**2))
         # exponential argument
         exp_arg += (x - y)**2 / (l_func(x)**2 + l_func(y)**2)
     exp_val = np.exp(-exp_arg)
+
     return pref_val * exp_val
 
 def sq_exp_kernel_function(x, y, sigma_f=1., l=1.):
     """
     Defines squared exponential kernel function
     """
+
     kernel = sigma_f * np.exp(- (np.linalg.norm(x - y)**2) / (2 * l**2))
+    
+    return kernel
+
+def matern_kernel(x, y, sigma_f=1., l=1., nu=1):
+    """
+    Defines Mater kernel function
+    """
+    
+    m1 = np.sqrt(2 * nu) * np.linalg.norm(x - y) / l,
+
+    kernel = sigma_f**2 * (np.power(2, nu-1) / gamma(nu)) \
+           * np.power(m1, nu) \
+           * kv(m1, nu)
+    
     return kernel

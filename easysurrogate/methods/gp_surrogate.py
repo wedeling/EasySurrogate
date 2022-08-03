@@ -38,6 +38,11 @@ class GP_Surrogate(Campaign):
             self.n_out = kwargs['n_out']
         else:
             self.n_out = 1
+        
+        #if 'process_type' in kwargs:
+        #    self.process_type = kwargs['process_type']
+        #else:
+        #    self.process_type = 'gaussian'
 
     ############################
     # START COMMON SUBROUTINES #
@@ -77,8 +82,13 @@ class GP_Surrogate(Campaign):
         if 'nonstationary' not in kwargs:
             self.nonstationary = False
         else: 
-            self.nonstationary = kwargs['nonstationary']
+            self.nonstationary = kwargs['nonstationary']         
 
+        if 'process_type' not in kwargs:
+            self.process_type = 'gaussian'
+        else:
+            self.process_type = kwargs['process_type']
+        
         # prepare the training data
         X_train, y_train, X_test, y_test = self.feat_eng.get_training_data(
             feats, target, local=False, test_frac=test_frac, train_first=False)
@@ -105,7 +115,9 @@ class GP_Surrogate(Campaign):
             bias=self.bias, # BIAS should not matter and yield factor parameter close to zero if data is whitened
             nonstationary=self.nonstationary,
             noize=self.noize,
-            backend=self.backend)
+            backend=self.backend,
+            process_type=self.process_type,
+                                  ) 
 
         # get dimensionality of the output
         self.n_out = y_train.shape[1]
