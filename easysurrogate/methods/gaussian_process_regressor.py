@@ -10,6 +10,7 @@ from itertools import product
 from scipy.optimize import minimize
 
 from scipy.special import gamma, kv
+from scipy.linalg import solve_triangular
 
 class GaussianProcess():
 
@@ -19,13 +20,14 @@ class GaussianProcess():
         """
 
         # Dimensionality of output
-        self.n_x_dim = 1
+        self.n_y_dim = 1
         
         # Kernel type
-        kernel_name = 'sq_exp'
-        if 'kernel' in kwargs:
-            kernel_name = kwargs['kernel']
-        self.set_kernel(kernel_name)
+        if 'kernel' not in kwargs:
+            self.kernel_name = 'sq_exp'
+        else:
+            self.kernel_name = kwargs['kernel']
+        self.set_kernel(self.kernel_name)
 
         # Default values of kernel parameters
         if 'sigma_f' not in kwargs:
@@ -43,13 +45,16 @@ class GaussianProcess():
         else:
             self.l = kwargs['l']
 
-        self.nu = 1
+        if 'nu' not in kwargs:
+            self.nu = 1
+        else:
+            self.nu = kwargs['nu']
 
         # Type of the stochastic process
-        if 'process_type' in kwargs:
-            self.process_type = kwargs['process_type']
-        else:
+        if 'process_type' not in kwargs:
             self.process_type = 'gaussian'
+        else:
+            self.process_type = kwargs['process_type']
 
     def set_kernel(self, kernel='sq_exp', **kwargs):
         """
@@ -76,6 +81,8 @@ class GaussianProcess():
         """
 
         K = [kernel(i, j, sigma_f=sigma_f, l=l) for (i, j) in product(X, X)]
+        #print('K[0][0]={0}, X[0]={1}, sigma_f={2}, l={3}'.format(K[0], X[0], sigma_f, l)) ###DEBUG
+        #print('k(X[0], X[0])={0} \n'.format(kernel(X[0], X[0], sigma_f, l))) ###DEBUG
 
         K = np.array(K).reshape(n, n)
 
@@ -90,6 +97,7 @@ class GaussianProcess():
         self.set_covariance(K)
 
         K_inv_tot = np.linalg.inv(self.K + (self.sigma_n ** 2) * np.eye(self.n))
+        
         self.K_inv_tot = K_inv_tot
 
     def optmize_hyperparameters(self, X_train, y_train, loss='r2'):
@@ -105,12 +113,10 @@ class GaussianProcess():
 
         hp_curval = np.array([self.sigma_f, self.sigma_n, self.l, self.nu])
 
-        if loss == 'r2':
-            loss_func = self.r2_score_hp
-        elif loss == 'nmll':
+        if loss == 'nmll':
             loss_func = self.nmll_hp
         else:
-            loss_func == 'r2'
+            loss_func == self.r2_score
 
         hp_optval_res = minimize(loss_func, hp_curval, options={'maxiter': 100})
 
@@ -118,9 +124,10 @@ class GaussianProcess():
 
         self.sigma_f = hp_optval[0]
         self.sigma_n = hp_optval[1]
-        self.l = hp_optval[2]
-        
+        self.l = hp_optval[2]       
         self.nu = hp_optval[3]
+
+        self.fit_cov(X_train)  
 
     def fit(self, X, y):
 
@@ -135,17 +142,12 @@ class GaussianProcess():
     def predict_mean(self, X_new):
 
         # Size of the new sample
-        #print('X_new.shape={0}'.format(X_new.shape)) ###DEBUG
 
         if len(X_new.shape) == 1:
             X_new = np.array(X_new).reshape((1, X_new.shape[0]))
             n_star = 1
         else:   
             n_star = X_new.shape[0]
-        
-        #print('X_new.shape={0}'.format(X_new.shape)) ###DEBUG
-        #print('n_star={0}'.format(n_star)) ###DEBUG
-        #print('X.shape={0}'.format(self.X.shape)) ###DEBUG
 
         # Covariance matrix of new and old sample K_*=K(X_new,X) e R^(n x N)
         K_star = [
@@ -162,15 +164,7 @@ class GaussianProcess():
         
         K_star = np.array(K_star).reshape((n_star, self.n))
 
-        #print('self.y = {0} ; self.n = {1} ; self.n_x_dim = {2} ; n_star = {3}'.
-        #       format(self.y, self.n, self.n_x_dim, n_star)) ###DEBUG
-
-        f_bar_star = np.dot(K_star, np.dot(self.K_inv_tot, self.y.reshape(self.n, self.n_x_dim)))
-
-        #print('X_new.shape = {1} ; y.shape = {2} ; f_bar_star.shape = {0} ; K_star.shape = {3}, K_inv_tot.shape = {4} \n'.
-        #       format(f_bar_star.shape, X_new.shape, self.y.shape, K_star.shape, self.K_inv_tot.shape)) ### DEBUG
-        
-        #print(' X_new = {1} \n y = {2} \n f_bar_star = {0} \n'.format(f_bar_star, X_new, self.y)) ### DEBUG
+        f_bar_star = np.dot(K_star, np.dot(self.K_inv_tot, self.y.reshape(self.n, self.n_y_dim)))
         
         return f_bar_star
 
@@ -214,8 +208,11 @@ class GaussianProcess():
         M1 = K_star2 - np.dot(K_star, np.dot(self.K_inv_tot, K_star.T))
 
         if likelihood == 'gaussian':
+            
             cov_f_star = M1
+
         elif likelihood == 'student_t':
+            
             M2 = np.dot(self.y.T, np.dot(self.K_inv_tot, self.y))
             cov_f_star = np.dot((self.nu + M2 - 2)/(self.nu + self.n - 2), M1)
 
@@ -237,7 +234,7 @@ class GaussianProcess():
             y_var = self.predict_var(X)
             return y_mean, y_var
 
-        return y_mean, y_var
+        return y_mean
 
     def r2_score(self, X, y):
         """
@@ -246,6 +243,7 @@ class GaussianProcess():
             r2: float
             A real value r e [0.;1.] with 1. meaning that regression model fully captures data variance
         """
+
         f = self.predict_mean(X)
         y_mean = y.mean()
         r2 = 1 - np.multiply(y - f, y - f).sum() / (np.multiply(y - y_mean, y - y_mean).sum())
@@ -265,7 +263,7 @@ class GaussianProcess():
 
     def score(self, X, y):
         """
-        Synonim for r2_score
+        Synonym for r2_score
         """
         return self.r2_score(X, y)
 
@@ -305,6 +303,7 @@ class GaussianProcess():
         """
 
         likelihood = self.process_type
+        method = 'stable'
         
         # y - observable QoI values
         # H - matrix of vector functions -> after whitening could be identity functions?
@@ -320,21 +319,34 @@ class GaussianProcess():
         n = len(y)
 
         K = self.calc_covariance(X, self.kernel, theta['sigma_f'], theta['l'], n)
-        K_modif = K + sigma_n**2 * np.eye(n)
+        #print('K={0}'.format(K)) ###DEBUG
+
+        K_modif = K + (sigma_n**2) * np.eye(n)
 
         H = self.calc_H(self.X)
 
         # Use this to reduce optimisation space for GPR MLE fitting
         #beta_hat = self.beta_of_theta(y, sigma_n, theta['sigma_f'], theta['l'])
         #beta = beta_hat
-        beta = np.zeros((n, self.n_x_dim)) # use assuming constant zero model y=0+f(x)
+        beta = np.zeros((n, self.n_y_dim)) # use assuming constant zero model y=0+f(x)
 
         M11 = y - np.dot(H, beta)
-        #print('M11.shape = {0}'.format(M11.shape))
-        M12 = np.dot(np.linalg.inv(K_modif), M11)
-        #print('M12.shape = {0}'.format(M12.shape))
+
+        if method == 'stable':
+            
+            #print('K_mod={0}'.format(K_modif)) ###DEBUG
+            
+            M2 = L = np.linalg.cholesky(K_modif)
+            S1 = solve_triangular(L, M11, lower=True)
+            M12 = S2 = solve_triangular(L.T, S1, lower=False)
+            M2 = np.sum(np.log2(np.diag(L)))
+      
+        else:
+
+            M12 = np.dot(np.linalg.inv(K_modif), M11)
+            M2 = np.log2(np.linalg.det(K_modif))
+        
         M1 = np.dot(M11.T, M12)
-        #print('M1.shape = {0}'.format(M1.shape))
 
         # TODO: Think of better polymorphism with Python: 
         # - different function passed
@@ -343,23 +355,24 @@ class GaussianProcess():
         
         # Option for GPR
         if likelihood == 'gaussian':
+            
             mll = -0.5 * M1 \
-              - 0.5 * n * np.log2(2*np.pi) \
-              - 0.5 * np.log2(np.linalg.det(K_modif))
+              - 0.5 * n * np.log2(2 * np.pi) \
+              - 0.5 * M2
 
         # Option for STP
         elif likelihood == 'student_t':
+
             nu = theta['nu'] 
             mll = np.log2(gamma(0.5 * (nu + n))) \
                 - np.log2(gamma(0.5 * nu)) \
                 - 0.5 * n * np.log2(nu * np.pi) \
-                - 0.5 * np.log2(((nu - 2.) / nu) * np.linalg.det(K_modif)) \
+                - 0.5 * np.log2(((nu - 2.) / nu) * M2) \
                 - (0.5 * (nu + n)) * np.log2(1. + ((nu - 2.) / nu) * M1 / nu)
-                # K should include nugget and be K + sigma_n**2 * I_n ?
+                # K should include nugget and be K + sigma_n**2 * I_n ? -> now it includes
         
         # Use to find argmax of MLE over {beta, theta, sigma_n} 
 
-        #print('nmll = {0}'.format(-mll))
         return -mll[0][0]
 
     def nmll_hp(self, hpval):
@@ -372,13 +385,12 @@ class GaussianProcess():
 
         sigma_n = hpval[1]
         theta['sigma_f'] = hpval[0]
-        theta['l'] = hpval[2]
-        
+        theta['l'] = hpval[2] 
         theta['nu'] = hpval[3]
 
         self.fit_cov(self.X_train)
 
-        return self.neg_marg_log_likelihood(self.y_train, self.X_train, theta, sigma_n, likelihood='student_t')
+        return self.neg_marg_log_likelihood(self.y_train, self.X_train, theta, sigma_n, likelihood=self.process_type)
 
 ########################################
 ### Kernel functions implementations ###
@@ -406,7 +418,7 @@ def sq_exp_kernel_function(x, y, sigma_f=1., l=1.):
     Defines squared exponential kernel function
     """
 
-    kernel = sigma_f * np.exp(- (np.linalg.norm(x - y)**2) / (2 * l**2))
+    kernel = sigma_f * np.exp(-(np.linalg.norm(x - y)**2) / (2 * l**2))
     
     return kernel
 
@@ -415,10 +427,17 @@ def matern_kernel(x, y, sigma_f=1., l=1., nu=1.5):
     Defines Mater kernel function
     """
     
-    m1 = np.sqrt(2 * nu) * np.linalg.norm(x - y) / l,
+    r = np.linalg.norm(x - y) 
+    m1 = np.sqrt(2 * nu) * r/ l
 
-    kernel = sigma_f**2 * (np.power(2, nu-1) / gamma(nu)) \
-           * np.power(m1, nu) \
-           * kv(m1, nu)
+    if abs(nu - 1.5) < 1e-16:
+        
+        m2 = np.sqrt(3) * r / l
+        kernel = (sigma_f**2) * (1 + m2) * np.exp(-m2)
+    else:
+        
+        kernel = (sigma_f**2) * (2**(1 - nu)) / gamma(nu) \
+             * np.power(m1, nu) \
+             * kv(m1, nu)
     
     return kernel
