@@ -36,6 +36,41 @@ class GP_analysis(BaseAnalysis):
         plt.savefig('gp_abs_err.png')
         plt.close()
 
+    def plot_predictions_vs_groundtruth(self,
+                                        y_test_pred, 
+                                        y_test_orig, 
+                                        y_test_pred_var,
+                                        name='Predictions against ground truth values'
+                                       ):
+        """
+        Plots original values of QoI on X axis and predicted values on Y axis
+        """
+
+        plt.ioff()
+        plt.title(name)
+        plt.xlabel('Original values')
+        plt.ylabel('Predicted values')
+        plt.grid('both')
+        plt.yscale('log')
+        plt.xscale('log')
+
+        if y_test_pred_var is not None:
+            plt.errorbar(
+                x=y_test_orig,
+                y=y_test_pred,
+                yerr=1.96 *
+                y_test_pred_var,
+                label='variance of GPR model on test data',
+                fmt='+')
+        else:
+            plt.plot(y_test_orig, y_test_pred, label='pred-s vs g.t.', fmt='.')
+
+        plt.plot(y_test_orig, y_test_orig, 'k--')
+
+        plt.legend()
+        plt.savefig('pred_vs_orig.png')
+        plt.close()
+
     def plot_res(self,
                  x_test, y_test_pred, y_test_orig,
                  x_train, y_train_pred, y_train_orig,
@@ -303,6 +338,8 @@ class GP_analysis(BaseAnalysis):
   
             self.plot_err(err_rel[:, 0], y_test[:, 0],
                       'rel. err. of prediction mean for test dataset in Ti fluxes')
+            
+            self.plot_predictions_vs_groundtruth(y_test_plot[:, 0], y_pred[:y_t_len, 0], y_var_pred.reshape(y_pred[:y_t_len, 0].shape))
 
         train_n = self.gp_surrogate.feat_eng.n_samples - y_t_len
 
@@ -320,7 +357,7 @@ class GP_analysis(BaseAnalysis):
         print('MSE of the GPR prediction is: {:.3}'.format(
             mse(y_pred[:y_t_len, 0], y_test_plot[:, 0])))
 
-        print('Mean relative test error is {:.3}'.format(err_rel.mean()))
+        print('Mean relative test error is {:.3}'.format(np.abs(err_rel).mean()))
 
         self.y_pred = y_pred
         self.err_abs = err_abs
