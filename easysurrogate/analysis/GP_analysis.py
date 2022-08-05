@@ -37,8 +37,8 @@ class GP_analysis(BaseAnalysis):
         plt.close()
 
     def plot_predictions_vs_groundtruth(self,
-                                        y_test_pred, 
                                         y_test_orig, 
+                                        y_test_pred, 
                                         y_test_pred_var,
                                         name='Predictions against ground truth values'
                                        ):
