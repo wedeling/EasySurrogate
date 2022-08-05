@@ -48,12 +48,12 @@ time_init_start = t.time()
 
 # TODO: form a surrogate model parameter dictionary and pass starting from here  
 gp_param = {
-            'bias': True,
-            'nonstationary': True,
+            'bias': False,
+            'nonstationary': False,
            }
 
 surrogate = es.methods.GP_Surrogate(
-                            backend='local',
+                            backend='scikit-learn', #'local',
                             n_in=len(features),
                                    )
 
@@ -65,18 +65,19 @@ time_train_start = t.time()
 surrogate.train(features, 
                 target, 
                 test_frac=0.5,
+                n_iter=10,
                 bias=gp_param['bias'],
-                length_scale=1.0,
+                length_scale=2.0,
                 noize=0.001,
                 nonstationary=gp_param['nonstationary'],
-                process_type='gaussian',
+                process_type='student_t',
                 kernel='Matern',
                )
 
 print('Time to train the surrogate: {:.3} s'.format(t.time() - time_train_start))
 surrogate.model.print_model_info()
 
-save_model_file_name = 'model_N_M_03082022.pickle'
+save_model_file_name = 'model_N_M_05082022.pickle'
 
 campaign.add_app(name='gp_campaign', surrogate=surrogate)
 campaign.save_state(file_path=save_model_file_name)
