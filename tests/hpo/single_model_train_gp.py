@@ -30,6 +30,7 @@ target = np.concatenate([data_frame[k] for k in target_name_selected if k in dat
 
 # create a GP surrogate
 surrogate = es.methods.GP_Surrogate(
+    backend=str(inputs['backend']),
     n_in=len(features_names_selected),
     )
 
@@ -42,6 +43,7 @@ surrogate.train(
     length_scale=float(inputs['length_scale']),
     noize=float(inputs['noize']),
     bias=float(inputs['bias']),
+    nu=float(inputs['nu']),
     process_type=str(inputs['process_type'])
     )
 

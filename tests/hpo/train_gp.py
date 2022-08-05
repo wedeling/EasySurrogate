@@ -13,17 +13,21 @@ from easyvvuq.actions.execute_qcgpj import EasyVVUQParallelTemplate
 
 from qcg.pilotjob.executor_api.qcgpj_executor import QCGPJExecutor
 
+from pprint import pprint
+
 #TODO: ADD A RANDOM SEED
 
 # List all possible hyperparamters of a surrogate of this type, together with their types and default values
 params = {
-    "length_scale": {"type": "string", "min": 1e-6, "max": 1e+6, "default": 1.0},
-    "noize": {"type": "string", "min": 1e-16, "max": 1e+3, "default": 1e-8}, 
+    "length_scale": {"type": "string", "min": 1e-6, "max": 1e+6, "default": "1.0"},
+    "noize": {"type": "string", "min": 1e-16, "max": 1e+3, "default": "1e-8"}, 
     "bias": {"type": "string", "min": -1e+4, "max": 1e+4, "default": "0.0"},
+    "nu": {"type": "string", "min": 1e-4, "max": 1e+4, "default": "2.5"},
     "kernel": {"type": "string", "default": "Matern"},
     "testset_fraction": {"type": "string", "min": 0.0, "max": 1.0, "default": "0.5"},
     "n_iter" : {"type": "string", "min": 1, "default": "10"},
     "process_type" : {"type": "string", "default": "gaussian"},
+    "backend" : {"type": "string", "default": "local"},
 }
 # looks like EasyVVUQ checks for a need in a default value after sampler is initialized 
 
@@ -52,6 +56,7 @@ campaign = uq.Campaign(name=campaign_name, work_dir=work_dir)
 #param_file = 'hp_values_gp.csv'
 # For testset_frac=0.5 and kernel K=C(s0)*RBF(l1)+W(s1)+C(s2) best (default) parameters are l1=0.5, s1=0.001, s2=0.0
 ### 42n__z3x run_11 : 0.5 0.001 0.0
+### vkbz8hz0 run_7: RBF l=0.5 s_n=.001 b=0. tfr=0.5 n_i=10, p=N be=loc
 
 #param_file = 'hp_values_gp_tfrac.csv'
 # For kernel parameters given above, a) lowering test dataset fraction to 0.5 gives ~0.33*|Err| decrease and platoeing
@@ -60,9 +65,12 @@ campaign = uq.Campaign(name=campaign_name, work_dir=work_dir)
 
 #param_file = 'hp_values_gp_niter.csv'
 # For kernel parameters and test dataset fraction given above, the training gives best values for n_iter=10
-### lvr0_0w2 run_6: 10; BUT single iteration could be enough
+### tp2csdpe run_6: 10; BUT single iteration could be enough
 
 param_file = 'hp_values_gp_stp.csv'
+# Custom implementation: The relative test error of 0.048 for student_t process with Matern kernel, sigma_n=0.001, l=2.0
+# w4mixs15 run_28 : Matern l=2. s_n=.001 b=0. tfr=0.5 n_i=10, p=STP be=scikit-learn
+# tp2csdpe run_27 : Matern l=.5 s_n=.001 b=0. nu=1.5 tfr=0.5 n_i=10, p=STP be=scikit-learn
 
 # Encoder should take a value from the sampler and pass it to EasySurrogate es.methos.*_Surrogate().train(...) as kwargs
 encoder = uq.encoders.GenericEncoder(
@@ -127,7 +135,7 @@ print('> Finished training the models, time={} s'.format(train_time))
 
 # Collate the results of all training runs
 collation_results = campaign.get_collation_result()
-print(collation_results)
+pprint(collation_results)
 
 # TODO Next: analysis, create a separate class to choose the best ML model
 analysis = uq.analysis.BasicStats(qoi_cols=qoi)
@@ -145,7 +153,7 @@ analysis.analyse(collation_results)
 analysis.analyse(results)
 
 minrowidx = collation_results['test_error'].idxmin()
-print(collation_results.iloc[minrowidx,:])
+print("Best model so far: {0}".format(collation_results.iloc[minrowidx,:]))
 
 # TODO check if error is read as a string
 #test_error = results.describe('test_error')
