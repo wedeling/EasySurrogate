@@ -77,6 +77,11 @@ class GP_Surrogate(Campaign):
         else:
             self.length_scale = kwargs['length_scale']
 
+        if 'nu' not in kwargs:
+            self.nu = 1.0
+        else:
+            self.nu = kwargs['nu']
+
         if 'noize' not in kwargs:
             self.noize = 'True'
         else:
@@ -126,6 +131,7 @@ class GP_Surrogate(Campaign):
             length_scale=self.length_scale,
             backend=self.backend,
             process_type=self.process_type,
+            nu=self.nu,
                                   ) 
 
         # get dimensionality of the output

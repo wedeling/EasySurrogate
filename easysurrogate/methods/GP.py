@@ -43,6 +43,11 @@ class GP:
         self.kernel_argument = ''
         self.noize_argument = ''
 
+        if 'nu' not in kwargs:
+            self.nu = 2.5
+        else:
+            self.nu = kwargs['nu']
+
         # sciki-learn specific part
         if self.backend == 'scikit-learn':
             self.kernel = ConstantKernel(constant_value=1.0,
@@ -52,7 +57,7 @@ class GP:
                 self.kernel *= Matern(length_scale=[length_scale] *
                                       self.n_in, length_scale_bounds=[length_scale *
                                                                       1e-4, length_scale *
-                                                                      1e+4], nu=2.5)
+                                                                      1e+4], nu=self.nu)
 
             elif kernel == 'RBF':
                 self.kernel *= RBF(length_scale=[length_scale] * self.n_in,
@@ -182,7 +187,8 @@ class GP:
                                             kernel=self.kernel_argument, 
                                             process_type=self.process_type,
                                             sigma_n=float(self.noize_argument),
-                                            l=float(self.length_scale),
+                                            l=self.length_scale,
+                                            nu=self.nu,
                                                       )
             self.instance.fit(X,y)
         
