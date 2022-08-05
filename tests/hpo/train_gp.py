@@ -14,6 +14,10 @@ from easyvvuq.actions.execute_qcgpj import EasyVVUQParallelTemplate
 from qcg.pilotjob.executor_api.qcgpj_executor import QCGPJExecutor
 
 from pprint import pprint
+from itertools import product
+import csv
+
+import easysurrogate as es
 
 #TODO: ADD A RANDOM SEED
 
@@ -38,6 +42,30 @@ params = {
 
 vary = {} #TODO maybe: use vary to create CSV for non-categorical hyperparameters
 
+# Defien values for each parameter, create its cartesian grid, save as csv
+param_search_vals = {
+    "length_scale": [0.5, 1.0, 2.0],
+    "noize": [1e-4, 1e-2, 1e-1], 
+    "bias": [0., 1.0],
+    "nu": [0.5, 1.5, 2.5],
+    "kernel": ['RBF', 'Matern'],
+    "testset_fraction": [0.1, 0.5, 0.9],
+    "n_iter" : [1, 5, 10],
+    "process_type" : ['gaussian', 'student_t'],
+    "backend" : ['local', 'scikit-learn'],
+}
+
+csv_header = [k for k in param_search_vals.keys()]
+csv_vals = [x for x in product(*[v for (k,v) in param_search_vals.items()])]
+
+with open('hp_values_gp_loc.csv', 'w') as f:
+    writer = csv.writer(f)
+    writer.writerow(csv_header)
+    writer.writerows(csv_vals)
+
+#TODO: IMPORTANT: when runnign for the large csv there is a failure due to not positive definite covariance matrix
+#  when training a Student-t (nu=1.5) model with local implementation, Matern kernel: run_143 !!!
+ 
 # If run on HPC, should be called from the scheduler like SLURM
 # for which an environmental variable HPC_EXECUTION should be specified
 HPC_EXECUTION = os.environ['HPC_EXECUTION']
@@ -67,10 +95,12 @@ campaign = uq.Campaign(name=campaign_name, work_dir=work_dir)
 # For kernel parameters and test dataset fraction given above, the training gives best values for n_iter=10
 ### tp2csdpe run_6: 10; BUT single iteration could be enough
 
-param_file = 'hp_values_gp_stp.csv'
+#param_file = 'hp_values_gp_stp.csv'
 # Custom implementation: The relative test error of 0.048 for student_t process with Matern kernel, sigma_n=0.001, l=2.0
 # w4mixs15 run_28 : Matern l=2. s_n=.001 b=0. tfr=0.5 n_i=10, p=STP be=scikit-learn
 # tp2csdpe run_27 : Matern l=.5 s_n=.001 b=0. nu=1.5 tfr=0.5 n_i=10, p=STP be=scikit-learn
+
+param_file = 'hp_values_gp_loc.csv'
 
 # Encoder should take a value from the sampler and pass it to EasySurrogate es.methos.*_Surrogate().train(...) as kwargs
 encoder = uq.encoders.GenericEncoder(
@@ -146,8 +176,7 @@ res_file = os.path.join(work_dir, "hpo_res.pickle")
 with open(res_file, "bw") as rf:
     pickle.dump(results, rf)
 
-# DEBUG, what to do with outputs; get mininmal-error-surrogate 
-print(results)
+#print(results)
 
 analysis.analyse(collation_results)
 analysis.analyse(results)

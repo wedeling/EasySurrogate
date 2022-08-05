@@ -73,4 +73,8 @@ with open('output.json', 'w') as of:
     json_string = json.dumps(output)
     of.write(json_string)
 
+# GPR Analysis
+analysis_gp = es.analysis.GP_analysis(campaign.surrogate)
+analysis_gp.get_regression_error(feat_test, targ_test, feat_train, targ_train)
+
 print('> Exiting the training script')
