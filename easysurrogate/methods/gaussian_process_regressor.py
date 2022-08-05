@@ -422,7 +422,7 @@ def sq_exp_kernel_function(x, y, sigma_f=1., l=1.):
     
     return kernel
 
-def matern_kernel(x, y, sigma_f=1., l=1., nu=1.5):
+def matern_kernel(x, y, sigma_f=1., l=1., nu=2.5):
     """
     Defines Mater kernel function
     """
@@ -430,10 +430,20 @@ def matern_kernel(x, y, sigma_f=1., l=1., nu=1.5):
     r = np.linalg.norm(x - y) 
     m1 = np.sqrt(2 * nu) * r/ l
 
-    if abs(nu - 1.5) < 1e-16:
+    if abs(nu - 0.5) < 1e-16:
+        
+        kernel = (sigma_f**2) * np.exp(-r/l)
+
+    elif abs(nu - 1.5) < 1e-16:
         
         m2 = np.sqrt(3) * r / l
         kernel = (sigma_f**2) * (1 + m2) * np.exp(-m2)
+
+    elif abs(nu - 2.5) < 1e-16:
+
+        m2 = np.sqrt(5) * r / l
+        kernel = (sigma_f**2) * (1 + m2 + (m2**2)/3.) * np.exp(-m2)
+    
     else:
         
         kernel = (sigma_f**2) * (2**(1 - nu)) / gamma(nu) \
