@@ -33,7 +33,7 @@ campaign = es.Campaign(load_state=False)
 # 5) Case from single flux tube GEM UQ campaign (4 parameters, tensor product of grid with 2 points per DoF)
 data_file_name = 'gem_uq_16_std.hdf5'
 features_names_selected = features_names
-target_name_selected = [target_names[3]]
+target_name_selected = [target_names[1]]
 
 # Create a surrogate and its model; train and save it
 
@@ -48,12 +48,12 @@ time_init_start = t.time()
 
 # TODO: form a surrogate model parameter dictionary and pass starting from here  
 gp_param = {
-            'bias': False,
-            'nonstationary': False,
+            'bias': True,
+            'nonstationary': True,
            }
 
 surrogate = es.methods.GP_Surrogate(
-                            backend='scikit-learn', #'local',
+                            backend='scikit-learn',
                             n_in=len(features),
                                    )
 
@@ -67,10 +67,10 @@ surrogate.train(features,
                 test_frac=0.5,
                 n_iter=10,
                 bias=gp_param['bias'],
-                length_scale=2.0,
+                length_scale=1.0,
                 noize=0.001,
                 nonstationary=gp_param['nonstationary'],
-                process_type='student_t',
+                process_type='gaussian',
                 kernel='Matern',
                )
 
