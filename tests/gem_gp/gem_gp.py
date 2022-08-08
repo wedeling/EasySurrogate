@@ -4,7 +4,7 @@ import numpy as np
 import easysurrogate as es
 
 features_names = ['te_value', 'ti_value', 'te_ddrho', 'ti_ddrho']
-target_names = ['te_transp_flux', 'ti_transp_flux']
+target_names = ['te_transp_flux', 'ti_transp_flux', 'te_transp_flux_std', 'ti_transp_flux_std']
 
 features_names_selected = features_names
 target_name_selected = target_names
@@ -39,7 +39,7 @@ target_name_selected = target_names
 
 # 5) Case from single flux tube GEM UQ campaign (4 parameters, tensor product of grid with 2 points per DoF)
 
-saved_model_file_path = 'model_N_M_05082022.pickle' 
+saved_model_file_path = 'model_val_08082022.pickle' 
 #'model_biased_nonst_05train_10062022.pickle' 
 #TODO: noize+const+dotproduct apparently leads to overfitting - trying to have higher variance of the model is probably more beneficial
 #'model_nonst_05train_10062022.pickle'
@@ -53,8 +53,8 @@ features_names_selected = features_names
 target_name_selected = [target_names[1]]
 campaign = es.Campaign(load_state=True, file_path=saved_model_file_path)
 
-data_frame = campaign.load_hdf5_data(file_path='gem_uq_16.hdf5')
-data_frame_train = campaign.load_hdf5_data(file_path='gem_uq_16.hdf5')
+data_frame = campaign.load_hdf5_data(file_path='gem_uq_16_std.hdf5')
+data_frame_train = campaign.load_hdf5_data(file_path='gem_uq_16_std.hdf5')
 
 # To use or not to use analysis of sequential design results
 SEQDES = False

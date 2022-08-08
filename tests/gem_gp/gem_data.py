@@ -4,9 +4,9 @@ import pandas as pd
 
 import easysurrogate as es
 
+
 features_names = ['te_value', 'ti_value', 'te_ddrho', 'ti_ddrho']
 target_names = ['te_transp_flux', 'ti_transp_flux', 'te_transp_flux_std', 'ti_transp_flux_std']
-
 
 def load_csv_file(input_file='gem_data_625.txt', n_runs=625, input_dim=4, output_dim=2, std=False):
 
@@ -49,7 +49,6 @@ def load_csv_file(input_file='gem_data_625.txt', n_runs=625, input_dim=4, output
 
     return data
 
-
 def load_csv_dict_file(input_file='gem0_lhc_res.csv', n_runs=1000, input_dim=4, output_dim=2):
     if input_dim == 4:
         Xlabels = ['te.value', 'ti.value', 'te.ddrho', 'ti.ddrho']
@@ -90,7 +89,6 @@ def load_csv_dict_file(input_file='gem0_lhc_res.csv', n_runs=1000, input_dim=4, 
 
     return data
 
-
 def load_wf_csv_file(data_dir='', input_file='AUG_gem_inoutput.txt', runs=[0, 500]):
 
     Xlabels = ['Te-ft5', 'Ti-ft5', 'dTe-ft5', 'dTi-ft5']
@@ -125,8 +123,7 @@ def load_wf_csv_file(data_dir='', input_file='AUG_gem_inoutput.txt', runs=[0, 50
 
     return data
 
-# get data to a hfd5
-
+# Get data to a hfd5
 
 # create an ES campaign
 campaign = es.Campaign(load_state=False)

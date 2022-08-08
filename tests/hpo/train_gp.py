@@ -95,12 +95,12 @@ campaign = uq.Campaign(name=campaign_name, work_dir=work_dir)
 # For kernel parameters and test dataset fraction given above, the training gives best values for n_iter=10
 ### tp2csdpe run_6: 10; BUT single iteration could be enough
 
-#param_file = 'hp_values_gp_stp.csv'
+param_file = 'hp_values_gp_stp.csv'
 # Custom implementation: The relative test error of 0.048 for student_t process with Matern kernel, sigma_n=0.001, l=2.0
 # w4mixs15 run_28 : Matern l=2. s_n=.001 b=0. tfr=0.5 n_i=10, p=STP be=scikit-learn
 # tp2csdpe run_27 : Matern l=.5 s_n=.001 b=0. nu=1.5 tfr=0.5 n_i=10, p=STP be=scikit-learn
 
-param_file = 'hp_values_gp_loc.csv'
+#param_file = 'hp_values_gp_loc.csv'
 
 # Encoder should take a value from the sampler and pass it to EasySurrogate es.methos.*_Surrogate().train(...) as kwargs
 encoder = uq.encoders.GenericEncoder(

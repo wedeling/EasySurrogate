@@ -13,7 +13,7 @@ with open(json_input, "r") as f:
 
 # input and output names
 features_names = ['te_value', 'ti_value', 'te_ddrho', 'ti_ddrho']
-target_names = ['te_transp_flux', 'ti_transp_flux']
+target_names = ['te_transp_flux', 'ti_transp_flux', 'te_transp_flux_std', 'ti_transp_flux_std']
 features_names_selected = [features_names[0], features_names[1], features_names[2], features_names[3]]
 target_name_selected = [target_names[1]]
 
@@ -21,7 +21,7 @@ target_name_selected = [target_names[1]]
 campaign = es.Campaign()
 
 # load HDF5 data frame
-data_frame = campaign.load_hdf5_data(file_path='../../../gem.hdf5')
+data_frame = campaign.load_hdf5_data(file_path='../../../gem1.hdf5')
 # TODO: get rid of hardcoding relative path
 
 # supervised training data set
