@@ -1,3 +1,4 @@
+from operator import le
 import numpy as np
 
 from sklearn.gaussian_process import GaussianProcessRegressor
@@ -8,7 +9,7 @@ import mogp_emulator as mogp
 from mogp_emulator import GaussianProcess, MultiOutputGP
 from mogp_emulator.MeanFunction import Coefficient, LinearMean, MeanFunction
 
-#from gaussian_process_regressor import GaussianProcess
+#from gaussian_process_regressor import GaussianProcessRegressor
 import easysurrogate as es
 
 class GP:
@@ -134,11 +135,18 @@ class GP:
             else:
                 self.noize_argument = 0.0
 
+            if isinstance(length_scale, list):
+                self.length_scale = length_scale
+            else:
+                self.length_scale = [length_scale]
+
+            """ 
             if 'length_scale' in kwargs:
                 self.length_scale = kwargs['length_scale']
             else:
                 self.length_scale = 1.0
-            
+            """
+
         else:
             raise NotImplementedError('Currently supporting only scikit-learn, mogp, and custom backend')
 
@@ -183,7 +191,8 @@ class GP:
             self.instance = mogp.fit_GP_MAP(self.instance)
         
         elif self.backend == 'local':
-            self.instance = es.methods.GaussianProcess(
+
+            self.instance = es.methods.GaussianProcessRegressor(
                                             kernel=self.kernel_argument, 
                                             process_type=self.process_type,
                                             sigma_n=float(self.noize_argument),

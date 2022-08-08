@@ -12,7 +12,7 @@ from scipy.optimize import minimize
 from scipy.special import gamma, kv
 from scipy.linalg import solve_triangular
 
-class GaussianProcess():
+class GaussianProcessRegressor():
 
     def __init__(self, **kwargs):
         """
@@ -21,6 +21,12 @@ class GaussianProcess():
 
         # Dimensionality of output
         self.n_y_dim = 1
+
+        # Dimensionality of input
+        if 'n_x_dim' not in kwargs:
+            self.n = 1
+        else:
+            self.n = kwargs['n_x_dim']
         
         # Kernel type
         if 'kernel' not in kwargs:
@@ -41,7 +47,7 @@ class GaussianProcess():
             self.sigma_n = kwargs['sigma_n']
 
         if 'l' not in kwargs:
-            self.l = 1.0
+            self.l = [1.]*self.n
         else:
             self.l = kwargs['l']
 
@@ -88,7 +94,20 @@ class GaussianProcess():
 
         return K
 
-    def fit_cov(self, X, covariance='regular'):
+    def calc_noise(self, X_train_var):
+        """
+        Returns
+        -------
+            Eta: array_like
+            Eta e R^[n x n] matrix of original X noise with X_var at the diagonal
+        """
+
+        Eta = np.diag(X_train_var) 
+        #TODO could be expressed using an additional kernel -> increases the search parameter space
+
+        return Eta
+
+    def fit_cov(self, X, X_var=False, covariance='regular'):
 
         #K = [self.kernel(i, j, sigma_f=self.sigma_f, l=self.l) for (i, j) in product(X, X)]
         #K = np.array(K).reshape(self.n, self.n)
@@ -96,22 +115,27 @@ class GaussianProcess():
         K = self.calc_covariance(X, self.kernel, self.sigma_f, self.l, self.n)
         self.set_covariance(K)
 
-        K_inv_tot = np.linalg.inv(self.K + (self.sigma_n ** 2) * np.eye(self.n))
+        if not X_var:
+            K_inv_tot = np.linalg.inv(self.K + (self.sigma_n ** 2) * np.eye(self.n))
+        else:
+            Eta = self.calc_noise(X_var)
+            K_inv_tot = np.linalg.inv(self.K + Eta)
         
         self.K_inv_tot = K_inv_tot
 
-    def optmize_hyperparameters(self, X_train, y_train, loss='r2'):
+    def optmize_hyperparameters(self, X_train, y_train, X_train_var=False, loss='r2'):
         """
         Optimizes hyperparamter values for minimum of R^2 score on training dataset OR perform MLE
-        #TODO has to optimise from MLE or MAP
+        #TODO has to optimise from MLE or MAP -> MLe done
         Uses scipy .minimize() to find the optimum
-        Reassigns the attributes of the object after optimization
+        Reassigns the attributes of the object after optimization; assumes the covariance matrix is calculated before the first iteration
         """
 
         self.X_train = X_train
         self.y_train = y_train
+        self.X_train_var = X_train_var
 
-        hp_curval = np.array([self.sigma_f, self.sigma_n, self.l, self.nu])
+        hp_curval = np.array([self.sigma_f, self.sigma_n, self.nu, *self.l,])
 
         if loss == 'nmll':
             loss_func = self.nmll_hp
@@ -123,21 +147,26 @@ class GaussianProcess():
         hp_optval = hp_optval_res.x
 
         self.sigma_f = hp_optval[0]
-        self.sigma_n = hp_optval[1]
-        self.l = hp_optval[2]       
-        self.nu = hp_optval[3]
+        self.sigma_n = hp_optval[1]     
+        self.nu = hp_optval[2]
+        self.l = hp_optval[3:]  
 
-        self.fit_cov(X_train)  
+        self.fit_cov(X_train, X_train_var)  
 
-    def fit(self, X, y):
+    def fit(self, X, y, X_var=False):
+        """
+        Sets the training data and associated attibutes.
+        Calculates the covariance matrix and calls for optimisation of hyperparameters
+        Name complies with scikit-learn and other packages standard .fit() method
+        """
 
         self.n = X.shape[0]
         self.X = X
         self.y = y
 
-        self.fit_cov(X)
+        self.fit_cov(X, X_var)
 
-        self.optmize_hyperparameters(X, y, 'nmll')
+        self.optmize_hyperparameters(X, y, X_var, loss='nmll')
 
     def predict_mean(self, X_new):
 
@@ -257,8 +286,10 @@ class GaussianProcess():
 
         self.sigma_f = hpval[0]
         self.sigma_n = hpval[1]
-        self.l = hpval[2]
-        self.fit_cov(self.X_train)
+        self.nu = hpval[2]
+        self.l = hpval[3:]
+
+        self.fit_cov(self.X_train, self.X_train_var)
         return self.r2_score(self.X_train, self.y_train)
 
     def score(self, X, y):
@@ -287,6 +318,7 @@ class GaussianProcess():
 
         K = self.calc_covariance(self.X, self.kernel, sigma_f, l, n)
         K_modif = K + sigma_n**2 * np.eye(n)
+        # TODO add option for heteroschedastic noise
 
         H = self.calc_H(self.X)
         
@@ -295,7 +327,7 @@ class GaussianProcess():
 
         return beta_hat
 
-    def neg_marg_log_likelihood(self, y, X, theta, sigma_n, beta=0., h=lambda x:x, likelihood='gaussian'):
+    def neg_marg_log_likelihood(self, y, X, theta, sigma_n, X_var=False, beta=0., h=lambda x:x, likelihood='gaussian'):
         """
         Returns:
             nmml: float
@@ -313,7 +345,7 @@ class GaussianProcess():
         
         # theta - parameters of the kernel (sigma_f, l, [nu])
         # use logarithm with base 2
-        # recalculate K based on X, and theta 
+        # recalculate K based on X and theta 
         # mind fast matrix inversion or decomposition -> np.linalg.cholesky
 
         n = len(y)
@@ -322,6 +354,7 @@ class GaussianProcess():
         #print('K={0}'.format(K)) ###DEBUG
 
         K_modif = K + (sigma_n**2) * np.eye(n)
+        # TODO add option for heteroschedastic noise
 
         H = self.calc_H(self.X)
 
@@ -385,10 +418,10 @@ class GaussianProcess():
 
         sigma_n = hpval[1]
         theta['sigma_f'] = hpval[0]
-        theta['l'] = hpval[2] 
-        theta['nu'] = hpval[3]
+        theta['nu'] = hpval[2]
+        theta['l'] = hpval[3:] 
 
-        self.fit_cov(self.X_train)
+        self.fit_cov(self.X_train, self.X_train_var)
 
         return self.neg_marg_log_likelihood(self.y_train, self.X_train, theta, sigma_n, likelihood=self.process_type)
 
@@ -418,7 +451,11 @@ def sq_exp_kernel_function(x, y, sigma_f=1., l=1.):
     Defines squared exponential kernel function
     """
 
-    kernel = sigma_f * np.exp(-(np.linalg.norm(x - y)**2) / (2 * l**2))
+    r1 = (x - y) / l # TODO check that if l is array we get element-wise division
+    r  = np.linalg.norm(r1)**2
+    kernel = sigma_f * np.exp(-0.5 * r)
+
+    #print('x={0};y={1};l={2};r1={3};r={4}'.format(x,y,l,r1,r)) ###DEBUG
     
     return kernel
 
@@ -427,21 +464,23 @@ def matern_kernel(x, y, sigma_f=1., l=1., nu=2.5):
     Defines Mater kernel function
     """
     
-    r = np.linalg.norm(x - y) 
-    m1 = np.sqrt(2 * nu) * r/ l
+    r1 = (x - y) / l
+    r  = np.linalg.norm(r1)
+
+    m1 = np.sqrt(2 * nu) * r
 
     if abs(nu - 0.5) < 1e-16:
         
-        kernel = (sigma_f**2) * np.exp(-r/l)
+        kernel = (sigma_f**2) * np.exp(-r)
 
     elif abs(nu - 1.5) < 1e-16:
         
-        m2 = np.sqrt(3) * r / l
+        m2 = np.sqrt(3) * r
         kernel = (sigma_f**2) * (1 + m2) * np.exp(-m2)
 
     elif abs(nu - 2.5) < 1e-16:
 
-        m2 = np.sqrt(5) * r / l
+        m2 = np.sqrt(5) * r
         kernel = (sigma_f**2) * (1 + m2 + (m2**2)/3.) * np.exp(-m2)
     
     else:
