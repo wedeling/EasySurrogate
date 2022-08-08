@@ -1,4 +1,3 @@
-from operator import le
 import numpy as np
 
 from sklearn.gaussian_process import GaussianProcessRegressor
@@ -44,13 +43,14 @@ class GP:
         self.kernel_argument = ''
         self.noize_argument = ''
 
-        if 'nu' not in kwargs:
-            self.nu = 2.5
-        else:
-            self.nu = kwargs['nu']
-
         # sciki-learn specific part
         if self.backend == 'scikit-learn':
+
+            if 'nu' not in kwargs:
+                self.nu = 2.5
+            else:
+                self.nu = kwargs['nu']
+
             self.kernel = ConstantKernel(constant_value=1.0,
                                          constant_value_bounds=(1e-6, 1e+6))
 
@@ -130,6 +130,11 @@ class GP:
             if bias:
                 pass
 
+            if 'nu' not in kwargs:
+                self.nu = 3
+            else:
+                self.nu = kwargs['nu']
+
             if isinstance(noize, float):
                 self.noize_argument = noize
             else:
@@ -138,7 +143,7 @@ class GP:
             if isinstance(length_scale, list):
                 self.length_scale = length_scale
             else:
-                self.length_scale = [length_scale]
+                self.length_scale = [length_scale]*self.n_in
 
             """ 
             if 'length_scale' in kwargs:

@@ -52,7 +52,7 @@ class GaussianProcessRegressor():
             self.l = kwargs['l']
 
         if 'nu' not in kwargs:
-            self.nu = 1
+            self.nu = 3
         else:
             self.nu = kwargs['nu']
 
@@ -87,7 +87,8 @@ class GaussianProcessRegressor():
         """
 
         K = [kernel(i, j, sigma_f=sigma_f, l=l) for (i, j) in product(X, X)]
-        #print('K[0][0]={0}, X[0]={1}, sigma_f={2}, l={3}'.format(K[0], X[0], sigma_f, l)) ###DEBUG
+        
+        print('K[0][0]={0}, X[0]={1}, sigma_f={2}, l={3}'.format(K[0], X[0], sigma_f, l)) ###DEBUG
         #print('k(X[0], X[0])={0} \n'.format(kernel(X[0], X[0], sigma_f, l))) ###DEBUG
 
         K = np.array(K).reshape(n, n)
@@ -137,12 +138,16 @@ class GaussianProcessRegressor():
 
         hp_curval = np.array([self.sigma_f, self.sigma_n, self.nu, *self.l,])
 
+        hp_bounds = [(1e-16, None), (1e-16, None), (1, None), *([(1e-16, None)]*len(self.l))]
+
+        hp_options = {'maxiter': 100}
+
         if loss == 'nmll':
             loss_func = self.nmll_hp
         else:
-            loss_func == self.r2_score
+            loss_func == self.r2_score_hp
 
-        hp_optval_res = minimize(loss_func, hp_curval, options={'maxiter': 100})
+        hp_optval_res = minimize(loss_func, hp_curval, bounds=hp_bounds, options=hp_options)
 
         hp_optval = hp_optval_res.x
 
@@ -393,20 +398,24 @@ class GaussianProcessRegressor():
               - 0.5 * n * np.log2(2 * np.pi) \
               - 0.5 * M2
 
+            mll = mll[0][0]
+
         # Option for STP
         elif likelihood == 'student_t':
 
             nu = theta['nu'] 
+            M1_m = ((nu - 2.) / nu) * M2
             mll = np.log2(gamma(0.5 * (nu + n))) \
                 - np.log2(gamma(0.5 * nu)) \
                 - 0.5 * n * np.log2(nu * np.pi) \
-                - 0.5 * np.log2(((nu - 2.) / nu) * M2) \
-                - (0.5 * (nu + n)) * np.log2(1. + ((nu - 2.) / nu) * M1 / nu)
+                - 0.5 * np.log2(M1_m) \
+                - (0.5 * (nu + n)) * np.log2(1. + M1_m / nu)
+                
                 # K should include nugget and be K + sigma_n**2 * I_n ? -> now it includes
         
         # Use to find argmax of MLE over {beta, theta, sigma_n} 
 
-        return -mll[0][0]
+        return -mll
 
     def nmll_hp(self, hpval):
         """
@@ -416,10 +425,15 @@ class GaussianProcessRegressor():
         
         theta = {}
 
-        sigma_n = hpval[1]
         theta['sigma_f'] = hpval[0]
+        sigma_n = hpval[1]
         theta['nu'] = hpval[2]
         theta['l'] = hpval[3:] 
+
+        self.sigma_f = theta['sigma_f'] 
+        self.sigma_n = sigma_n
+        self.nu = theta['nu']
+        self.l = theta['l']
 
         self.fit_cov(self.X_train, self.X_train_var)
 
@@ -451,7 +465,7 @@ def sq_exp_kernel_function(x, y, sigma_f=1., l=1.):
     Defines squared exponential kernel function
     """
 
-    r1 = (x - y) / l # TODO check that if l is array we get element-wise division
+    r1 = np.divide(x - y, l) # TODO check that if l is array we get element-wise division
     r  = np.linalg.norm(r1)**2
     kernel = sigma_f * np.exp(-0.5 * r)
 
@@ -464,7 +478,7 @@ def matern_kernel(x, y, sigma_f=1., l=1., nu=2.5):
     Defines Mater kernel function
     """
     
-    r1 = (x - y) / l
+    r1 = r1 = np.divide(x - y, l)
     r  = np.linalg.norm(r1)
 
     m1 = np.sqrt(2 * nu) * r
