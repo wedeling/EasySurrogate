@@ -47,7 +47,7 @@ param_search_vals = {
     "length_scale": [0.5, 1.0, 2.0],
     "noize": [1e-4, 1e-2, 1e-1], 
     "bias": [0., 1.0],
-    "nu": [0.5, 1.5, 2.5],
+    "nu": [0.5, 1.5, 2.5], # TODO: REFACTOR FOR UNAMBIGIOUS DIFFERENTIATION OF STUDENT-T NU AND MATERN NU
     "kernel": ['RBF', 'Matern'],
     "testset_fraction": [0.1, 0.5, 0.9],
     "n_iter" : [1, 5, 10],
