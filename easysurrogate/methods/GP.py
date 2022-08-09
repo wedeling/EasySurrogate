@@ -43,13 +43,18 @@ class GP:
         self.kernel_argument = ''
         self.noize_argument = ''
 
+        if 'nu_matern' not in kwargs:
+            self.nu_matern = 2.5
+        else:
+            self.nu_matern = kwargs['nu_matern']
+            
+        if 'nu_stp' not in kwargs:
+            self.nu_stp = 5
+        else:
+            self.nu_stp = kwargs['nu_stp']
+
         # sciki-learn specific part
         if self.backend == 'scikit-learn':
-
-            if 'nu' not in kwargs:
-                self.nu = 2.5
-            else:
-                self.nu = kwargs['nu']
 
             self.kernel = ConstantKernel(constant_value=1.0,
                                          constant_value_bounds=(1e-6, 1e+6))
@@ -58,7 +63,7 @@ class GP:
                 self.kernel *= Matern(length_scale=[length_scale] *
                                       self.n_in, length_scale_bounds=[length_scale *
                                                                       1e-4, length_scale *
-                                                                      1e+4], nu=self.nu)
+                                                                      1e+4], nu=self.nu_matern)
 
             elif kernel == 'RBF':
                 self.kernel *= RBF(length_scale=[length_scale] * self.n_in,
@@ -130,11 +135,6 @@ class GP:
             if bias:
                 pass
 
-            if 'nu' not in kwargs:
-                self.nu = 5
-            else:
-                self.nu = kwargs['nu']
-
             if isinstance(noize, float):
                 self.noize_argument = noize
             else:
@@ -202,7 +202,7 @@ class GP:
                                             process_type=self.process_type,
                                             sigma_n=float(self.noize_argument),
                                             l=self.length_scale,
-                                            nu=self.nu,
+                                            nu_stp=self.nu_stp,
                                                       )
             self.instance.fit(X,y)
         

@@ -51,10 +51,10 @@ class GaussianProcessRegressor():
         else:
             self.l = kwargs['l']
 
-        if 'nu' not in kwargs:
-            self.nu = 3
+        if 'nu_stp' not in kwargs:
+            self.nu_stp = 3
         else:
-            self.nu = kwargs['nu']
+            self.nu_stp = kwargs['nu_stp']
 
         # Type of the stochastic process
         if 'process_type' not in kwargs:
@@ -88,7 +88,7 @@ class GaussianProcessRegressor():
 
         K = [kernel(i, j, sigma_f=sigma_f, l=l) for (i, j) in product(X, X)]
         
-        #print('K[0][0]={0}, X[0]={1}, sigma_n={4}, sigma_f={2}, l={3}, nu={5}'.format(K[0], X[0], sigma_f, l, self.sigma_n, self.nu)) ###DEBUG
+        #print('K[0][0]={0}, X[0]={1}, sigma_n={4}, sigma_f={2}, l={3}, nu_stp={5}'.format(K[0], X[0], sigma_f, l, self.sigma_n, self.nu_stp)) ###DEBUG
         #print('k(X[0], X[0])={0} \n'.format(kernel(X[0], X[0], sigma_f, l))) ###DEBUG
 
         K = np.array(K).reshape(n, n)
@@ -139,7 +139,7 @@ class GaussianProcessRegressor():
         self.y_train = y_train
         self.X_train_var = X_train_var
 
-        hp_curval = np.array([self.sigma_f, self.sigma_n, self.nu, *self.l,])
+        hp_curval = np.array([self.sigma_f, self.sigma_n, self.nu_stp, *self.l,])
 
         hp_bounds = [(1e-16, 1e+16), (1e-16, 1e+16), (2, 1e+16), *([(1e-16, 1e+16)]*len(self.l))]
 
@@ -158,7 +158,7 @@ class GaussianProcessRegressor():
 
         self.sigma_f = hp_optval[0]
         self.sigma_n = hp_optval[1]     
-        #self.nu = hp_optval[2] # for now setting nu as fixes during optimisation
+        #self.nu_stp = hp_optval[2] # for now setting nu as fixes during optimisation
         self.l = hp_optval[3:]  
 
         self.fit_cov(X_train, X_train_var)  
@@ -253,7 +253,7 @@ class GaussianProcessRegressor():
         elif likelihood == 'student_t':
             
             M2 = np.dot(self.y.T, np.dot(self.K_inv_modif, self.y))
-            cov_f_star = np.dot((self.nu + M2 - 2)/(self.nu + self.n - 2), M1)
+            cov_f_star = np.dot((self.nu_stp + M2 - 2)/(self.nu_stp + self.n - 2), M1)
 
         var_f_star = np.diag(cov_f_star)
 
@@ -296,7 +296,7 @@ class GaussianProcessRegressor():
 
         self.sigma_f = hpval[0]
         self.sigma_n = hpval[1]
-        self.nu = hpval[2]
+        self.nu_stp = hpval[2]
         self.l = hpval[3:]
 
         self.fit_cov(self.X_train, self.X_train_var)
@@ -438,14 +438,14 @@ class GaussianProcessRegressor():
         sigma_n = hpval[1]
         
         #theta['nu'] = hpval[2] # fixing nu during optimisation
-        theta['nu'] = self.nu
+        theta['nu'] = self.nu_stp
 
         theta['l'] = hpval[3:] 
 
         """
         self.sigma_f = theta['sigma_f'] 
         self.sigma_n = sigma_n
-        self.nu = theta['nu']
+        self.nu_stp = theta['nu']
         self.l = theta['l']
         """
         #self.fit_cov(self.X_train, self.X_train_var)
