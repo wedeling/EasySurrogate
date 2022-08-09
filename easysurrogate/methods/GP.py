@@ -203,6 +203,7 @@ class GP:
                                             sigma_n=float(self.noize_argument),
                                             l=self.length_scale,
                                             nu_stp=self.nu_stp,
+                                            nu_matern=self.nu_matern,
                                                       )
             self.instance.fit(X,y)
         

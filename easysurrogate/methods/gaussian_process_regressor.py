@@ -56,6 +56,11 @@ class GaussianProcessRegressor():
         else:
             self.nu_stp = kwargs['nu_stp']
 
+        if 'nu_matern' not in kwargs:
+            self.nu_matern = 2.5
+        else:
+            self.nu_matern = kwargs['nu_matern']
+
         # Type of the stochastic process
         if 'process_type' not in kwargs:
             self.process_type = 'gaussian'
@@ -141,7 +146,7 @@ class GaussianProcessRegressor():
 
         hp_curval = np.array([self.sigma_f, self.sigma_n, self.nu_stp, *self.l,])
 
-        hp_bounds = [(1e-16, 1e+16), (1e-16, 1e+16), (2, 1e+16), *([(1e-16, 1e+16)]*len(self.l))]
+        hp_bounds = [(1e-16, 1e+6), (1e-16, 1e+4), (2, 1e+6), *([(1e-16, 1e+4)]*len(self.l))]
 
         hp_options = {'maxiter': 100}
 
@@ -364,11 +369,20 @@ class GaussianProcessRegressor():
 
         n = len(y)
 
-        K = self.calc_covariance(X, self.kernel, theta['sigma_f'], theta['l'], n)
+        K = self.calc_covariance(X, self.kernel, sigma_f=theta['sigma_f'], l=theta['l'], n=n)
+        
         #print('K={0}'.format(K)) ###DEBUG
+        
+        #print('K[0][0]={0}, X[0]={1}, sigma_n={4}, sigma_f={2}, l={3}, nu_stp={5}'.\
+        #    format(K[0][0], X[0], theta['sigma_f'], theta['l'], sigma_n, self.nu_stp)) ###DEBUG
 
-        K_modif = K + (sigma_n**2) * np.eye(n)
+        if not X_var:
+            K_modif = K + (sigma_n ** 2) * np.eye(n)
+        else:
+            Eta = self.calc_noise(X_var)
+            K_modif = K + Eta
         # TODO add option for heteroschedastic noise
+        #print('K_modif={0}'.format(K_modif)) ###DEBUG
 
         H = self.calc_H(self.X)
 
@@ -460,6 +474,12 @@ class GaussianProcessRegressor():
 ### Kernel functions implementations ###
 ########################################
 
+def set_nu(func, nu):
+    def wrapper(*args, **kwargs):
+        kwargs['nu'] = nu
+        return func(*args, **kwargs)   
+    return wrapper
+
 def gibbs_ns_kernel(x, y, l, l_func=lambda x: x):
     """
     Defines Gibbs kernel function
@@ -495,7 +515,7 @@ def matern_kernel(x, y, sigma_f=1., l=1., nu=2.5):
     Defines Mater kernel function
     """
     
-    r1 = r1 = np.divide(x - y, l)
+    r1 = np.divide(x - y, l)
     r  = np.linalg.norm(r1)
 
     m1 = np.sqrt(2 * nu) * r
