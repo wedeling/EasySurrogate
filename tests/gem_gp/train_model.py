@@ -6,6 +6,8 @@ import easysurrogate as es
 features_names = ['te_value', 'ti_value', 'te_ddrho', 'ti_ddrho']
 target_names = ['te_transp_flux', 'ti_transp_flux', 'te_transp_flux_std', 'ti_transp_flux_std']
 
+np.random.seed(42)
+
 SEQDES = False #True
 
 campaign = es.Campaign(load_state=False)
@@ -46,14 +48,22 @@ target = np.concatenate([data_frame[k] for k in target_name_selected if k in dat
 
 time_init_start = t.time()
 
-# TODO: form a surrogate model parameter dictionary and pass starting from here  
 gp_param = {
-            'bias': True,
-            'nonstationary': True,
+            'backend': 'local',
+            'process_type': 'student_t',
+            'kernel': 'RBF',
+            'length_scale': 0.5,  #[1.]*len(features),
+            'noize': 0.1,
+            'nu_matern': 0.5,
+            'nu_stp': 15,
+            'bias': 0.,
+            'nonstationary': False,
+            'test_frac': 0.5,
+            'n_iter': 1,
            }
 
 surrogate = es.methods.GP_Surrogate(
-                            backend='local',
+                            backend=gp_param['backend'],
                             n_in=len(features),
                                    )
 
@@ -61,18 +71,18 @@ print('Time to initialise the surrogate: {:.3} s'.format(t.time() - time_init_st
 
 time_train_start = t.time()
 
-# TODO pass hyperparameters here!
 surrogate.train(features, 
                 target, 
-                test_frac=0.5,
-                n_iter=10,
+                test_frac=gp_param['test_frac'],
+                n_iter=gp_param['n_iter'],
                 bias=gp_param['bias'],
-                length_scale=.5, #[1.]*len(features),
-                noize=0.0000001,
-                nu_stp=5,
+                length_scale=gp_param['length_scale'],
+                noize=gp_param['noize'],
+                nu_matern=gp_param['nu_matern'],
+                nu_stp=gp_param['nu_stp'],
                 nonstationary=gp_param['nonstationary'],
-                process_type='student_t',
-                kernel='Matern',
+                process_type=gp_param['process_type'],
+                kernel=gp_param['kernel'],
                )
 
 print('Time to train the surrogate: {:.3} s'.format(t.time() - time_train_start))
@@ -89,4 +99,3 @@ if SEQDES:
     surrogate.model.print_model_info()
     campaign.add_app(name='gp_campaign_sequential', surrogate=surrogate)
     campaign.save_state()
-

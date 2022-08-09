@@ -64,9 +64,6 @@ with open('hp_values_gp_loc.csv', 'w') as f:
     writer = csv.writer(f)
     writer.writerow(csv_header)
     writer.writerows(csv_vals)
-
-#TODO: IMPORTANT: when runnign for the large csv there is a failure due to not positive definite covariance matrix
-#  when training a Student-t (nu=1.5) model with local implementation, Matern kernel: run_143 !!!
  
 # If run on HPC, should be called from the scheduler like SLURM
 # for which an environmental variable HPC_EXECUTION should be specified

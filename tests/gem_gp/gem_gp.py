@@ -85,13 +85,17 @@ if SEQDES:
 analysis.get_regression_error(feat_test, targ_test, feat_train, targ_train, 
                               #index=[i for i in range(16)] #DEBUG
                              )
+# TODO for size of test dataset = 2, the 3-part plot shows 8(half) samples as test ones!
 
 # Cross-correlation functions
-r = analysis.auto_correlation_function(targ_test, 5)
-print('Te flux auto-correlation is {}'.format(r))
+"""
+print('targ_test={0}'.format(targ_test)) ###DEBUG
+r = analysis.auto_correlation_function(targ_test, len(targ_test) if len(targ_test) < 5 else 5)
+print('Ti transport flux auto-correlation is {}'.format(r))
 
-c = analysis.cross_correlation_function(targ_test, analysis.y_pred, 5)
-print('Te flux cross-correlation between simulated and predicted value is {}'.format(c))
+c = analysis.cross_correlation_function(targ_test, analysis.y_pred, len(targ_test) if len(targ_test) < 5 else 5)
+print('Ti transport flux cross-correlation between simulated and predicted value is {}'.format(c))
+"""
 
 # Distribution of output variables
 
