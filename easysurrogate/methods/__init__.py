@@ -14,4 +14,4 @@ from .CumSum_Layer import CumSum_Layer
 from .das_surrogate import DAS_Surrogate
 from .gp_surrogate import GP_Surrogate
 from .GP import GP
-from .gaussian_process_regressor import GaussianProcess
+from .gaussian_process_regressor import GaussianProcessRegressor

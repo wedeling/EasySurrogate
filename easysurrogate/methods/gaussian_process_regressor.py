@@ -319,16 +319,20 @@ class GaussianProcessRegressor():
         H = np.ones((n,n))
         return H
 
-    def beta_of_theta(self, y, sigma_n, sigma_f, l):
+    def beta_of_theta(self, y, sigma_n, sigma_f, l, X_var=False):
         """
-        Estimate optimal beta (coefficient vector for y = h(x)*beta+f(x)) for given parameters of kernel theata: (sigma_f, l) 
+        Estimate optimal beta ( coefficient vector for base model of y = h(x)*beta+f(x) ) for given parameters of kernel theta: (sigma_f, l) 
         """
 
         n = len(y)
 
         K = self.calc_covariance(self.X, self.kernel, sigma_f, l, n)
-        K_modif = K + sigma_n**2 * np.eye(n)
-        # TODO add option for heteroschedastic noise
+        
+        if not X_var:
+            K_modif = self.K + (self.sigma_n ** 2) * np.eye(self.n)
+        else:
+            Eta = self.calc_noise(X_var)
+            K_modif = self.K + Eta
 
         H = self.calc_H(self.X)
         
