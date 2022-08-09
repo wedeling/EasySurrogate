@@ -23,10 +23,11 @@ import easysurrogate as es
 
 # List all possible hyperparamters of a surrogate of this type, together with their types and default values
 params = {
-    "length_scale": {"type": "string", "min": 1e-6, "max": 1e+6, "default": "1.0"},
-    "noize": {"type": "string", "min": 1e-16, "max": 1e+3, "default": "1e-8"}, 
-    "bias": {"type": "string", "min": -1e+4, "max": 1e+4, "default": "0.0"},
-    "nu": {"type": "string", "min": 1e-4, "max": 1e+4, "default": "2.5"},
+    "length_scale": {"type": "string", "min": 1e-12, "max": 1e+12, "default": "1.0"},
+    "noize": {"type": "string", "min": 1e-16, "max": 1e+4, "default": "1e-8"}, 
+    "bias": {"type": "string", "min": -1e+6, "max": 1e+6, "default": "0.0"},
+    "nu_matern": {"type": "string", "min": 1e-6, "max": 1e+6, "default": "2.5"},
+    "nu_stp": {"type": "string", "min": 2, "max": 1e+16, "default": "5"},
     "kernel": {"type": "string", "default": "Matern"},
     "testset_fraction": {"type": "string", "min": 0.0, "max": 1.0, "default": "0.5"},
     "n_iter" : {"type": "string", "min": 1, "default": "10"},
@@ -42,12 +43,13 @@ params = {
 
 vary = {} #TODO maybe: use vary to create CSV for non-categorical hyperparameters
 
-# Defien values for each parameter, create its cartesian grid, save as csv
+# Define values for each parameter, create its cartesian grid, save as csv
 param_search_vals = {
     "length_scale": [0.5, 1.0, 2.0],
     "noize": [1e-4, 1e-2, 1e-1], 
     "bias": [0., 1.0],
-    "nu": [0.5, 1.5, 2.5], # TODO: REFACTOR FOR UNAMBIGIOUS DIFFERENTIATION OF STUDENT-T NU AND MATERN NU
+    "nu_matern": [0.5, 1.5, 2.5],
+    "nu_stp": [5, 10, 15],
     "kernel": ['RBF', 'Matern'],
     "testset_fraction": [0.1, 0.5, 0.9],
     "n_iter" : [1, 5, 10],
@@ -95,12 +97,12 @@ campaign = uq.Campaign(name=campaign_name, work_dir=work_dir)
 # For kernel parameters and test dataset fraction given above, the training gives best values for n_iter=10
 ### tp2csdpe run_6: 10; BUT single iteration could be enough
 
-param_file = 'hp_values_gp_stp.csv'
+#param_file = 'hp_values_gp_stp.csv'
 # Custom implementation: The relative test error of 0.048 for student_t process with Matern kernel, sigma_n=0.001, l=2.0
 # w4mixs15 run_28 : Matern l=2. s_n=.001 b=0. tfr=0.5 n_i=10, p=STP be=scikit-learn
 # tp2csdpe run_27 : Matern l=.5 s_n=.001 b=0. nu=1.5 tfr=0.5 n_i=10, p=STP be=scikit-learn
 
-#param_file = 'hp_values_gp_loc.csv'
+param_file = 'hp_values_gp_loc.csv'
 
 # Encoder should take a value from the sampler and pass it to EasySurrogate es.methos.*_Surrogate().train(...) as kwargs
 encoder = uq.encoders.GenericEncoder(

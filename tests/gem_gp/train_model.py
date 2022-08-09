@@ -69,10 +69,10 @@ surrogate.train(features,
                 bias=gp_param['bias'],
                 length_scale=.5, #[1.]*len(features),
                 noize=0.0000001,
-                nu=5,
+                nu_stp=5,
                 nonstationary=gp_param['nonstationary'],
                 process_type='student_t',
-                kernel='RBF',
+                kernel='Matern',
                )
 
 print('Time to train the surrogate: {:.3} s'.format(t.time() - time_train_start))

@@ -43,7 +43,8 @@ surrogate.train(
     length_scale=float(inputs['length_scale']),
     noize=float(inputs['noize']),
     bias=float(inputs['bias']),
-    nu=float(inputs['nu']),
+    nu_matern=float(inputs['nu_matern']),
+    nu_stp=float(inputs['nu_stp']),
     process_type=str(inputs['process_type'])
     )
 
