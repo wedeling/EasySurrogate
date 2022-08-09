@@ -88,7 +88,7 @@ class GaussianProcessRegressor():
 
         K = [kernel(i, j, sigma_f=sigma_f, l=l) for (i, j) in product(X, X)]
         
-        print('K[0][0]={0}, X[0]={1}, sigma_f={2}, l={3}'.format(K[0], X[0], sigma_f, l)) ###DEBUG
+        #print('K[0][0]={0}, X[0]={1}, sigma_n={4}, sigma_f={2}, l={3}, nu={5}'.format(K[0], X[0], sigma_f, l, self.sigma_n, self.nu)) ###DEBUG
         #print('k(X[0], X[0])={0} \n'.format(kernel(X[0], X[0], sigma_f, l))) ###DEBUG
 
         K = np.array(K).reshape(n, n)
@@ -117,12 +117,15 @@ class GaussianProcessRegressor():
         self.set_covariance(K)
 
         if not X_var:
-            K_inv_tot = np.linalg.inv(self.K + (self.sigma_n ** 2) * np.eye(self.n))
+            K_modif = self.K + (self.sigma_n ** 2) * np.eye(self.n)
         else:
             Eta = self.calc_noise(X_var)
-            K_inv_tot = np.linalg.inv(self.K + Eta)
+            K_modif = self.K + Eta
+                    
+        K_inv_modif = np.linalg.inv(K_modif)
         
-        self.K_inv_tot = K_inv_tot
+        self.K_modif = K_modif
+        self.K_inv_modif = K_inv_modif
 
     def optmize_hyperparameters(self, X_train, y_train, X_train_var=False, loss='r2'):
         """
@@ -138,7 +141,7 @@ class GaussianProcessRegressor():
 
         hp_curval = np.array([self.sigma_f, self.sigma_n, self.nu, *self.l,])
 
-        hp_bounds = [(1e-16, None), (1e-16, None), (1, None), *([(1e-16, None)]*len(self.l))]
+        hp_bounds = [(1e-16, 1e+16), (1e-16, 1e+16), (2, 1e+16), *([(1e-16, 1e+16)]*len(self.l))]
 
         hp_options = {'maxiter': 100}
 
@@ -151,9 +154,11 @@ class GaussianProcessRegressor():
 
         hp_optval = hp_optval_res.x
 
+        print('Optimisation results: [{0}] with the optimum at {1}'.format(hp_optval_res.message, hp_optval_res.x))
+
         self.sigma_f = hp_optval[0]
         self.sigma_n = hp_optval[1]     
-        self.nu = hp_optval[2]
+        #self.nu = hp_optval[2] # for now setting nu as fixes during optimisation
         self.l = hp_optval[3:]  
 
         self.fit_cov(X_train, X_train_var)  
@@ -169,7 +174,7 @@ class GaussianProcessRegressor():
         self.X = X
         self.y = y
 
-        self.fit_cov(X, X_var)
+        #self.fit_cov(X, X_var)
 
         self.optmize_hyperparameters(X, y, X_var, loss='nmll')
 
@@ -198,7 +203,7 @@ class GaussianProcessRegressor():
         
         K_star = np.array(K_star).reshape((n_star, self.n))
 
-        f_bar_star = np.dot(K_star, np.dot(self.K_inv_tot, self.y.reshape(self.n, self.n_y_dim)))
+        f_bar_star = np.dot(K_star, np.dot(self.K_inv_modif, self.y.reshape(self.n, self.n_y_dim)))
         
         return f_bar_star
 
@@ -239,7 +244,7 @@ class GaussianProcessRegressor():
 
         K_star = np.array(K_star).reshape((n_star, self.n))
 
-        M1 = K_star2 - np.dot(K_star, np.dot(self.K_inv_tot, K_star.T))
+        M1 = K_star2 - np.dot(K_star, np.dot(self.K_inv_modif, K_star.T))
 
         if likelihood == 'gaussian':
             
@@ -247,7 +252,7 @@ class GaussianProcessRegressor():
 
         elif likelihood == 'student_t':
             
-            M2 = np.dot(self.y.T, np.dot(self.K_inv_tot, self.y))
+            M2 = np.dot(self.y.T, np.dot(self.K_inv_modif, self.y))
             cov_f_star = np.dot((self.nu + M2 - 2)/(self.nu + self.n - 2), M1)
 
         var_f_star = np.diag(cov_f_star)
@@ -383,8 +388,9 @@ class GaussianProcessRegressor():
 
             M12 = np.dot(np.linalg.inv(K_modif), M11)
             M2 = np.log2(np.linalg.det(K_modif))
-        
+
         M1 = np.dot(M11.T, M12)
+        M1 = M1[0][0]
 
         # TODO: Think of better polymorphism with Python: 
         # - different function passed
@@ -398,23 +404,25 @@ class GaussianProcessRegressor():
               - 0.5 * n * np.log2(2 * np.pi) \
               - 0.5 * M2
 
-            mll = mll[0][0]
-
         # Option for STP
         elif likelihood == 'student_t':
 
             nu = theta['nu'] 
-            M1_m = ((nu - 2.) / nu) * M2
-            mll = np.log2(gamma(0.5 * (nu + n))) \
+            alpha = ((nu - 2.) / nu)
+            beta = 0.5 * (nu + n)
+
+            mll = np.log2(gamma(beta)) \
                 - np.log2(gamma(0.5 * nu)) \
                 - 0.5 * n * np.log2(nu * np.pi) \
-                - 0.5 * np.log2(M1_m) \
-                - (0.5 * (nu + n)) * np.log2(1. + M1_m / nu)
+                - 0.5 * np.log2(alpha) \
+                - 0.5 * M2 \
+                - beta * np.log2(1. + alpha * M1 / nu)
                 
                 # K should include nugget and be K + sigma_n**2 * I_n ? -> now it includes
         
         # Use to find argmax of MLE over {beta, theta, sigma_n} 
 
+        #print('nmll={0}'.format(-mll)) ###DEBUG
         return -mll
 
     def nmll_hp(self, hpval):
@@ -426,16 +434,21 @@ class GaussianProcessRegressor():
         theta = {}
 
         theta['sigma_f'] = hpval[0]
+        
         sigma_n = hpval[1]
-        theta['nu'] = hpval[2]
+        
+        #theta['nu'] = hpval[2] # fixing nu during optimisation
+        theta['nu'] = self.nu
+
         theta['l'] = hpval[3:] 
 
+        """
         self.sigma_f = theta['sigma_f'] 
         self.sigma_n = sigma_n
         self.nu = theta['nu']
         self.l = theta['l']
-
-        self.fit_cov(self.X_train, self.X_train_var)
+        """
+        #self.fit_cov(self.X_train, self.X_train_var)
 
         return self.neg_marg_log_likelihood(self.y_train, self.X_train, theta, sigma_n, likelihood=self.process_type)
 
@@ -465,7 +478,7 @@ def sq_exp_kernel_function(x, y, sigma_f=1., l=1.):
     Defines squared exponential kernel function
     """
 
-    r1 = np.divide(x - y, l) # TODO check that if l is array we get element-wise division
+    r1 = np.divide(x - y, l)
     r  = np.linalg.norm(r1)**2
     kernel = sigma_f * np.exp(-0.5 * r)
 

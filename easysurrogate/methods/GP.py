@@ -131,7 +131,7 @@ class GP:
                 pass
 
             if 'nu' not in kwargs:
-                self.nu = 3
+                self.nu = 5
             else:
                 self.nu = kwargs['nu']
 
