@@ -141,7 +141,7 @@ class GP_Surrogate(Campaign):
             length_scale=self.length_scale,
             backend=self.backend,
             process_type=self.process_type,
-            nu=self.nu_matern,
+            nu_matern=self.nu_matern,
             nu_stp=self.nu_stp
                                   ) 
 

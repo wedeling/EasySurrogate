@@ -6,6 +6,8 @@ Author: Y. Yudin
 """
 
 import numpy as np
+import functools
+
 from itertools import product
 from scipy.optimize import minimize
 
@@ -27,13 +29,6 @@ class GaussianProcessRegressor():
             self.n = 1
         else:
             self.n = kwargs['n_x_dim']
-        
-        # Kernel type
-        if 'kernel' not in kwargs:
-            self.kernel_name = 'sq_exp'
-        else:
-            self.kernel_name = kwargs['kernel']
-        self.set_kernel(self.kernel_name)
 
         # Default values of kernel parameters
         if 'sigma_f' not in kwargs:
@@ -61,11 +56,18 @@ class GaussianProcessRegressor():
         else:
             self.nu_matern = kwargs['nu_matern']
 
-        # Type of the stochastic process
+        # Set the type of the stochastic process
         if 'process_type' not in kwargs:
             self.process_type = 'gaussian'
         else:
             self.process_type = kwargs['process_type']
+
+        # Set the kernel type
+        if 'kernel' not in kwargs:
+            self.kernel_name = 'sq_exp'
+        else:
+            self.kernel_name = kwargs['kernel']
+        self.set_kernel(self.kernel_name)
 
     def set_kernel(self, kernel='sq_exp', **kwargs):
         """
@@ -75,7 +77,8 @@ class GaussianProcessRegressor():
         if kernel == 'gibbs':
             self.kernel = gibbs_ns_kernel
         elif kernel == 'matern':
-            self.kernel = matern_kernel
+            #self.kernel = matern_kernel
+             self.kernel = functools.partial(matern_kernel, nu=self.nu_matern)
         else:
             self.kernel = sq_exp_kernel_function
 
@@ -477,7 +480,8 @@ class GaussianProcessRegressor():
 def set_nu(func, nu):
     def wrapper(*args, **kwargs):
         kwargs['nu'] = nu
-        return func(*args, **kwargs)   
+        val = func(*args, **kwargs)  
+        return val
     return wrapper
 
 def gibbs_ns_kernel(x, y, l, l_func=lambda x: x):

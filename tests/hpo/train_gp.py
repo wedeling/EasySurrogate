@@ -48,12 +48,12 @@ vary = {} #TODO maybe: use vary to create CSV for non-categorical hyperparameter
 param_search_vals = {
     "length_scale": [0.5, 1.0, 2.0],
     "noize": [1e-4, 1e-2, 1e-1], 
-    "bias": [0., 1.0], # currently not used by local implementation
+    "bias": [0., 1.0], # cCURRENTLY not used by local implementation
     "nu_matern": [0.5, 1.5, 2.5], # not used by RBF and non-Matern kernels
     "nu_stp": [5, 10, 15], # not used for GPR (normal likelihood)
     "kernel": ['RBF', 'Matern'], 
     #"testset_fraction": [0.1, 0.5, 0.9], # does not reflect best model
-    "n_iter" : [1, 5, 10], # not used by local implementation
+    "n_iter" : [1, 5, 10], # CURRENTLY not used by local implementation
     "process_type" : ['gaussian', 'student_t'], # not used by scikit-learn implementation
     "backend" : ['local', 'scikit-learn'],
 }
