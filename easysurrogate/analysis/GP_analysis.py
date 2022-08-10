@@ -10,7 +10,6 @@ from scipy import stats
 from sklearn.metrics import mean_squared_error as mse
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-
 class GP_analysis(BaseAnalysis):
     """
     GP analysis class
@@ -31,7 +30,7 @@ class GP_analysis(BaseAnalysis):
         plt.xlabel('Run number')
         plt.ylabel('Results of {}'.format(name))
         plt.legend()
-        plt.grid('major')
+        plt.grid('both')
         plt.yscale("symlog")
         plt.savefig('gp_abs_err.png')
         plt.close()
@@ -48,11 +47,6 @@ class GP_analysis(BaseAnalysis):
 
         plt.ioff()
         plt.title(name)
-        plt.xlabel('Original values')
-        plt.ylabel('Predicted values')
-        plt.grid('both')
-        plt.yscale('log')
-        plt.xscale('log')
 
         if y_test_pred_var is not None:
             plt.errorbar(
@@ -67,6 +61,11 @@ class GP_analysis(BaseAnalysis):
 
         plt.plot(y_test_orig, y_test_orig, 'k--')
 
+        plt.grid(True, which='both', axis='both')
+        plt.xlabel('Original values')
+        plt.ylabel('Predicted values')
+        plt.yscale('log')
+        plt.xscale('log')
         plt.legend()
         plt.savefig('pred_vs_orig.png')
         plt.close()
@@ -88,21 +87,25 @@ class GP_analysis(BaseAnalysis):
         y_orig[x_train] = y_train_orig
         y_orig[x_test] = y_test_orig
 
-        # --- Plotting prediction vs original test data
+        # --- 1) Plotting prediction vs original test data
         plt.subplot(311)
-        plt.title('{} training sample of size: {}'.format(type_train, str(train_n)))
 
+        plt.title('{} training sample of size: {}'.format(type_train, str(train_n)))
         plt.xlabel('Run number')
         plt.ylabel('Prediction of {}'.format(name))
-        plt.grid(which='both')
-        #plt.tight_layout()
-        #plt.yticks(axis='y')
+
         plt.yscale("symlog")
 
         plt.plot(x_test, y_test_orig, '.', label='Simulation, test', color='red')
         plt.plot(x_train, y_train_orig, '*', label='Simulation, train', color='green')
 
         if y_var_pred_test is not None and y_var_pred_train is not None:
+            
+            #y_var_pred = np.concatenate([y_var_pred_test, y_var_pred_train])
+            #plot_ticks = np.logspace((y_pred-2*y_var_pred).min(), (y_pred+2*y_var_pred).max(), num=8)
+            plot_ticks = np.logspace(np.log10((y_test_orig-2*y_var_pred_test).min()), np.log10((y_test_orig+2*y_var_pred_test).max()), num=8)
+            #print('plot_ticks={0}'.format(plot_ticks)) ###DEBUG
+
             plt.errorbar(
                 x=x_test,
                 y=y_test_pred,
@@ -110,6 +113,7 @@ class GP_analysis(BaseAnalysis):
                 y_var_pred_test,
                 label='GP metamodel, test',
                 fmt='+')
+            
             plt.errorbar(
                 x=x_train,
                 y=y_train_pred,
@@ -118,34 +122,45 @@ class GP_analysis(BaseAnalysis):
                 label='GP metamodel, train',
                 fmt='+')
         else:
+            
             plt.plot(x_test, y_test_pred, '.', label='GP metamodel', color=out_color)
             plt.plot(x_train, y_train_pred, '*', label='GP metamodel', color=out_color)
-        plt.legend()
+            
+            plot_ticks = np.logspace(y_pred.min(), y_pred.max(), num=8)
+        
 
-        # --- Plotting absolute errors
+        plt.legend()
+        plt.grid(True, which='both', axis='both')
+        plt.yticks(ticks=plot_ticks)
+        #plt.tight_layout()
+
+        # --- 2) Plotting absolute errors
         plt.subplot(312)
 
-        plt.grid()
         plt.yscale("symlog")
         plt.xlabel('Run number')
         plt.ylabel('Error')
 
         err_abs = y_pred - y_orig
 
-        plt.plot(err_abs, '.', color=out_color)
+        plt.plot(err_abs, '.', color=out_color, label='y_pred - y_orig')
+        plt.grid()
         plt.legend()
 
         # print('Indices of test data where absolute error is larger than {} : {} '
         #       .format(2e5, np.where(abs(err_abs) > 2e5)[0]))
 
-        # --- Plotting relative errors
+        # --- 3) Plotting relative errors
         plt.subplot(313)
-        plt.plot(np.fabs(y_pred - y_orig) / y_orig * 100, '.', color=out_color)
+        plt.plot(np.fabs((y_pred - y_orig) / y_orig) * 100, '.', color=out_color, label='|(y_p - y_o) / y_o|*100%')
         plt.grid()
         plt.xlabel('Run number')
         plt.ylabel('Relative error (%)')
         plt.yscale("log")
-        plt.tight_layout()
+        plt.legend()
+        #plt.tight_layout()
+
+        # Finishing
         plt.savefig(
             output_folder +
             'GP_prediction_' +
@@ -157,7 +172,6 @@ class GP_analysis(BaseAnalysis):
             '.png',
             bbox_inches='tight',
             dpi=100)
-        plt.legend()
         plt.clf()
         plt.close()
 
@@ -338,8 +352,10 @@ class GP_analysis(BaseAnalysis):
   
         if flag_plot:
   
-            self.plot_err(err_rel[:, 0], y_test[:, 0],
-                      'rel. err. of prediction mean for test dataset in Ti fluxes')
+            self.plot_err(error=err_rel[:, 0],
+                          name='rel. err. of prediction mean for test dataset in Ti fluxes',
+                          #original=y_test[:, 0],
+                         )
             
             self.plot_predictions_vs_groundtruth(y_test_plot[:, 0], y_pred[:y_t_len, 0], y_var_pred.reshape(y_pred[:y_t_len, 0].shape))
 
