@@ -16,6 +16,7 @@ from qcg.pilotjob.executor_api.qcgpj_executor import QCGPJExecutor
 from pprint import pprint
 from itertools import product
 import csv
+import numpy as np
 
 import easysurrogate as es
 
@@ -36,7 +37,7 @@ params = {
 }
 # looks like EasyVVUQ checks for a need in a default value after sampler is initialized 
 
-# TODO should be read from CSV; potentially: create a CSV from this script
+# TODO should be read from CSV
 # TODO force CSVSampler to interpret entries with correct type
 
 # For Grid Search: form carthesian product of variables
@@ -47,23 +48,54 @@ vary = {} #TODO maybe: use vary to create CSV for non-categorical hyperparameter
 param_search_vals = {
     "length_scale": [0.5, 1.0, 2.0],
     "noize": [1e-4, 1e-2, 1e-1], 
-    "bias": [0., 1.0],
-    "nu_matern": [0.5, 1.5, 2.5],
-    "nu_stp": [5, 10, 15],
-    "kernel": ['RBF', 'Matern'],
-    "testset_fraction": [0.1, 0.5, 0.9],
-    "n_iter" : [1, 5, 10],
-    "process_type" : ['gaussian', 'student_t'],
+    "bias": [0., 1.0], # currently not used by local implementation
+    "nu_matern": [0.5, 1.5, 2.5], # not used by RBF and non-Matern kernels
+    "nu_stp": [5, 10, 15], # not used for GPR (normal likelihood)
+    "kernel": ['RBF', 'Matern'], 
+    #"testset_fraction": [0.1, 0.5, 0.9], # does not reflect best model
+    "n_iter" : [1, 5, 10], # not used by local implementation
+    "process_type" : ['gaussian', 'student_t'], # not used by scikit-learn implementation
     "backend" : ['local', 'scikit-learn'],
 }
 
 csv_header = [k for k in param_search_vals.keys()]
 csv_vals = [x for x in product(*[v for (k,v) in param_search_vals.items()])]
 
+def clean_grid_by_rules(header, vals, def_vals):
+
+    # Construct list of dictionaries of with keys taken from header and values taken from rowns of vals
+    data = [{header[i]:vals[j][i] for i in range(len(header))} for j in range(len(vals))]
+
+    vals_new = []
+    
+    for d in data:
+        if d['backend'] == 'local' and np.abs(d['bias'] - float(def_vals['bias'])) > 1e-10:
+            continue
+        if d['kernel'] != 'Matern' and np.abs(d['nu_matern'] - float(def_vals['nu_matern'])) > 1e-10:
+            continue
+        if d['process_type'] != 'student_t' and d['nu_stp'] != int(def_vals['nu_stp']):
+            continue
+        if d['backend'] == 'local' and d['n_iter'] != int(def_vals['n_iter']):
+            continue
+        if d['backend'] == 'scikit-learn' and d['process_type'] != def_vals['process_type']:
+            continue
+
+        vals_new.append([x for k,x in d.items()])
+
+    return vals_new
+
+csv_defaults = {k:v['default'] for k,v in params.items()}
+csv_vals_new = clean_grid_by_rules(csv_header, csv_vals, csv_defaults)
+
 with open('hp_values_gp_loc.csv', 'w') as f:
     writer = csv.writer(f)
     writer.writerow(csv_header)
     writer.writerows(csv_vals)
+
+with open('hp_values_gp_loc_short.csv', 'w') as f:
+    writer = csv.writer(f)
+    writer.writerow(csv_header)
+    writer.writerows(csv_vals_new)
  
 # If run on HPC, should be called from the scheduler like SLURM
 # for which an environmental variable HPC_EXECUTION should be specified
@@ -99,7 +131,7 @@ campaign = uq.Campaign(name=campaign_name, work_dir=work_dir)
 # w4mixs15 run_28 : Matern l=2. s_n=.001 b=0. tfr=0.5 n_i=10, p=STP be=scikit-learn
 # tp2csdpe run_27 : Matern l=.5 s_n=.001 b=0. nu=1.5 tfr=0.5 n_i=10, p=STP be=scikit-learn
 
-param_file = 'hp_values_gp_loc.csv'
+param_file = 'hp_values_gp_loc_short.csv'
 
 # Encoder should take a value from the sampler and pass it to EasySurrogate es.methos.*_Surrogate().train(...) as kwargs
 encoder = uq.encoders.GenericEncoder(
