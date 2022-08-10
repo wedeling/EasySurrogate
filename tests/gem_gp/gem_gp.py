@@ -39,7 +39,7 @@ target_name_selected = target_names
 
 # 5) Case from single flux tube GEM UQ campaign (4 parameters, tensor product of grid with 2 points per DoF)
 
-saved_model_file_path = 'model_val_08082022.pickle' 
+saved_model_file_path = 'model_val_10082022.pickle' 
 #'model_biased_nonst_05train_10062022.pickle' 
 #TODO: noize+const+dotproduct apparently leads to overfitting - trying to have higher variance of the model is probably more beneficial
 #'model_nonst_05train_10062022.pickle'
@@ -85,7 +85,6 @@ if SEQDES:
 analysis.get_regression_error(feat_test, targ_test, feat_train, targ_train, 
                               #index=[i for i in range(16)] #DEBUG
                              )
-# TODO for size of test dataset = 2, the 3-part plot shows 8(half) samples as test ones!
 
 # Cross-correlation functions
 """

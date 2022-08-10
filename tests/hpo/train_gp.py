@@ -25,7 +25,7 @@ import easysurrogate as es
 # List all possible hyperparamters of a surrogate of this type, together with their types and default values
 params = {
     "length_scale": {"type": "string", "min": 1e-12, "max": 1e+12, "default": "1.0"},
-    "noize": {"type": "string", "min": 1e-16, "max": 1e+4, "default": "1e-8"}, 
+    "noize": {"type": "string", "min": 1e-16, "max": 1e+4, "default": "1e-3"}, 
     "bias": {"type": "string", "min": -1e+6, "max": 1e+6, "default": "0.0"},
     "nu_matern": {"type": "string", "min": 1e-6, "max": 1e+6, "default": "2.5"},
     "nu_stp": {"type": "string", "min": 2, "max": 1e+16, "default": "5"},
@@ -67,7 +67,7 @@ def clean_grid_by_rules(header, vals, def_vals):
     data = [{header[i]:vals[j][i] for i in range(len(header))} for j in range(len(vals))]
 
     vals_new = []
-    
+
     for d in data:
         if d['backend'] == 'local' and np.abs(d['bias'] - float(def_vals['bias'])) > 1e-10:
             continue
@@ -81,6 +81,8 @@ def clean_grid_by_rules(header, vals, def_vals):
             continue
 
         vals_new.append([x for k,x in d.items()])
+
+    print('> Using {0} different parameter values combinations insted of full {1}'.format(len(vals_new), len(vals)))
 
     return vals_new
 
@@ -107,7 +109,8 @@ work_dir = ''
 
 campaign = uq.Campaign(name=campaign_name, work_dir=work_dir)
 
-# Optimising hyperparamters for GEM data 
+# Optimising hyperparamters for GEM data
+# Here listing different test cases for different combinations of varied parameters
 
 # A file specifying a table of hyperparameter values (or their ranges/distributions) to pass for a number of ML models
 # Mind: delimeter is ',' w/o spaces
@@ -215,6 +218,5 @@ analysis.analyse(results)
 minrowidx = collation_results['test_error'].idxmin()
 print("Best model so far: {0}".format(collation_results.iloc[minrowidx,:]))
 
-# TODO check if error is read as a string
 #test_error = results.describe('test_error')
 #print(test_error)

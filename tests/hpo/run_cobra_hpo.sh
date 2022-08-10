@@ -40,6 +40,13 @@ export HPC_EXECUTION=1
 echo -e '> In this run: use ExecuteLocal only + QCGPJ pool + '$SLURM_NNODES' nodes /n'
 
 ####################################
+
+# Update the package
+
+cd ../..
+pysetup
+cd tests/hpo
+
 # Run the training code
 
 python3 train_gp.py > hpo-gpr-log.${SLURM_JOBID}

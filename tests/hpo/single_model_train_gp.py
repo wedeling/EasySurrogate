@@ -37,6 +37,7 @@ surrogate = es.methods.GP_Surrogate(
     n_in=len(features_names_selected),
     )
 
+#TODO mind if need to restore deafault value for a parameter
 surrogate.train(
     features, 
     target,  
@@ -60,13 +61,13 @@ campaign.save_state(file_path='model.pickle')
 feat_train, targ_train, feat_test, targ_test = campaign.surrogate.feat_eng.\
     get_training_data(features, target, index=campaign.surrogate.feat_eng.train_indices)
 
-analysis = es.analysis.GP_analysis(gp_surrogate=surrogate)
+analysis = es.analysis.GP_analysis(gp_surrogate=campaign.surrogate)
 err_test_abs, err_test,= analysis.get_regression_error(
     feat_test,
     targ_test,
     feat_train,
     targ_train,
-    flag_plot=False,
+    flag_plot=True,
     )
 
 err_test_tot = float(np.abs(err_test).mean())
@@ -78,9 +79,5 @@ with open('output.json', 'w') as of:
     of.write(json_string)
 
 print('Outputs: {0}'.format(output))
-
-# GPR Analysis
-analysis_gp = es.analysis.GP_analysis(campaign.surrogate)
-analysis_gp.get_regression_error(feat_test, targ_test, feat_train, targ_train)
 
 print('> Exiting the training script')

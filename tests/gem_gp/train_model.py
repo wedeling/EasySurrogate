@@ -51,7 +51,7 @@ time_init_start = t.time()
 gp_param = {
             'backend': 'local',
             'process_type': 'student_t',
-            'kernel': 'RBF',
+            'kernel': 'Matern',
             'length_scale': 0.5,  #[1.]*len(features),
             'noize': 0.1,
             'nu_matern': 0.5,
@@ -88,7 +88,7 @@ surrogate.train(features,
 print('Time to train the surrogate: {:.3} s'.format(t.time() - time_train_start))
 surrogate.model.print_model_info()
 
-save_model_file_name = 'model_val_08082022.pickle'
+save_model_file_name = 'model_val_10082022.pickle'
 
 campaign.add_app(name='gp_campaign', surrogate=surrogate)
 campaign.save_state(file_path=save_model_file_name)
