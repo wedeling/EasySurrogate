@@ -27,11 +27,14 @@ class GP_Surrogate(Campaign):
         self.y_scaler = StandardScaler()
         self.backend = backend
 
-        if 'noize' in kwargs: #TODO: put all model-related parameters EITHER in constructor OR in .train() method
+        #TODO: put all model-related parameters EITHER in constructor OR in .train() method
+        """
+        if 'noize' in kwargs: 
             self.noize = kwargs['noize']
         else:
             self.noize = False
-
+        """
+        
         if 'n_in' in kwargs:
             self.n_in = kwargs['n_in']
         else:
@@ -41,11 +44,13 @@ class GP_Surrogate(Campaign):
             self.n_out = kwargs['n_out']
         else:
             self.n_out = 1
-        
-        #if 'process_type' in kwargs:
-        #    self.process_type = kwargs['process_type']
-        #else:
-        #    self.process_type = 'gaussian'
+
+        """
+        if 'process_type' in kwargs:
+            self.process_type = kwargs['process_type']
+        else:
+            self.process_type = 'gaussian'
+        """
 
     ############################
     # START COMMON SUBROUTINES #

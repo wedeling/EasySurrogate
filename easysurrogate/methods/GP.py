@@ -31,7 +31,8 @@ class GP:
             backend='scikit-learn',
             standardize_X=True,
             standardize_y=True,
-            **kwargs): #TODO pass a dictionary as a parameter
+            **kwargs): 
+        #TODO pass a dictionary as a parameter
 
         self.n_in = n_in
         self.n_out = n_out

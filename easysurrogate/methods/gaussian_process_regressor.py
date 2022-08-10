@@ -135,7 +135,7 @@ class GaussianProcessRegressor():
     def optmize_hyperparameters(self, X_train, y_train, X_train_var=False, loss='r2'):
         """
         Optimizes hyperparamter values for minimum of R^2 score on training dataset OR perform MLE
-        #TODO has to optimise from MLE or MAP -> MLe done
+        #TODO has to optimise from MLE or MAP -> MLE done
         Uses scipy .minimize() to find the optimum
         Reassigns the attributes of the object after optimization; assumes the covariance matrix is calculated before the first iteration
         """
