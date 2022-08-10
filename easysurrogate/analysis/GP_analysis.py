@@ -38,7 +38,8 @@ class GP_analysis(BaseAnalysis):
     def plot_predictions_vs_groundtruth(self,
                                         y_test_orig, 
                                         y_test_pred, 
-                                        y_test_pred_var,
+                                        y_test_pred_var=None,
+                                        y_test_orig_var=None,
                                         name='Predictions against ground truth values'
                                        ):
         """
@@ -48,15 +49,36 @@ class GP_analysis(BaseAnalysis):
         plt.ioff()
         plt.title(name)
 
-        if y_test_pred_var is not None:
+        if y_test_pred_var is not None and y_test_orig_var is not None:
+
             plt.errorbar(
                 x=y_test_orig,
                 y=y_test_pred,
-                yerr=1.96 *
-                y_test_pred_var,
+                yerr=1.96 * y_test_pred_var,
+                xerr=1.96 * y_test_orig_var,
+                label='variance of GPR model on test and train data',
+                fmt='+')
+
+        elif y_test_pred_var is not None and y_test_orig_var is None:
+
+            plt.errorbar(
+                x=y_test_orig,
+                y=y_test_pred,
+                yerr=1.96 * y_test_pred_var,
                 label='variance of GPR model on test data',
                 fmt='+')
+
+        elif y_test_pred_var is None and y_test_orig_var is not None:
+
+            plt.errorbar(
+                x=y_test_orig,
+                y=y_test_pred,
+                xerr=1.96 * y_test_orig_var,
+                label='variance of GPR model on train data',
+                fmt='+')
+
         else:
+
             plt.plot(y_test_orig, y_test_pred, label='pred-s vs g.t.', fmt='.')
 
         plt.plot(y_test_orig, y_test_orig, 'k--')
@@ -67,6 +89,7 @@ class GP_analysis(BaseAnalysis):
         plt.yscale('log')
         plt.xscale('log')
         plt.legend()
+        plt.tight_layout()
         plt.savefig('pred_vs_orig.png')
         plt.close()
 
@@ -104,7 +127,6 @@ class GP_analysis(BaseAnalysis):
             #y_var_pred = np.concatenate([y_var_pred_test, y_var_pred_train])
             #plot_ticks = np.logspace((y_pred-2*y_var_pred).min(), (y_pred+2*y_var_pred).max(), num=8)
             plot_ticks = np.logspace(np.log10((y_test_orig-2*y_var_pred_test).min()), np.log10((y_test_orig+2*y_var_pred_test).max()), num=8)
-            #print('plot_ticks={0}'.format(plot_ticks)) ###DEBUG
 
             plt.errorbar(
                 x=x_test,
@@ -357,7 +379,12 @@ class GP_analysis(BaseAnalysis):
                           #original=y_test[:, 0],
                          )
             
-            self.plot_predictions_vs_groundtruth(y_test_plot[:, 0], y_pred[:y_t_len, 0], y_var_pred.reshape(y_pred[:y_t_len, 0].shape))
+            self.plot_predictions_vs_groundtruth(
+                y_test_plot[:, 0], 
+                y_pred[:y_t_len, 0], 
+                y_var_pred.reshape(y_pred[:y_t_len, 0].shape),
+                #y_var_pred_train.reshape(y_pred_train[:,0].shape),
+                                                )
 
         train_n = self.gp_surrogate.feat_eng.n_samples - y_t_len
 
