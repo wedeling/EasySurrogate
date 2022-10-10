@@ -86,8 +86,8 @@ class GP_analysis(BaseAnalysis):
         plt.grid(True, which='both', axis='both')
         plt.xlabel('Original values')
         plt.ylabel('Predicted values')
-        plt.yscale('log')
-        plt.xscale('log')
+        plt.yscale('symlog')
+        plt.xscale('symlog')
         plt.legend()
         plt.tight_layout()
         plt.savefig('pred_vs_orig.png')
@@ -127,6 +127,16 @@ class GP_analysis(BaseAnalysis):
             #y_var_pred = np.concatenate([y_var_pred_test, y_var_pred_train])
             #plot_ticks = np.logspace((y_pred-2*y_var_pred).min(), (y_pred+2*y_var_pred).max(), num=8)
             plot_ticks = np.logspace(np.log10((y_test_orig-2*y_var_pred_test).min()), np.log10((y_test_orig+2*y_var_pred_test).max()), num=8)
+            
+            #print("ticks with errors are : {0}".format(plot_ticks)) ###DEBUG
+
+            if (y_test_orig-2*y_var_pred_test).min() <= 0:
+                plot_ticks = np.hstack([
+                    -np.logspace(1., np.log10(-(y_test_orig-2*y_var_pred_test).min()), num=4)[::-1], 
+                     np.logspace(1., np.log10( (y_test_orig+2*y_var_pred_test).max()), num=4)
+                ])
+
+            #print("ticks with errors now are : {0}".format(plot_ticks)) ###DEBUG
 
             plt.errorbar(
                 x=x_test,
@@ -148,8 +158,7 @@ class GP_analysis(BaseAnalysis):
             plt.plot(x_test, y_test_pred, '.', label='GP metamodel', color=out_color)
             plt.plot(x_train, y_train_pred, '*', label='GP metamodel', color=out_color)
             
-            plot_ticks = np.logspace(y_pred.min(), y_pred.max(), num=8)
-        
+            plot_ticks = np.logspace(y_pred.min(), y_pred.max(), num=8)   
 
         plt.legend()
         plt.grid(True, which='both', axis='both')
