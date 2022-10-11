@@ -94,21 +94,29 @@ class GP_analysis(BaseAnalysis):
         plt.close()
 
     def plot_res(self,
-                 x_test, y_test_pred, y_test_orig,
                  x_train, y_train_pred, y_train_orig,
+                 x_test=None, y_test_pred=None, y_test_orig=None,
                  y_var_pred_test=None, y_var_pred_train=None,
                  name='', num='1', type_train='rand', train_n=10, out_color='b', output_folder=''):
 
         plt.ioff()
-        plt.figure(figsize=(8, 11))
+        plt.figure(figsize=(12, 15))
 
-        y_pred = np.zeros(y_test_pred.shape[0] + y_train_pred.shape[0])
+        n_train = y_train_pred.shape[0]
+        n_test = y_test_pred.shape[0] if y_test_pred is not None else 0
+        
+        #x_test = [] if x_test is None else x_test
+
+        y_pred = np.zeros(n_test + n_train)
         y_pred[x_train] = y_train_pred
-        y_pred[x_test] = y_test_pred
+        if x_test is not None:
+            y_pred[x_test] = y_test_pred
 
-        y_orig = np.zeros(y_test_orig.shape[0] + y_train_orig.shape[0])
+        #y_orig = np.zeros(y_test_orig.shape[0] + y_train_orig.shape[0])
+        y_orig = np.zeros(n_test + n_train)
         y_orig[x_train] = y_train_orig
-        y_orig[x_test] = y_test_orig
+        if y_test_orig is not None:
+            y_orig[x_test] = y_test_orig
 
         # --- 1) Plotting prediction vs original test data
         plt.subplot(311)
@@ -119,33 +127,29 @@ class GP_analysis(BaseAnalysis):
 
         plt.yscale("symlog")
 
-        plt.plot(x_test, y_test_orig, '.', label='Simulation, test', color='red')
         plt.plot(x_train, y_train_orig, '*', label='Simulation, train', color='green')
+        if y_test_orig is not None:
+            plt.plot(x_test, y_test_orig, '.', label='Simulation, test', color='red')
 
-        if y_var_pred_test is not None and y_var_pred_train is not None:
+        if y_var_pred_train is not None:
             
-            #y_var_pred = np.concatenate([y_var_pred_test, y_var_pred_train])
-            #plot_ticks = np.logspace((y_pred-2*y_var_pred).min(), (y_pred+2*y_var_pred).max(), num=8)
-            plot_ticks = np.logspace(np.log10((y_test_orig-2*y_var_pred_test).min()), np.log10((y_test_orig+2*y_var_pred_test).max()), num=8)
+            if y_var_pred_test is not None:
+                y_var_pred = np.concatenate([y_var_pred_test, y_var_pred_train])
+            else:
+                y_var_pred = y_var_pred_train
+
+            plot_ticks = np.logspace(np.log10((y_pred-2*y_var_pred).min()), np.log10((y_pred+2*y_var_pred).max()), num=8)
             
             #print("ticks with errors are : {0}".format(plot_ticks)) ###DEBUG
 
-            if (y_test_orig-2*y_var_pred_test).min() <= 0:
+            if (y_pred-2*y_var_pred).min() <= 0:
                 plot_ticks = np.hstack([
-                    -np.logspace(1., np.log10(-(y_test_orig-2*y_var_pred_test).min()), num=4)[::-1], 
-                     np.logspace(1., np.log10( (y_test_orig+2*y_var_pred_test).max()), num=4)
+                    -np.logspace(1., np.log10(-(y_pred-2*y_var_pred).min()), num=4)[::-1], 
+                     np.logspace(1., np.log10( (y_pred+2*y_var_pred).max()), num=4)
                 ])
 
             #print("ticks with errors now are : {0}".format(plot_ticks)) ###DEBUG
-
-            plt.errorbar(
-                x=x_test,
-                y=y_test_pred,
-                yerr=1.96 *
-                y_var_pred_test,
-                label='GP metamodel, test',
-                fmt='+')
-            
+                
             plt.errorbar(
                 x=x_train,
                 y=y_train_pred,
@@ -153,11 +157,22 @@ class GP_analysis(BaseAnalysis):
                 y_var_pred_train,
                 label='GP metamodel, train',
                 fmt='+')
+
+            if y_test_pred is not None:
+                plt.errorbar(
+                    x=x_test,
+                    y=y_test_pred,
+                    yerr=1.96 *
+                    y_var_pred_test,
+                    label='GP metamodel, test',
+                    fmt='+')
+
         else:
             
-            plt.plot(x_test, y_test_pred, '.', label='GP metamodel', color=out_color)
             plt.plot(x_train, y_train_pred, '*', label='GP metamodel', color=out_color)
-            
+            if y_test_pred is not None:
+                plt.plot(x_test, y_test_pred, '.', label='GP metamodel', color=out_color)
+
             plot_ticks = np.logspace(y_pred.min(), y_pred.max(), num=8)   
 
         plt.legend()
@@ -336,13 +351,22 @@ class GP_analysis(BaseAnalysis):
         x_test_inds = self.gp_surrogate.feat_eng.test_indices
         x_train_inds = self.gp_surrogate.feat_eng.train_indices
 
+        only_train_set = False
+        if len(x_test_inds) == 0:
+            only_train_set = True 
+            y_t_len = 0
+
         print("Prediction of new QoI")
         # TODO make predict call work on a (n_samples, n_features) np array
-        y_pred = [self.gp_surrogate.predict(X_test[i, :].reshape(-1, 1))[0]
-                  for i in range(X_test.shape[0])]
-        y_var_pred = [self.gp_surrogate.predict(X_test[i, :].reshape(-1, 1))[1]
-                      for i in range(X_test.shape[0])]
-        y_t_len = len(y_test)
+
+        y_pred = []
+        y_var_pred = []
+        if not only_train_set:
+            y_pred = [self.gp_surrogate.predict(X_test[i, :].reshape(-1, 1))[0]
+                    for i in range(X_test.shape[0])]
+            y_var_pred = [self.gp_surrogate.predict(X_test[i, :].reshape(-1, 1))[1]
+                          for i in range(X_test.shape[0])]
+            y_t_len = len(y_test)
 
         y_pred_train = [self.gp_surrogate.predict(
             X_train[i, :].reshape(-1, 1))[0] for i in range(X_train.shape[0])]
@@ -350,38 +374,50 @@ class GP_analysis(BaseAnalysis):
             X_train[i, :].reshape(-1, 1))[1] for i in range(X_train.shape[0])]
 
         # Reshape the resulting arrays
-        # TODO here an error occures when testfrac==0.0 -> add a check...
-
-        y_pred = np.squeeze(np.array(y_pred), axis=1)
+        # TODO here an error occures when testfrac==0.0
+        if not only_train_set:
+            y_pred = np.squeeze(np.array(y_pred), axis=1)
+            y_var_pred = np.squeeze(np.array(y_var_pred), axis=1)
+        else:
+            y_pred = np.ones((0, len(y_pred_train[0])))
+            y_var_pred = np.ones((0, len(y_pred_train[0])))
+            
+            #print('y_pred shape {}'.format(y_pred.shape)) ###DEBUG
+            
         y_pred_train = np.squeeze(np.array(y_pred_train), axis=1)
-
-        y_var_pred = np.squeeze(np.array(y_var_pred), axis=1)
         y_var_pred_train = np.squeeze(np.array(y_var_pred_train), axis=1)
 
-        # check if we a working with a vector or scalar QoI, if it is vector 
-        # then consider only the first component
+        # Check if we a working with a vector or scalar QoI:
+        #  If it is vector then consider only the first component
         y_test_plot = y_test
         y_train_plot = y_train
+
         if y_pred.shape[1] != 1:
-            y_test_plot = y_test[:, [0]]
+
             y_train_plot = y_train[:, [0]]
-            y_pred = y_pred[:, 0]
             y_pred_train = y_pred_train[:, 0]
-            y_var_pred = y_var_pred[:, 0]
             y_var_pred_train = y_var_pred_train[:, 0]
 
+            if not only_train_set:
+                y_test_plot = y_test[:, [0]]            
+                y_pred = y_pred[:, 0]
+                y_var_pred = y_var_pred[:, 0]
+
         if len(y_pred.shape) == 1:
-            y_pred = y_pred.reshape(-1, 1)
+
             y_pred_train = y_pred_train.reshape(-1, 1)
 
-        # calculate the errors
+            if not only_train_set:
+                y_pred = y_pred.reshape(-1, 1)
+
+        # Calculate the errors
         # test data appears smaller in length (by 1)
         err_abs = np.subtract(y_pred[:y_t_len, :], y_test)
         err_rel = np.divide(err_abs, y_test)
 
         print("Printing and plotting the evaluation results")
   
-        if flag_plot:
+        if flag_plot and not only_train_set:
   
             self.plot_err(error=err_rel[:, 0],
                           name='rel. err. of prediction mean for test dataset in Ti fluxes',
@@ -397,21 +433,43 @@ class GP_analysis(BaseAnalysis):
 
         train_n = self.gp_surrogate.feat_eng.n_samples - y_t_len
 
-        if flag_plot:
+        #print(x_train_inds, y_pred_train, y_train_plot) ###DEBUG
 
-            self.plot_res(x_test_inds, y_pred[:y_t_len, 0], y_test_plot[:, 0],
-                      x_train_inds, y_pred_train[:, 0], y_train_plot[:, 0],
-                      y_var_pred.reshape(y_pred[:y_t_len, 0].shape), y_var_pred_train.reshape(y_pred_train[:, 0].shape),
-                      r'$Y_i$', num='1', type_train='rand',
-                      train_n=train_n, out_color='b')
+        if flag_plot:
+            
+            if not only_train_set:
+
+                self.plot_res(
+                        x_train_inds, y_pred_train[:, 0], y_train_plot[:, 0],
+                        x_test_inds, y_pred[:y_t_len, 0], y_test_plot[:, 0],
+                        y_var_pred.reshape(y_pred[:y_t_len, 0].shape), y_var_pred_train.reshape(y_pred_train[:, 0].shape),
+                        name=r'$Y_i$', num='1', type_train='rand',
+                        train_n=train_n, out_color='b',
+                             )
+            
+            else:
+                
+                self.plot_res(
+                        x_train_inds, 
+                        y_pred_train[:, 0],
+                        y_train_plot[:, 0],
+                        y_var_pred_train=y_var_pred_train.reshape(y_pred_train[:, 0].shape),
+                        name=r'$Y_i$', num='1', type_train='rand',
+                        train_n=train_n, out_color='b',
+                             )
 
         r2_test = self.get_r2_score(X_test, y_test)
         print('R2 score for the test data is : {:.3}'.format(r2_test))
 
-        print('MSE of the GPR prediction is: {:.3}'.format(
-            mse(y_pred[:y_t_len, 0], y_test_plot[:, 0])))
+        if not only_train_set:
+            print('MSE of the GPR prediction is: {:.3}'.format(
+                mse(y_pred[:y_t_len, 0], y_test_plot[:, 0])))
+        else:
+            print('MSE of the GPR prediction for training set is: {:.3}'.format(
+                mse(y_pred_train[:, 0], y_train_plot[:, 0])))
 
-        print('Mean relative test error is {:.3}'.format(np.abs(err_rel).mean()))
+        if not only_train_set:
+            print('Mean relative test error is {:.3}'.format(np.abs(err_rel).mean()))
 
         self.y_pred = y_pred
         self.err_abs = err_abs
