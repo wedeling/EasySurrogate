@@ -64,7 +64,7 @@ class ANN_analysis(BaseAnalysis):
         print(idx)
         return idx, mean
 
-    def get_errors(self, feats, data, relative = True, return_predictions=False):
+    def get_errors(self, feats, data, relative=True, return_predictions=False):
         """
         Get the training and test error of the ANN surrogate to screen. This method
         uses the ANN_Surrogate.get_dimensions() dictionary to determine where the split
@@ -115,7 +115,7 @@ class ANN_analysis(BaseAnalysis):
         test_data = data[dims['n_train']:]
         if relative:
             err_test = np.mean(np.linalg.norm(test_data - test_pred, axis=0) /
-                               np.linalg.norm(test_data,axis=0), axis=0)
+                               np.linalg.norm(test_data, axis=0), axis=0)
             print("Relative test error = %.4f %%" % (err_test * 100))
         else:
             err_test = np.mean(np.linalg.norm(test_data - test_pred, axis=0), axis=0)

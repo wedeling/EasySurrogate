@@ -100,7 +100,7 @@ class ANN_Surrogate(Campaign):
         if lags is not None:
             self.feat_eng.initial_condition_feature_history(feats)
 
-    def derivative(self, x, norm=True, layer_idx = 0):
+    def derivative(self, x, norm=True, layer_idx=0):
         """
         Compute a derivative of the network output f(x) with respect to the inputs x.
 
@@ -124,7 +124,7 @@ class ANN_Surrogate(Campaign):
         """
         # check that x is of shape (n_in, ) or (n_in, 1)
         assert x.shape[0] == self.neural_net.n_in, \
-        "x must be of shape (n_in,): %d != %d" % (x.shape[0], self.neural_net.n_in)
+            "x must be of shape (n_in,): %d != %d" % (x.shape[0], self.neural_net.n_in)
 
         if x.ndim > 1:
             assert x.shape[1] == 1, "Only pass 1 feature vector at a time"

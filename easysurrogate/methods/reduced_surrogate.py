@@ -78,7 +78,7 @@ class Reduced_Surrogate(Campaign):
         return self.reduced_r(V_hat, dQ)
 
     def generate_online_training_data(self, feats, LR_before, LR_after, HR_before, HR_after,
-                                      qoi_func, nudge = False, **kwargs):
+                                      qoi_func, nudge=False, **kwargs):
         """
         Compute the features and the target data for an online training step. Results are
         stored internally, and used within the 'train_online' subroutine.

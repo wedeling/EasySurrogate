@@ -44,12 +44,14 @@ def draw():
     plt.pause(0.1)
     plt.tight_layout()
 
+
 def compute_int(x1_hat, x2_hat, n_points_1d):
     """
     Compute the integral of X1*X2 using the Fourier expansion
     """
     integral = np.dot(x1_hat.flatten(), np.conjugate(x2_hat.flatten())) / n_points_1d**4
     return integral.real
+
 
 def qoi_func(w_hat_n, **kwargs):
     """
@@ -80,6 +82,7 @@ def qoi_func(w_hat_n, **kwargs):
     qoi[1] = 0.5 * np.dot(w_hat_n.flatten(), np.conjugate(w_hat_n.flatten())).real / n_1d ** 4
 
     return qoi
+
 
 plt.close('all')
 plt.rcParams['image.cmap'] = 'seismic'
@@ -130,11 +133,12 @@ M = 1
 # set the online learning parameters
 campaign.surrogate.set_online_training_parameters(TAU_NUDGE, DT_LR, WINDOW_LENGTH)
 
-#the indices of a upper triangular N_Q x N_Q array
+# the indices of a upper triangular N_Q x N_Q array
 idx1, idx2 = np.triu_indices(N_Q)
 
 # the reference data frame used to train the ANN
-data_frame_ref = campaign.load_hdf5_data(file_path='/home/wouter/VECMA/samples/reduced_vorticity_training2.hdf5')
+data_frame_ref = campaign.load_hdf5_data(
+    file_path='/home/wouter/VECMA/samples/reduced_vorticity_training2.hdf5')
 dQ_ref = data_frame_ref['Q_HR'] - data_frame_ref['Q_LR']
 inner_prods = data_frame_ref['inner_prods'][0][idx1, idx2]
 c_ij = data_frame_ref['c_ij'][0].flatten()
@@ -162,8 +166,9 @@ if PLOT:
 
 if RESTART:
     # load the HR state from a HDF5 file
-    IC_HR = campaign.load_hdf5_data(file_path=
-                                    './restart/state_HR_t%d_N%d.hdf5' % (T / DAY, DT_MULTIPLIER))
+    IC_HR = campaign.load_hdf5_data(
+        file_path='./restart/state_HR_t%d_N%d.hdf5' %
+        (T / DAY, DT_MULTIPLIER))
     # HR vorticity at HR stencil k
     w_hat_k_HR = IC_HR['w_hat_k_HR']
     # HR vorticity at HR stencil k-1
@@ -176,8 +181,9 @@ if RESTART:
     w_hat_nm1_HR = IC_HR['w_hat_nm1_HR']
 
     # load the LR state from a HDF5 file
-    IC_LR = campaign.load_hdf5_data(file_path=
-                                    './restart/state_LR_t%d_N%d.hdf5' % (T / DAY, DT_MULTIPLIER))
+    IC_LR = campaign.load_hdf5_data(
+        file_path='./restart/state_LR_t%d_N%d.hdf5' %
+        (T / DAY, DT_MULTIPLIER))
     w_hat_n_LR = IC_LR['w_hat_n_LR']
     w_hat_nm1_LR = IC_LR['w_hat_nm1_LR']
     VgradW_hat_nm1_LR = IC_LR['VgradW_hat_nm1_LR']
@@ -224,10 +230,10 @@ for n in range(n_steps):
     psi_hat_n_LR = vort_solver_LR.compute_stream_function(w_hat_n_LR)
 
     # compute the QoI using the HR state
-    Q_HR = qoi_func(w_hat_n_HR, psi_hat_n_HR = psi_hat_n_HR)
+    Q_HR = qoi_func(w_hat_n_HR, psi_hat_n_HR=psi_hat_n_HR)
 
     # compute the QoI using the LR state
-    Q_LR = qoi_func(w_hat_n_LR, psi_hat_n_LR = psi_hat_n_LR)
+    Q_LR = qoi_func(w_hat_n_LR, psi_hat_n_LR=psi_hat_n_LR)
 
     plot1.append(Q_HR)
     plot2.append(Q_LR)
@@ -260,9 +266,9 @@ for n in range(n_steps):
     campaign.surrogate.generate_online_training_data(feats, w_hat_nm1_LR, w_hat_n_LR,
                                                      w_hat_nm1_HR, w_hat_n_HR,
                                                      qoi_func,
-                                                     #these are the kwargs needed in qoi_func
-                                                     psi_hat_n_LR = psi_hat_n_LR,
-                                                     psi_hat_n_HR = psi_hat_n_HR)
+                                                     # these are the kwargs needed in qoi_func
+                                                     psi_hat_n_LR=psi_hat_n_LR,
+                                                     psi_hat_n_HR=psi_hat_n_HR)
 
     # update the neural network for dQ every M time steps
     if np.mod(n, M) == 0 and n > SETTLING_PERIOD and n > WINDOW_LENGTH:
@@ -303,11 +309,11 @@ for n in range(n_steps):
 campaign.store_data_to_hdf5({'w_hat_n_HR': w_hat_n_HR, 'w_hat_nm1_HR': w_hat_nm1_HR,
                              'w_hat_k_HR': w_hat_k_HR, 'w_hat_km1_HR': w_hat_km1_HR,
                              'VgradW_hat_km1_HR': VgradW_hat_km1_HR},
-                             file_path='./restart/state_HR_t%d_N%d.hdf5' % (T / DAY, DT_MULTIPLIER))
+                            file_path='./restart/state_HR_t%d_N%d.hdf5' % (T / DAY, DT_MULTIPLIER))
 campaign.store_data_to_hdf5({'w_hat_np1_LR': w_hat_np1_LR, 'w_hat_n_LR': w_hat_n_LR,
                              'w_hat_nm1_LR': w_hat_nm1_LR,
                              'VgradW_hat_nm1_LR': VgradW_hat_nm1_LR},
-                             file_path='./restart/state_LR_t%d_N%d.hdf5' % (T / DAY, DT_MULTIPLIER))
+                            file_path='./restart/state_LR_t%d_N%d.hdf5' % (T / DAY, DT_MULTIPLIER))
 
 # store the accumulated data
 if STORE:
