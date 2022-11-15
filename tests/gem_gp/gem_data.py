@@ -8,7 +8,7 @@ import easysurrogate as es
 features_names = ['te_value', 'ti_value', 'te_ddrho', 'ti_ddrho']
 target_names = ['te_transp_flux', 'ti_transp_flux', 'te_transp_flux_std', 'ti_transp_flux_std']
 
-def load_csv_file(input_file='gem_data_625.txt', n_runs=625, input_dim=4, output_dim=2, std=False):
+def load_csv_file(input_file='gem_data_625.txt', n_runs=625, input_dim=4, output_dim=2, std=False, startcol=2):
 
     input_samples = np.zeros((n_runs, input_dim))
     output_samples = np.zeros((n_runs, output_dim))
@@ -16,7 +16,7 @@ def load_csv_file(input_file='gem_data_625.txt', n_runs=625, input_dim=4, output
     with open(input_file, 'r') as inputfile:
         datareader = csv.reader(inputfile, delimiter=',')
         next(datareader) #DEBUG
-        j_startcol = 2 #DEBUG
+        j_startcol = startcol #DEBUG
         i = 0
         for row in datareader:
             input_samples[i] = row[j_startcol:j_startcol+input_dim]
@@ -145,11 +145,30 @@ campaign = es.Campaign(load_state=False)
 #campaign.store_data_to_hdf5(data, file_path='gem0_lhc_256.hdf5')
 
 # 5) Case from single flux tube GEM UQ campaign (4 parameters, tensor product of grid with 2 points per DoF)
-data = load_csv_file(input_file='resuq_main_ti_transp_flux_all_moj202gj_11.csv', 
-                     n_runs=16,
+#data = load_csv_file(input_file='resuq_main_ti_transp_flux_all_moj202gj_11.csv', 
+#                     n_runs=16,
+#                     #input_dim=4, 
+#                     output_dim=2,
+#                     std=True
+#                     )
+#campaign.store_data_to_hdf5(data, file_path='gem_uq_16_std.hdf5')
+
+# 5') Case from single flux tube GEM UQ campaign (4 parameters, tensor product of grid with 3 points per DoF)
+# data = load_csv_file(input_file='resuq_main_ti_transp_flux_all_akgbbn1a_5.csv', 
+#                      n_runs=79,
+#                      #input_dim=4, 
+#                      output_dim=2,
+#                      std=True,
+#                      startcol=3,
+#                      )
+# campaign.store_data_to_hdf5(data, file_path='gem_uq_79_std.hdf5')
+
+# 5'') Case from single flux tube GEM UQ campaign (4 parameters, tensor product of grid with 3 points per DoF) - longer runs, fixed a permutation of input-outputs
+data = load_csv_file(input_file='resuq_main_ti_transp_flux_all_akgbbn1a_9.csv', 
+                     n_runs=81,
                      #input_dim=4, 
                      output_dim=2,
-                     std=True
+                     std=True,
+                     startcol=3,
                      )
-campaign.store_data_to_hdf5(data, file_path='gem_uq_16_std.hdf5')
-
+campaign.store_data_to_hdf5(data, file_path='gem_uq_81_std.hdf5')

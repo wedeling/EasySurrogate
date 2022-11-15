@@ -48,7 +48,7 @@ decoder = uq.decoders.JSONDecoder(
 
 # Execute should train a model in EasySurrogate: get the data, initalise object, call .train() and calculate the training/validation error
 execute_train = uq.actions.ExecuteLocal(
-    'python3 ../../../single_model_train.py input.json > train.log'
+    'python3 ../../../single_model_train.py input.json &> train.log'
 )
 # TODO get rid of hard-coding relative paths
 

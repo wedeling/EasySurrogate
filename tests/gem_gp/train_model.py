@@ -33,9 +33,11 @@ campaign = es.Campaign(load_state=False)
 #target_name_selected = [target_names[1]]
 
 # 5) Case from single flux tube GEM UQ campaign (4 parameters, tensor product of grid with 2 points per DoF)
-data_file_name = 'gem_uq_16_std.hdf5'
+#data_file_name = 'gem_uq_16_std.hdf5'
+#data_file_name = 'gem_uq_79_std.hdf5'
+data_file_name = 'gem_uq_81_std.hdf5'
 features_names_selected = features_names
-target_name_selected = [target_names[1]] # model for std of data
+target_name_selected = [target_names[1]] # model for [1 - means ; 3- std] of data
 
 # Create a surrogate and its model; train and save it
 
@@ -49,17 +51,17 @@ target = np.concatenate([data_frame[k] for k in target_name_selected if k in dat
 time_init_start = t.time()
 
 gp_param = {
-            'backend': 'local',
-            'process_type': 'student_t',
+            'backend': 'scikit-learn', #local',
+            'process_type': 'gaussian', #'student_t',
             'kernel': 'Matern',
-            'length_scale': 0.5,  #[1.]*len(features),
+            'length_scale': 1.0,  #[1.]*len(features),
             'noize': 0.1,
-            'nu_matern': 0.5,
-            'nu_stp': 15,
+            'nu_matern': 1.5,
+            'nu_stp': 10,
             'bias': 0.,
             'nonstationary': False,
             'test_frac': 0.5,
-            'n_iter': 1,
+            'n_iter': 5,
            }
 
 surrogate = es.methods.GP_Surrogate(
@@ -88,7 +90,7 @@ surrogate.train(features,
 print('Time to train the surrogate: {:.3} s'.format(t.time() - time_train_start))
 surrogate.model.print_model_info()
 
-save_model_file_name = 'model_val_10082022.pickle'
+save_model_file_name = 'model_val_15112022.pickle'
 
 campaign.add_app(name='gp_campaign', surrogate=surrogate)
 campaign.save_state(file_path=save_model_file_name)

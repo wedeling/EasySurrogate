@@ -39,22 +39,35 @@ target_name_selected = target_names
 
 # 5) Case from single flux tube GEM UQ campaign (4 parameters, tensor product of grid with 2 points per DoF)
 
-saved_model_file_path = 'model_val_10082022.pickle' 
-#'model_biased_nonst_05train_10062022.pickle' 
-#TODO: noize+const+dotproduct apparently leads to overfitting - trying to have higher variance of the model is probably more beneficial
-#'model_nonst_05train_10062022.pickle'
-#'model_biased_05train_09062022.pickle'
-#'model_nonst_05train_09062022.pickle'                                        
-#'mode_gem16_200522.pickle'
-#'model_05split_230522.pickle'
-#'model_biased_05train_09062022.pickle'
+# saved_model_file_path = 'model_val_10082022.pickle' 
+# #'model_biased_nonst_05train_10062022.pickle' 
+# #TODO: noize+const+dotproduct apparently leads to overfitting - trying to have higher variance of the model is probably more beneficial
+# #'model_nonst_05train_10062022.pickle'
+# #'model_biased_05train_09062022.pickle'
+# #'model_nonst_05train_09062022.pickle'                                        
+# #'mode_gem16_200522.pickle'
+# #'model_05split_230522.pickle'
+# #'model_biased_05train_09062022.pickle'
+
+# features_names_selected = features_names
+# target_name_selected = [target_names[1]]
+# campaign = es.Campaign(load_state=True, file_path=saved_model_file_path)
+
+# data_frame = campaign.load_hdf5_data(file_path='gem_uq_16_std.hdf5')
+# data_frame_train = campaign.load_hdf5_data(file_path='gem_uq_16_std.hdf5')
+
+# 5') Case from single flux tube GEM UQ campaign (4 parameters, tensor product of grid with 3 points per DoF)
+#saved_model_file_path = 'model_val_11102022.pickle' 
+
+# 5'') Case from single flux tube GEM UQ campaign - 81 runs (4 parameters, tensor product of grid with 3 points per DoF)
+saved_model_file_path = 'model_val_14112022.pickle' 
 
 features_names_selected = features_names
 target_name_selected = [target_names[1]]
 campaign = es.Campaign(load_state=True, file_path=saved_model_file_path)
 
-data_frame = campaign.load_hdf5_data(file_path='gem_uq_16_std.hdf5')
-data_frame_train = campaign.load_hdf5_data(file_path='gem_uq_16_std.hdf5')
+data_frame = campaign.load_hdf5_data(file_path='gem_uq_81_std.hdf5')
+data_frame_train = campaign.load_hdf5_data(file_path='gem_uq_81_std.hdf5')
 
 # To use or not to use analysis of sequential design results
 SEQDES = False
@@ -97,15 +110,17 @@ print('Ti transport flux cross-correlation between simulated and predicted value
 """
 
 # Distribution of output variables
-
+"""
 tefl_dom_tr, tefl_pdf_tr = analysis.get_pdf(targ_train)
 tefl_dom_ts, tefl_pdf_ts = analysis.get_pdf(targ_test)
 tefl_dom_tot, tefl_pdf_tot = analysis.get_pdf(data_frame[target_name_selected[0]])
 tefl_dom_surr, tefl_pdf_surr = analysis.get_pdf(analysis.y_pred)
 
 analysis.plot_pdfs(tefl_dom_ts, tefl_pdf_ts, tefl_dom_surr, tefl_pdf_surr)
+"""
 
 # Distributions of input variables
+"""
 tevl_dom_tr, tevl_pdf_tr = analysis.get_pdf(feat_train[0])
 tevl_dom_ts, tevl_pdf_ts = analysis.get_pdf(feat_test[0])
 tivl_dom_tr, tivl_pdf_tr = analysis.get_pdf(feat_train[1])
@@ -125,4 +140,4 @@ analysis.plot_pdfs(
         'tevl ts',
         'tivl tr',
         'tivl ts'])
-
+"""

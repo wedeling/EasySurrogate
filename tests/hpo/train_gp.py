@@ -48,7 +48,7 @@ vary = {} #TODO maybe: use vary to create CSV for non-categorical hyperparameter
 param_search_vals = {
     "length_scale": [0.5, 1.0, 2.0],
     "noize": [1e-4, 1e-2, 1e-1], 
-    "bias": [0., 1.0], # cCURRENTLY not used by local implementation
+    "bias": [0., 1.0], # CURRENTLY not used by local implementation
     "nu_matern": [0.5, 1.5, 2.5], # not used by RBF and non-Matern kernels
     "nu_stp": [5, 10, 15], # not used for GPR (normal likelihood)
     "kernel": ['RBF', 'Matern'], 
@@ -63,7 +63,7 @@ csv_vals = [x for x in product(*[v for (k,v) in param_search_vals.items()])]
 
 def clean_grid_by_rules(header, vals, def_vals):
 
-    # Construct list of dictionaries of with keys taken from header and values taken from rowns of vals
+    # Construct list of dictionaries of with keys taken from header and values taken from rows of vals
     data = [{header[i]:vals[j][i] for i in range(len(header))} for j in range(len(vals))]
 
     vals_new = []

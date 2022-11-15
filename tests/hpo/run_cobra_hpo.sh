@@ -41,6 +41,8 @@ echo -e '> In this run: use ExecuteLocal only + QCGPJ pool + '$SLURM_NNODES' nod
 
 ####################################
 
+DATAFILE=gem3.hdf5
+
 # Update the package
 
 cd ../..

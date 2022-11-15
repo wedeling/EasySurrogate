@@ -24,7 +24,8 @@ target_name_selected = [target_names[1]]
 campaign = es.Campaign()
 
 # Load HDF5 data frame
-data_frame = campaign.load_hdf5_data(file_path='../../../gem1.hdf5')
+data_file_name = 'gem3.hdf5'
+data_frame = campaign.load_hdf5_data(file_path='../../../'+data_file_name)
 # TODO: get rid of hardcoding relative path
 
 # Supervised training data set
