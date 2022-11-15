@@ -6,6 +6,8 @@ Author: Y. Yudin
 """
 
 import numpy as np
+import functools
+
 from ..campaign import Campaign
 import easysurrogate as es
 
@@ -237,6 +239,8 @@ class GP_Surrogate(Campaign):
                 acq_func_obj = self.poi_acquisition_function
             elif acq_func_arg == 'mu':
                 acq_func_obj = self.maxunc_acquisition_function
+            elif acq_func_arg == 'poi_sq_dist_to_val' and target is not None:
+                acq_func_arg == functools.partial(self.poi_function_acquisition_function, func=(lambda y1,y2: -np.pow(y1-y2, 2)), target=target)
             else:
                 raise NotImplementedError(
                     'This rule for sequential optimisation is not implemented, using default.')
@@ -378,5 +382,30 @@ class GP_Surrogate(Campaign):
 
         mu, std, d = self.model.predict(sample)
         poi = np.linalg.norm(np.divide(abs(mu - f_star), std + jitter), ord=2)
+
+        return -poi
+
+    def poi_function_acquisition_function(self, sample, func=(lambda x,y: x), target=None, candidates=None):
+        """
+        Returns the probability of a given sample to maximize given function
+        Args:
+            sample: a single sample from a feature array
+            func: a function object to be optimise
+            candidates: list of input parameter files to chose optimum from
+        Returns:
+            the probability of improvement if a given sample will be added to the model
+        """
+
+        jitter = 1e-9
+
+        if sample.ndim == 1:
+            sample = sample[None, :]
+
+        mu, std, d = self.model.predict(sample)
+                
+        func_val = func(mu, target)
+        
+        #poi = np.linalg.norm(np.divide(np.pow(mu - f_star, 2), std + jitter), ord=2)
+        poi = np.divide(func_val + jitter, std + jitter)
 
         return -poi

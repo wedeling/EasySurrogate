@@ -78,7 +78,7 @@ class GaussianProcessRegressor():
             self.kernel = gibbs_ns_kernel
         elif kernel == 'matern':
             #self.kernel = matern_kernel
-             self.kernel = functools.partial(matern_kernel, nu=self.nu_matern)
+            self.kernel = functools.partial(matern_kernel, nu=self.nu_matern)
         else:
             self.kernel = sq_exp_kernel_function
 
@@ -166,7 +166,7 @@ class GaussianProcessRegressor():
 
         self.sigma_f = hp_optval[0]
         self.sigma_n = hp_optval[1]     
-        #self.nu_stp = hp_optval[2] # for now setting nu as fixes during optimisation
+        #self.nu_stp = hp_optval[2] # for now setting nu as fixed during optimisation
         self.l = hp_optval[3:]  
 
         self.fit_cov(X_train, X_train_var)  
@@ -414,9 +414,10 @@ class GaussianProcessRegressor():
         M1 = M1[0][0]
 
         # TODO: Think of better polymorphism with Python: 
-        # - different function passed
-        # - different class implemenetation for GPR/STP
-        # - decorators? 
+        #  - different function passed
+        #  - different class implemenetation for GPR/STP
+        #  - decorators? 
+        # + if no implementation -> throw exceptions/log errors
         
         # Option for GPR
         if likelihood == 'gaussian':
@@ -440,6 +441,7 @@ class GaussianProcessRegressor():
                 - beta * np.log2(1. + alpha * M1 / nu)
                 
                 # K should include nugget and be K + sigma_n**2 * I_n ? -> now it includes
+                # should the 4th term be there?
         
         # Use to find argmax of MLE over {beta, theta, sigma_n} 
 
@@ -509,6 +511,8 @@ def sq_exp_kernel_function(x, y, sigma_f=1., l=1.):
     r1 = np.divide(x - y, l)
     r  = np.linalg.norm(r1)**2
     kernel = sigma_f * np.exp(-0.5 * r)
+
+    #TODO: check if works for vector l
 
     #print('x={0};y={1};l={2};r1={3};r={4}'.format(x,y,l,r1,r)) ###DEBUG
     
