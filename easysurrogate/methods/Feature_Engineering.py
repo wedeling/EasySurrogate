@@ -154,8 +154,9 @@ class Feature_Engineering:
             boundminima = np.array(X_cands).min(axis=0)
             boundmaxima = np.array(X_cands).max(axis=0)
             currbounds = []
-            for i in range(self.n_dim):
+            for i in range(boundminima.shape[0]):
                 currbounds.append((boundminima[i], boundmaxima[i]))
+            #print('optimisation bounds are {0}'.format(currbounds)) ###DEBUG
 
             opt_start_point = [statistics.mean(x) for x in currbounds]
 
@@ -163,6 +164,7 @@ class Feature_Engineering:
                                  bounds=currbounds)  # bounds for current GP case
             if newpoints.success:
                 x_min = newpoints['x']
+                #print('x_min={0}'.format(x_min)) ###DEBUG
 
             x_min_ind_test = 0
             x_min_ind_glob = 0

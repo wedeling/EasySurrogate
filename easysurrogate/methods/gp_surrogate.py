@@ -222,7 +222,8 @@ class GP_Surrogate(Campaign):
     def train_sequentially(self, feats=None, target=None,
                            n_iter=0, **kwargs):
         """
-        Update GP surrogate with a sequeantial design scheme
+        Update GP surrogate with a sequential design scheme
+        if n_iter==1 finds a suggestion for new candidates for which to evaluate function 
 
         Parameters
         ----------
@@ -233,6 +234,9 @@ class GP_Surrogate(Campaign):
 
         self.set_data_stats()
 
+        target = self.y_scaler.transform(np.array(target).reshape(1,-1)) 
+        # #TODO: in every function specs write in which scaling the passed data are
+
         if 'acquisition_function' in kwargs:
             acq_func_arg = kwargs['acquisition_function']
             if acq_func_arg == 'poi':
@@ -240,7 +244,7 @@ class GP_Surrogate(Campaign):
             elif acq_func_arg == 'mu':
                 acq_func_obj = self.maxunc_acquisition_function
             elif acq_func_arg == 'poi_sq_dist_to_val' and target is not None:
-                acq_func_arg == functools.partial(self.poi_function_acquisition_function, func=(lambda y1,y2: -np.pow(y1-y2, 2)), target=target)
+                acq_func_obj == functools.partial(self.poi_function_acquisition_function, func=(lambda y1,y2: np.pow(y1-y2, 2)), target=target)
             else:
                 raise NotImplementedError(
                     'This rule for sequential optimisation is not implemented, using default.')
@@ -265,47 +269,62 @@ class GP_Surrogate(Campaign):
                 3) model instance is updated : first approach to train new model for new X_train
             """
 
-            for i in range(n_iter):
+            if n_iter == 1:
 
                 X_new, x_new_ind_test, x_new_ind_glob = self.feat_eng.\
-                    chose_feature_from_acquisition(acq_func_obj, self.X_test)
+                        chose_feature_from_acquisition(acq_func_obj, self.X_test, candidate_search=False)
                 X_new = X_new.reshape(1, -1)
+                X_new = self.x_scaler.inverse_transform(X_new)
 
-                # x_new_inds = feats.index(X_new)  # feats is list of features, for this
-                # has to be list of samples
-                y_new = self.y_test[x_new_ind_test].reshape(1, -1)
+                cand_file_path = 'surrogate_al_cands.csv'
+                np.savetxt(cand_file_path, X_new, header=''.join([f+',' for f in feats]), comments='', delimiter=',')
+                print('>Performed a single optimisation iteration, the suggested candidates are in {0}'.format(cand_file_path))
+                
+                return X_new
 
-                self.feat_eng.train_indices = np.concatenate([self.feat_eng.train_indices,
-                                                              np.array(x_new_ind_glob).reshape(-1)])
-                self.feat_eng.test_indices = np.delete(
-                    self.feat_eng.test_indices, x_new_ind_test, 0)
-                self.feat_eng.n_train += 1
-                self.feat_eng.n_test -= 1
+            else:
 
-                X_train = np.concatenate([self.X_train, X_new])
-                y_train = np.concatenate([self.y_train, y_new])
-                X_test = np.delete(self.X_test, x_new_ind_test, 0)
-                y_test = np.delete(self.y_test, x_new_ind_test, 0)
+                for i in range(n_iter):
 
-                if save_history:
-                    self.design_history.append(x_new_ind_test)
+                    X_new, x_new_ind_test, x_new_ind_glob = self.feat_eng.\
+                        chose_feature_from_acquisition(acq_func_obj, self.X_test)
+                    X_new = X_new.reshape(1, -1)
 
-                # TODO update the scaler - has to transform back to original values, then refit
-                #X_train = self.x_scaler.fit_transform(X_train)
-                #y_train = self.y_scaler.fit_transform(y_train)
-                #X_test = self.x_scaler.transform(X_test)
-                #y_test = self.y_scaler.transform(y_test)
+                    # x_new_inds = feats.index(X_new)  # feats is list of features, for this
+                    # has to be list of samples
+                    y_new = self.y_test[x_new_ind_test].reshape(1, -1)
 
-                self.X_train = X_train
-                self.y_train = y_train
-                self.X_test = X_test
-                self.y_test = y_test
+                    self.feat_eng.train_indices = np.concatenate([self.feat_eng.train_indices,
+                                                                np.array(x_new_ind_glob).reshape(-1)])
+                    self.feat_eng.test_indices = np.delete(
+                        self.feat_eng.test_indices, x_new_ind_test, 0)
+                    self.feat_eng.n_train += 1
+                    self.feat_eng.n_test -= 1
 
-                # self.model = es.methods.GP(X_train, y_train,
-                # kernel=self.base_kernel, bias=False, noize=self.noize,
-                # backend=self.backend)
+                    X_train = np.concatenate([self.X_train, X_new])
+                    y_train = np.concatenate([self.y_train, y_new])
+                    X_test = np.delete(self.X_test, x_new_ind_test, 0)
+                    y_test = np.delete(self.y_test, x_new_ind_test, 0)
 
-                self.model.train(X_train, y_train)
+                    if save_history:
+                        self.design_history.append(x_new_ind_test)
+
+                    # TODO update the scaler - has to transform back to original values, then refit
+                    #X_train = self.x_scaler.fit_transform(X_train)
+                    #y_train = self.y_scaler.fit_transform(y_train)
+                    #X_test = self.x_scaler.transform(X_test)
+                    #y_test = self.y_scaler.transform(y_test)
+
+                    self.X_train = X_train
+                    self.y_train = y_train
+                    self.X_test = X_test
+                    self.y_test = y_test
+
+                    # self.model = es.methods.GP(X_train, y_train,
+                    # kernel=self.base_kernel, bias=False, noize=self.noize,
+                    # backend=self.backend)
+
+                    self.model.train(X_train, y_train)
 
         elif self.backend == 'mogp':
             pass
@@ -391,12 +410,13 @@ class GP_Surrogate(Campaign):
         Args:
             sample: a single sample from a feature array
             func: a function object to be optimise
+            target: an external value e.g. to find samples closer to a certain outcome value (in scaled space)
             candidates: list of input parameter files to chose optimum from
         Returns:
             the probability of improvement if a given sample will be added to the model
         """
 
-        jitter = 1e-9
+        jitter = 1e-4 # depends on the scaling, for whitened data 1e-9 to 1e-1
 
         if sample.ndim == 1:
             sample = sample[None, :]
@@ -405,7 +425,12 @@ class GP_Surrogate(Campaign):
                 
         func_val = func(mu, target)
         
+        #TODO: !Double check with scripts at MFW repo and in papers! 
+        #  -> the former include additive constant that doesn't influence the an optimisation step
+        
         #poi = np.linalg.norm(np.divide(np.pow(mu - f_star, 2), std + jitter), ord=2)
-        poi = np.divide(func_val + jitter, std + jitter)
+        
+        poi = np.divide(-func_val + jitter, std + jitter)
+        #poi = -func_val #ATTENTION: checking suspiciously low QoI value from surrogate for optimisation result
 
         return -poi
