@@ -151,21 +151,34 @@ class Feature_Engineering:
             x_min_ind_glob = self.test_indices[x_min_ind_test]
 
         else:
+
+            alpha_expand = 0.1
+            beta_jitter  = [-0.1, 0.1, 0.1, 0.1] 
+
             boundminima = np.array(X_cands).min(axis=0)
             boundmaxima = np.array(X_cands).max(axis=0)
             currbounds = []
             for i in range(boundminima.shape[0]):
-                currbounds.append((boundminima[i], boundmaxima[i]))
-            #print('optimisation bounds are {0}'.format(currbounds)) ###DEBUG
+                currbounds.append(
+                    ((1-alpha_expand*np.sign(boundminima[i]))*boundminima[i], 
+                     (1+alpha_expand*np.sign(boundmaxima[i]))*boundmaxima[i])
+                                )
+            print('optimisation bounds are {0}'.format(currbounds)) ###DEBUG
 
-            opt_start_point = [statistics.mean(x) for x in currbounds]
+            opt_start_point = np.array([statistics.mean(x)+beta_jitter[i] for i,x in enumerate(currbounds)])
+            print('starting point for optimization is: {0}'.format(opt_start_point)) ###DEBUG
 
-            newpoints = minimize(acquisition_function, np.array(opt_start_point),
-                                 bounds=currbounds)  # bounds for current GP case
+            newpoints = minimize(
+                                fun=acquisition_function, 
+                                x0=opt_start_point,
+                                bounds=currbounds, # bounds for current GP case
+                                )
+            #TODO: scipy error for poi_function_acquisition_function
             if newpoints.success:
                 x_min = newpoints['x']
-                #print('x_min={0}'.format(x_min)) ###DEBUG
+                print('x_min={0}'.format(x_min)) ###DEBUG
 
+            # Just a stand in
             x_min_ind_test = 0
             x_min_ind_glob = 0
 

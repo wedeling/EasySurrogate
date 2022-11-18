@@ -31,7 +31,7 @@ class GP_analysis(BaseAnalysis):
         plt.ylabel('Results of {}'.format(name))
         plt.legend()
         plt.grid('both')
-        #plt.yscale("symlog") #TEMP
+        #plt.yscale("symlog") #if comment then TEMP
         plt.savefig('gp_abs_err.png')
         plt.close()
 
@@ -86,8 +86,8 @@ class GP_analysis(BaseAnalysis):
         plt.grid(True, which='both', axis='both')
         plt.xlabel('Original values')
         plt.ylabel('Predicted values')
-        #plt.yscale('symlog') #TEMP
-        #plt.xscale('symlog') #TEMP
+        plt.yscale('symlog') #if comment then TEMP
+        plt.xscale('symlog') #if comment then TEMP
         plt.legend()
         plt.tight_layout()
         plt.savefig('pred_vs_orig.png')
@@ -125,7 +125,7 @@ class GP_analysis(BaseAnalysis):
         plt.xlabel('Run number')
         plt.ylabel('Prediction of {}'.format(name))
 
-        #plt.yscale("symlog") #TEMP
+        plt.yscale("symlog") #if comment then TEMP
 
         plt.plot(x_train, y_train_orig, '*', label='Simulation, train', color='green')
         if y_test_orig is not None:
@@ -183,7 +183,7 @@ class GP_analysis(BaseAnalysis):
         # --- 2) Plotting absolute errors
         plt.subplot(312)
 
-        #plt.yscale("symlog") #TEMP
+        plt.yscale("symlog") #if comment then TEMP
         plt.xlabel('Run number')
         plt.ylabel('Error')
 
@@ -202,7 +202,7 @@ class GP_analysis(BaseAnalysis):
         plt.grid()
         plt.xlabel('Run number')
         plt.ylabel('Relative error (%)')
-        #plt.yscale("log") #TEMP
+        plt.yscale("log") #if comment then TEMP
         plt.legend()
         #plt.tight_layout()
 

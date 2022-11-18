@@ -234,8 +234,12 @@ class GP_Surrogate(Campaign):
 
         self.set_data_stats()
 
-        target = self.y_scaler.transform(np.array(target).reshape(1,-1)) 
-        # #TODO: in every function specs write in which scaling the passed data are
+        #TODO: in every function specs write in which scaling the passed data are
+        #target = self.y_scaler.transform(np.array(target).reshape(1,-1)) 
+        #X_test_unscaled = [self.x_scaler.inverse_transform(X_i.reshape(1,-1))[0].tolist() for X_i in self.X_test]
+        #TODO: this is horrible and should not exist
+
+        #print('Comparing scaled and unscaled candidate lists: {0} and {1} \n'.format(self.X_test, X_test_unscaled)) ###DEBUG
 
         if 'acquisition_function' in kwargs:
             acq_func_arg = kwargs['acquisition_function']
@@ -244,7 +248,9 @@ class GP_Surrogate(Campaign):
             elif acq_func_arg == 'mu':
                 acq_func_obj = self.maxunc_acquisition_function
             elif acq_func_arg == 'poi_sq_dist_to_val' and target is not None:
-                acq_func_obj == functools.partial(self.poi_function_acquisition_function, func=(lambda y1,y2: np.pow(y1-y2, 2)), target=target)
+                #TODO currently simplified to less genral version of function, not a metric anymore
+                #acq_func_obj = functools.partial(self.poi_function_acquisition_function, func=(lambda y1,y2: np.power(y1-y2, 2)), target=target)
+                acq_func_obj = functools.partial(self.poi_function_acquisition_function, func=(lambda y: np.power(y-target, 2)), target=target)
             else:
                 raise NotImplementedError(
                     'This rule for sequential optimisation is not implemented, using default.')
@@ -259,7 +265,7 @@ class GP_Surrogate(Campaign):
         if save_history:
             self.design_history = []
 
-        if self.backend == 'scikit-learn':
+        if self.backend == 'scikit-learn' or self.backend == 'local':
 
             """
             0) iterate for n_iter
@@ -274,6 +280,7 @@ class GP_Surrogate(Campaign):
                 X_new, x_new_ind_test, x_new_ind_glob = self.feat_eng.\
                         chose_feature_from_acquisition(acq_func_obj, self.X_test, candidate_search=False)
                 X_new = X_new.reshape(1, -1)
+                
                 X_new = self.x_scaler.inverse_transform(X_new)
 
                 cand_file_path = 'surrogate_al_cands.csv'
@@ -381,7 +388,11 @@ class GP_Surrogate(Campaign):
 
         _, uncertatinty, _ = self.model.predict(sample)
 
-        return -1. * uncertatinty
+        poi = -1. * uncertatinty
+
+        print('acq-n f-n value of type {0} = {1}'.format(type(poi), poi)) ###DEBUG
+
+        return poi
 
     def poi_acquisition_function(self, sample, candidates=None):
         """
@@ -404,7 +415,7 @@ class GP_Surrogate(Campaign):
 
         return -poi
 
-    def poi_function_acquisition_function(self, sample, func=(lambda x,y: x), target=None, candidates=None):
+    def poi_function_acquisition_function(self, sample, func=(lambda x: x), target=None, candidates=None):
         """
         Returns the probability of a given sample to maximize given function
         Args:
@@ -422,15 +433,19 @@ class GP_Surrogate(Campaign):
             sample = sample[None, :]
 
         mu, std, d = self.model.predict(sample)
-                
-        func_val = func(mu, target)
+        print('mean predicted for input {1} during optimisation substeps: {0}'.format(mu, sample)) ###DEBUG
+
+        #func_val = func(mu, target)        
+        func_val = func(mu)
         
         #TODO: !Double check with scripts at MFW repo and in papers! 
         #  -> the former include additive constant that doesn't influence the an optimisation step
         
         #poi = np.linalg.norm(np.divide(np.pow(mu - f_star, 2), std + jitter), ord=2)
         
-        poi = np.divide(-func_val + jitter, std + jitter)
+        poi = np.divide(-func_val + jitter, std + jitter)[0] # Workaround for dimensionality...
         #poi = -func_val #ATTENTION: checking suspiciously low QoI value from surrogate for optimisation result
+
+        print('acq-n f-n value of type {0} = {1}'.format(type(poi), poi)) ###DEBUG
 
         return -poi
