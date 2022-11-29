@@ -278,10 +278,17 @@ class GP_Surrogate(Campaign):
             if n_iter == 1:
 
                 X_new, x_new_ind_test, x_new_ind_glob = self.feat_eng.\
-                        chose_feature_from_acquisition(acq_func_obj, self.X_test, candidate_search=False)
+                        chose_feature_from_acquisition(acq_func_obj, 
+                                                       self.X_test, 
+                                                       candidate_search=False)
+
                 X_new = X_new.reshape(1, -1)
                 
                 X_new = self.x_scaler.inverse_transform(X_new)
+
+                #TODO optimisation works weel for scikitlearn+gaussian+rbf
+                # --> test for local/student-t/matern
+                #   ---> implement new EasyVVUQ sampler
 
                 cand_file_path = 'surrogate_al_cands.csv'
                 np.savetxt(cand_file_path, X_new, header=''.join([f+',' for f in feats]), comments='', delimiter=',')
@@ -433,7 +440,7 @@ class GP_Surrogate(Campaign):
             sample = sample[None, :]
 
         mu, std, d = self.model.predict(sample)
-        print('mean predicted for input {1} during optimisation substeps: {0}'.format(mu, sample)) ###DEBUG
+        print('mean predicted for input {1} during optimisation substeps: {0}, std={2}'.format(mu, sample, std)) ###DEBUG
 
         #func_val = func(mu, target)        
         func_val = func(mu)

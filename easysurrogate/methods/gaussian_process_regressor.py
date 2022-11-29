@@ -212,6 +212,8 @@ class GaussianProcessRegressor():
         K_star = np.array(K_star).reshape((n_star, self.n))
 
         f_bar_star = np.dot(K_star, np.dot(self.K_inv_modif, self.y.reshape(self.n, self.n_y_dim)))
+
+        print(f_bar_star, K_star, self.K, self.sigma_f,) ###DEBUG
         
         return f_bar_star
 

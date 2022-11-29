@@ -152,8 +152,8 @@ class Feature_Engineering:
 
         else:
 
-            alpha_expand = 0.1
-            beta_jitter  = [-0.1, 0.1, 0.1, 0.1] 
+            alpha_expand = 0.0
+            beta_jitter  = [0., 0., 0., 0.]
 
             boundminima = np.array(X_cands).min(axis=0)
             boundmaxima = np.array(X_cands).max(axis=0)
@@ -173,14 +173,16 @@ class Feature_Engineering:
                                 x0=opt_start_point,
                                 bounds=currbounds, # bounds for current GP case
                                 )
-            #TODO: scipy error for poi_function_acquisition_function
-            if newpoints.success:
-                x_min = newpoints['x']
-                print('x_min={0}'.format(x_min)) ###DEBUG
 
+            #TODO: scipy error for poi_function_acquisition_function
             # Just a stand in
             x_min_ind_test = 0
             x_min_ind_glob = 0
+            x_min = 0.
+
+            if newpoints.success:
+                x_min = newpoints['x']
+                print('x_min={0}'.format(x_min)) ###DEBUG
 
         print('Using new %d samples to retrain the ML model' % n_new_cands)
 

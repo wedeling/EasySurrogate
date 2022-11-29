@@ -32,7 +32,7 @@ class GP_analysis(BaseAnalysis):
         plt.legend()
         plt.grid('both')
         #plt.yscale("symlog") #if comment then TEMP
-        plt.savefig('gp_abs_err.png')
+        plt.savefig('gp_abs_err.svg')
         plt.close()
 
     def plot_predictions_vs_groundtruth(self,
@@ -47,6 +47,11 @@ class GP_analysis(BaseAnalysis):
         """
 
         plt.ioff()
+
+        fig = plt.figure()
+
+        val_err = 0.25
+
         plt.title(name)
 
         if y_test_pred_var is not None and y_test_orig_var is not None:
@@ -83,14 +88,28 @@ class GP_analysis(BaseAnalysis):
 
         plt.plot(y_test_orig, y_test_orig, 'k--')
 
+        # Adding error bands around original mean
+        plt.plot(y_test_orig, (1.+val_err)*y_test_orig, 'k--', alpha=0.25)
+        plt.plot(y_test_orig, (1.-val_err)*y_test_orig, 'k--', alpha=0.25)
+
+        # Limitting plot to make it square
+        maxlim = max((1.+val_err)*y_test_orig)
+        minlim = min((1.-val_err)*y_test_orig)
+        maxlim_less = max(y_test_orig)
+        minlim_less = min(y_test_orig)
+        plt.xlim(minlim_less, maxlim_less)
+        plt.ylim(minlim, maxlim)
+
+        # Scaling of the plots
+        #plt.yscale('symlog') #if comment then TEMP
+        #plt.xscale('symlog') #if comment then TEMP
+
         plt.grid(True, which='both', axis='both')
         plt.xlabel('Original values')
         plt.ylabel('Predicted values')
-        plt.yscale('symlog') #if comment then TEMP
-        plt.xscale('symlog') #if comment then TEMP
         plt.legend()
         plt.tight_layout()
-        plt.savefig('pred_vs_orig.png')
+        plt.savefig('pred_vs_orig.svg')
         plt.close()
 
     def plot_res(self,
@@ -125,7 +144,7 @@ class GP_analysis(BaseAnalysis):
         plt.xlabel('Run number')
         plt.ylabel('Prediction of {}'.format(name))
 
-        plt.yscale("symlog") #if comment then TEMP
+        #plt.yscale("symlog") #if comment then TEMP
 
         plt.plot(x_train, y_train_orig, '*', label='Simulation, train', color='green')
         if y_test_orig is not None:
@@ -183,7 +202,7 @@ class GP_analysis(BaseAnalysis):
         # --- 2) Plotting absolute errors
         plt.subplot(312)
 
-        plt.yscale("symlog") #if comment then TEMP
+        #plt.yscale("symlog") #if comment then TEMP
         plt.xlabel('Run number')
         plt.ylabel('Error')
 
@@ -202,7 +221,7 @@ class GP_analysis(BaseAnalysis):
         plt.grid()
         plt.xlabel('Run number')
         plt.ylabel('Relative error (%)')
-        plt.yscale("log") #if comment then TEMP
+        #plt.yscale("log") #if comment then TEMP
         plt.legend()
         #plt.tight_layout()
 
@@ -215,7 +234,7 @@ class GP_analysis(BaseAnalysis):
             type_train +
             '_' +
             str(train_n) +
-            '.png',
+            '.svg',
             bbox_inches='tight',
             dpi=100)
         plt.clf()
@@ -245,7 +264,7 @@ class GP_analysis(BaseAnalysis):
 
         plt.legend(loc='best')
         plt.title('PDF of simulated and predicted target values')
-        plt.savefig(filename + '.png')
+        plt.savefig(filename + '.svg')
         plt.close()
 
     def plot_2d_design_history(self, x_test=None, y_test=None):
@@ -374,7 +393,6 @@ class GP_analysis(BaseAnalysis):
             X_train[i, :].reshape(-1, 1))[1] for i in range(X_train.shape[0])]
 
         # Reshape the resulting arrays
-        # TODO here an error occures when testfrac==0.0
         if not only_train_set:
             y_pred = np.squeeze(np.array(y_pred), axis=1)
             y_var_pred = np.squeeze(np.array(y_var_pred), axis=1)
@@ -416,6 +434,8 @@ class GP_analysis(BaseAnalysis):
         err_rel = np.divide(err_abs, y_test)
 
         print("Printing and plotting the evaluation results")
+        #TODO: resolve case whe y_groundtruth==0.0
+        #TODO: add color for test case in Err_abs and Err_rel plots
   
         if flag_plot and not only_train_set:
   
