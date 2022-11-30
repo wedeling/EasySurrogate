@@ -60,7 +60,7 @@ target_name_selected = target_names
 #saved_model_file_path = 'model_val_11102022.pickle' 
 
 # 5'') Case from single flux tube GEM UQ campaign - 81 runs (4 parameters, tensor product of grid with 3 points per DoF)
-saved_model_file_path = 'model_val_14112022.pickle' 
+saved_model_file_path = 'model_val_LocStudentMatern_30112022.pickle'
 
 features_names_selected = features_names
 target_name_selected = [target_names[1]]

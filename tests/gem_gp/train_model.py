@@ -51,9 +51,9 @@ target = np.concatenate([data_frame[k] for k in target_name_selected if k in dat
 time_init_start = t.time()
 
 gp_param = {
-            'backend': 'scikit-learn', #local',
-            'process_type': 'gaussian', #'student_t',
-            'kernel': 'Matern',
+            'backend': 'local', #'scikit-learn'
+            'process_type': 'student_t', #'gaussian'
+            'kernel': 'Matern', #'RBF'
             'length_scale': 1.0,  #[1.]*len(features),
             'noize': 0.1,
             'nu_matern': 1.5,
@@ -90,7 +90,7 @@ surrogate.train(features,
 print('Time to train the surrogate: {:.3} s'.format(t.time() - time_train_start))
 surrogate.model.print_model_info()
 
-save_model_file_name = 'model_val_15112022.pickle'
+save_model_file_name = 'model_val_LocStudentMatern_30112022.pickle'
 
 campaign.add_app(name='gp_campaign', surrogate=surrogate)
 campaign.save_state(file_path=save_model_file_name)
