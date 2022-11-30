@@ -7,6 +7,7 @@ Author: Y. Yudin
 
 import numpy as np
 import functools
+import math
 
 from itertools import product
 from scipy.optimize import minimize
@@ -69,6 +70,12 @@ class GaussianProcessRegressor():
             self.kernel_name = kwargs['kernel']
         self.set_kernel(self.kernel_name)
 
+    def __del__(self):
+
+        print('>Destructor[Surrogate]: called')
+        print('>Destructor[Surrogate]: The kernel function was called times: {0}'.
+            format(self.kernel.func.call_counter if type(self.kernel)==functools.partial else self.kernel.call_counter)) ###DEBUG
+
     def set_kernel(self, kernel='sq_exp', **kwargs):
         """
         Setting type of the kernel function and its default parameters
@@ -78,6 +85,7 @@ class GaussianProcessRegressor():
             self.kernel = gibbs_ns_kernel
         elif kernel == 'matern':
             #self.kernel = matern_kernel
+            #self.kernel = lambda x: matern_kernel(x, nu=self.nu_matern)
             self.kernel = functools.partial(matern_kernel, nu=self.nu_matern)
         else:
             self.kernel = sq_exp_kernel_function
@@ -149,7 +157,9 @@ class GaussianProcessRegressor():
 
         hp_curval = np.array([self.sigma_f, self.sigma_n, self.nu_stp, *self.l,])
 
-        hp_bounds = [(1e-16, 1e+6), (1e-16, 1e+4), (2, 1e+6), *([(1e-16, 1e+4)]*len(self.l))]
+        # Mind the bounds, sometimes the lenghtscale is too small -> it is a tradeoff between optimizer and further usage
+        #hp_bounds = [(1e-16, 1e+6), (1e-16, 1e+4), (2, 1e+6), *([(1e-16, 1e+4)]*len(self.l))]
+        hp_bounds = [(1e-6, 1e+6), (1e-6, 1e+4), (2, 1e+6), *([(1e-6, 1e+4)]*len(self.l))]
 
         hp_options = {'maxiter': 100}
 
@@ -213,7 +223,8 @@ class GaussianProcessRegressor():
 
         f_bar_star = np.dot(K_star, np.dot(self.K_inv_modif, self.y.reshape(self.n, self.n_y_dim)))
 
-        print(f_bar_star, K_star, self.K, self.sigma_f,) ###DEBUG
+        print('resulting_mean={0}, sigma_f={1}, l={2} \n'.format(f_bar_star,self.sigma_f, self.l,)) ###DEBUG
+        #print('K*={0}\n'.format(K_star)) ###DEBUG
         
         return f_bar_star
 
@@ -488,6 +499,14 @@ def set_nu(func, nu):
         return val
     return wrapper
 
+def counted(func):
+    func.call_counter = 0
+    @functools.wraps(func)
+    def wrapped(*args, **kwargs):
+        wrapped.call_counter += 1
+        return func(*args, **kwargs)
+    return wrapped
+
 def gibbs_ns_kernel(x, y, l, l_func=lambda x: x):
     """
     Defines Gibbs kernel function
@@ -507,22 +526,32 @@ def gibbs_ns_kernel(x, y, l, l_func=lambda x: x):
 
 def sq_exp_kernel_function(x, y, sigma_f=1., l=1.):
     """
-    Defines squared exponential kernel function
+    Defines squared exponential kernel function, same as RBF
     """
 
     r1 = np.divide(x - y, l)
     r  = np.linalg.norm(r1)**2
     kernel = sigma_f * np.exp(-0.5 * r)
 
-    #TODO: check if works for vector l
-
     #print('x={0};y={1};l={2};r1={3};r={4}'.format(x,y,l,r1,r)) ###DEBUG
     
     return kernel
 
+def exp_kernel_function(x, y, sigma_f=1., l=1.):
+    """
+    Defines exponential kernel function
+    """
+
+    r1 = np.divide(x - y, l)
+    r  = np.linalg.norm(r1)**2
+    kernel = sigma_f * np.exp(-1. * np.sqrt(r))
+    
+    return kernel
+
+@counted
 def matern_kernel(x, y, sigma_f=1., l=1., nu=2.5):
     """
-    Defines Mater kernel function
+    Defines Matern kernel function
     """
     
     r1 = np.divide(x - y, l)
@@ -530,16 +559,18 @@ def matern_kernel(x, y, sigma_f=1., l=1., nu=2.5):
 
     m1 = np.sqrt(2 * nu) * r
 
-    if abs(nu - 0.5) < 1e-16:
+    if math.isclose(nu, 0.5):
         
         kernel = (sigma_f**2) * np.exp(-r)
 
-    elif abs(nu - 1.5) < 1e-16:
+    elif math.isclose(nu, 1.5):
         
         m2 = np.sqrt(3) * r
         kernel = (sigma_f**2) * (1 + m2) * np.exp(-m2)
+        #NB: np.exp(-1E5)==0.0
+        #TODO: some passed l is 1E-16
 
-    elif abs(nu - 2.5) < 1e-16:
+    elif math.isclose(nu, 2.5):
 
         m2 = np.sqrt(5) * r
         kernel = (sigma_f**2) * (1 + m2 + (m2**2)/3.) * np.exp(-m2)
@@ -550,4 +581,10 @@ def matern_kernel(x, y, sigma_f=1., l=1., nu=2.5):
              * np.power(m1, nu) \
              * kv(m1, nu)
     
+    #if math.isclose(kernel, 0.):
+    #    print('Matern-{0:.1f}({1},{2})={3}\n'.format(nu, x, y, kernel)) ###DEBUG
+
+    #if min(abs(l)) < 1e-9:
+    #    print('Lengthscale is {0} \n'.format(l)) ###DEBUG
+
     return kernel

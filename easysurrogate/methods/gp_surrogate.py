@@ -167,7 +167,7 @@ class GP_Surrogate(Campaign):
         -------
         Stochastic prediction of the output y
         """
-        # TODO slows down a lot, maybe FeatureEngineering should return training data still as list
+        # TODO slows down a lot, maybe FeatureEngineering should return training data still as a list
         x = np.array([x for x in X]).T
         x = self.x_scaler.transform(x)
         x = [np.array(i) for i in x.T.tolist()]
@@ -248,7 +248,7 @@ class GP_Surrogate(Campaign):
             elif acq_func_arg == 'mu':
                 acq_func_obj = self.maxunc_acquisition_function
             elif acq_func_arg == 'poi_sq_dist_to_val' and target is not None:
-                #TODO currently simplified to less genral version of function, not a metric anymore
+                #TODO currently simplified to less general version of function, not a metric anymore
                 #acq_func_obj = functools.partial(self.poi_function_acquisition_function, func=(lambda y1,y2: np.power(y1-y2, 2)), target=target)
                 acq_func_obj = functools.partial(self.poi_function_acquisition_function, func=(lambda y: np.power(y-target, 2)), target=target)
             else:
@@ -286,9 +286,9 @@ class GP_Surrogate(Campaign):
                 
                 X_new = self.x_scaler.inverse_transform(X_new)
 
-                #TODO optimisation works weel for scikitlearn+gaussian+rbf
-                # --> test for local/student-t/matern
-                #   ---> implement new EasyVVUQ sampler
+                #TODO optimisation works weel for scikitlearn+gaussian+rbf --> test for local/student-t/matern
+                
+                #TODO: local Matern-3/2 implementation gives spurious zeros for some (x,y) pairs
 
                 cand_file_path = 'surrogate_al_cands.csv'
                 np.savetxt(cand_file_path, X_new, header=''.join([f+',' for f in feats]), comments='', delimiter=',')

@@ -173,8 +173,7 @@ class Feature_Engineering:
                                 x0=opt_start_point,
                                 bounds=currbounds, # bounds for current GP case
                                 )
-
-            #TODO: scipy error for poi_function_acquisition_function
+                                
             # Just a stand in
             x_min_ind_test = 0
             x_min_ind_glob = 0
