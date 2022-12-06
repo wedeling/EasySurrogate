@@ -112,8 +112,9 @@ class Feature_Engineering:
         Returns:
 
         """
+        pass
 
-    def chose_feature_from_acquisition(self, acquisition_function, X_cands,
+    def choose_feature_from_acquisition(self, acquisition_function, X_cands,
                                        candidate_search=True, n_new_cands=1):
         """
         Returns a new parameter value as a minimum of acquisition function, as well as its index among suggested
@@ -171,6 +172,7 @@ class Feature_Engineering:
             newpoints = minimize(
                                 fun=acquisition_function, 
                                 x0=opt_start_point,
+                                method='Powell',
                                 bounds=currbounds, # bounds for current GP case
                                 )
                                 
@@ -227,7 +229,7 @@ class Feature_Engineering:
             The fraction of the testing data that is withheld to be considered for validation.
             The default is 0.0, and it must be in [0.0, 1.0].
         train_first: boolean, if True then use first (1.0-test_frac) samples for training,
-            otherwise chose training sample at random
+            otherwise choose training sample at random
         index: list of inidices of data samples to be chosen for training set
 
         Returns
@@ -266,7 +268,7 @@ class Feature_Engineering:
         # 2) train_first False: choose (1-test_frac) fraction of data set at
         # random without replacement
         if train_first:
-            # chose train fraction from first sims
+            # choose train fraction from first sims
             self.train_indices = np.arange(self.n_samples)[:self.n_train]
             self.test_indices = np.arange(self.n_samples)[self.n_train:]
         else:
@@ -294,11 +296,11 @@ class Feature_Engineering:
         # use the entire row as a feature
         if not local:
             # list of features
-            X[0] = [X_i[self.train_indices] for X_i in feats]  # chose train fraction randomly
+            X[0] = [X_i[self.train_indices] for X_i in feats]  # choose train fraction randomly
             # the target data
             y[0] = target[self.train_indices]
             if self.n_test > 0:
-                X_r[0] = [X_i[self.test_indices] for X_i in feats]  # chose train fraction randomly
+                X_r[0] = [X_i[self.test_indices] for X_i in feats]  # choose train fraction randomly
                 y_r[0] = target[self.test_indices]
         # do not use entire row as feature, apply surrogate locally along second dimension
         else:

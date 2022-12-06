@@ -235,7 +235,7 @@ class GP_Surrogate(Campaign):
         self.set_data_stats()
 
         #TODO: in every function specs write in which scaling the passed data are
-        #target = self.y_scaler.transform(np.array(target).reshape(1,-1)) 
+        target = self.y_scaler.transform(np.array(target).reshape(1,-1)) 
         #X_test_unscaled = [self.x_scaler.inverse_transform(X_i.reshape(1,-1))[0].tolist() for X_i in self.X_test]
         #TODO: this is horrible and should not exist
 
@@ -278,7 +278,7 @@ class GP_Surrogate(Campaign):
             if n_iter == 1:
 
                 X_new, x_new_ind_test, x_new_ind_glob = self.feat_eng.\
-                        chose_feature_from_acquisition(acq_func_obj, 
+                        choose_feature_from_acquisition(acq_func_obj, 
                                                        self.X_test, 
                                                        candidate_search=False)
 
@@ -301,7 +301,7 @@ class GP_Surrogate(Campaign):
                 for i in range(n_iter):
 
                     X_new, x_new_ind_test, x_new_ind_glob = self.feat_eng.\
-                        chose_feature_from_acquisition(acq_func_obj, self.X_test)
+                        choose_feature_from_acquisition(acq_func_obj, self.X_test)
                     X_new = X_new.reshape(1, -1)
 
                     # x_new_inds = feats.index(X_new)  # feats is list of features, for this
@@ -385,7 +385,7 @@ class GP_Surrogate(Campaign):
         Returns the uncertainty of the model as (a posterior variance on Y) for a given sample
         Args:
             sample: a single sample from a feature array
-            candidates: list of input parameter files to chose optimum from
+            candidates: list of input parameter files to choose optimum from
         Returns:
             the value of uncertainty (variance) of the model
         """
@@ -406,7 +406,7 @@ class GP_Surrogate(Campaign):
         Returns the probability of improvement for a given sample
         Args:
             sample: a single sample from a feature array
-            candidates: list of input parameter files to chose optimum from
+            candidates: list of input parameter files to choose optimum from
         Returns:
             the probability of improvement if a given sample will be added to the model
         """
@@ -420,7 +420,7 @@ class GP_Surrogate(Campaign):
         mu, std, d = self.model.predict(sample)
         poi = np.linalg.norm(np.divide(abs(mu - f_star), std + jitter), ord=2)
 
-        return -poi
+        return poi
 
     def poi_function_acquisition_function(self, sample, func=(lambda x: x), target=None, candidates=None):
         """
@@ -429,7 +429,7 @@ class GP_Surrogate(Campaign):
             sample: a single sample from a feature array
             func: a function object to be optimise
             target: an external value e.g. to find samples closer to a certain outcome value (in scaled space)
-            candidates: list of input parameter files to chose optimum from
+            candidates: list of input parameter files to choose optimum from
         Returns:
             the probability of improvement if a given sample will be added to the model
         """
@@ -450,9 +450,9 @@ class GP_Surrogate(Campaign):
         
         #poi = np.linalg.norm(np.divide(np.pow(mu - f_star, 2), std + jitter), ord=2)
         
-        poi = np.divide(-func_val + jitter, std + jitter)[0] # Workaround for dimensionality...
-        #poi = -func_val #ATTENTION: checking suspiciously low QoI value from surrogate for optimisation result
+        poi = np.divide(-func_val + jitter, std + jitter)[0] # Workaround for dimensionality
+        #poi = -func_val[0] #ATTENTION: ###DEBUG checking suspiciously low QoI value from surrogate for optimisation result
 
         print('acq-n f-n value of type {0} = {1}'.format(type(poi), poi)) ###DEBUG
 
-        return -poi
+        return -poi # ATTENTION: this is what being minimized
