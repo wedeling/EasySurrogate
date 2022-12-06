@@ -6,7 +6,7 @@ target_names = ['ti_transp_flux']
 
 qoi_targ=2099023.289881937 #TODO read from production run result csv
 
-campaign = es.Campaign(load_state=True, file_path='model_val_LocGaussMatern_30112022.pickle')
+campaign = es.Campaign(load_state=True, file_path='model_val_SkitGaussRbf_29112022.pickle')
 data_frame = campaign.load_hdf5_data(file_path='gem_uq_81_std.hdf5')
 
 # Printing out some predictions from the existing model
@@ -27,5 +27,5 @@ X_new = campaign.surrogate.train_sequentially(n_iter=1, feats=features_names, ta
 
 #X_new = campaign.surrogate.x_scaler.inverse_transform(X_new)
 
-# m_new, v_new = campaign.surrogate.predict(X_new.reshape(-1, 1))  # just a test on single sample
-# print(m_new, v_new)
+m_new, v_new = campaign.surrogate.predict(X_new.reshape(-1, 1))  # just a test on single sample
+print(m_new, v_new)

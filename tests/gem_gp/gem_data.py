@@ -164,11 +164,21 @@ campaign = es.Campaign(load_state=False)
 # campaign.store_data_to_hdf5(data, file_path='gem_uq_79_std.hdf5')
 
 # 5'') Case from single flux tube GEM UQ campaign (4 parameters, tensor product of grid with 3 points per DoF) - longer runs, fixed a permutation of input-outputs
-data = load_csv_file(input_file='resuq_main_ti_transp_flux_all_akgbbn1a_9.csv', 
-                     n_runs=81,
+# data = load_csv_file(input_file='resuq_main_ti_transp_flux_all_akgbbn1a_9.csv', 
+#                      n_runs=81,
+#                      #input_dim=4, 
+#                      output_dim=2,
+#                      std=True,
+#                      startcol=3,
+#                      )
+# campaign.store_data_to_hdf5(data, file_path='gem_uq_81_std.hdf5')
+
+# 6) Cases predicted by AL GPR model, the values should yield results close to 2099023.289881937 
+data = load_csv_file(input_file='resuq_main_ti_transp_flux_all_alcand_30112022.csv', 
+                     n_runs=6,
                      #input_dim=4, 
                      output_dim=2,
                      std=True,
                      startcol=3,
                      )
-campaign.store_data_to_hdf5(data, file_path='gem_uq_81_std.hdf5')
+campaign.store_data_to_hdf5(data, file_path='gpr_al_6_val.hdf5')

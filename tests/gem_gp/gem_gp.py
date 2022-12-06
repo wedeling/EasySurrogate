@@ -60,13 +60,23 @@ target_name_selected = target_names
 #saved_model_file_path = 'model_val_11102022.pickle' 
 
 # 5'') Case from single flux tube GEM UQ campaign - 81 runs (4 parameters, tensor product of grid with 3 points per DoF)
+# saved_model_file_path = 'model_val_LocStudentMatern_30112022.pickle'
+
+# features_names_selected = features_names
+# target_name_selected = [target_names[1]]
+# campaign = es.Campaign(load_state=True, file_path=saved_model_file_path)
+
+# data_frame = campaign.load_hdf5_data(file_path='gem_uq_81_std.hdf5')
+# data_frame_train = campaign.load_hdf5_data(file_path='gem_uq_81_std.hdf5')
+
+# 6) Cases predicted by AL GPR model, the values should yield results close to 2099023.289881937 
 saved_model_file_path = 'model_val_LocStudentMatern_30112022.pickle'
 
 features_names_selected = features_names
 target_name_selected = [target_names[1]]
 campaign = es.Campaign(load_state=True, file_path=saved_model_file_path)
 
-data_frame = campaign.load_hdf5_data(file_path='gem_uq_81_std.hdf5')
+data_frame = campaign.load_hdf5_data(file_path='gpr_al_6_val.hdf5')
 data_frame_train = campaign.load_hdf5_data(file_path='gem_uq_81_std.hdf5')
 
 # To use or not to use analysis of sequential design results
