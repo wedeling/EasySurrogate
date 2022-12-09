@@ -168,7 +168,7 @@ class GP_Surrogate(Campaign):
         Stochastic prediction of the output y
         """
         # TODO slows down a lot, maybe FeatureEngineering should return training data still as a list
-        x = np.array([x for x in X]).T
+        x = np.array([x for x in X]).T # TODO: if no transformation needed, then list comprehension not needed
         x = self.x_scaler.transform(x)
         x = [np.array(i) for i in x.T.tolist()]
 
@@ -218,7 +218,30 @@ class GP_Surrogate(Campaign):
         else:
             self.output_mean = 0.0 * np.ones((1, self.n_out))
             self.output_std = 1.0 * np.ones((1, self.n_out))
+    
+    def get_dimensions(self):
+        """
+        Get some useful dimensions of the GPR surrogate. Returns a dict with the number
+        of training samples (n_train), the number of data samples (n_samples),
+        the number of test samples (n_test), the size of input vector (n_in),
+        and the size of output vector (n_out).
 
+        Returns
+        -------
+        dims : dict
+            The dimensions dictionary.
+
+        """
+
+        dims = {}
+        dims['n_train'] = self.feat_eng.n_train
+        dims['n_samples'] = self.feat_eng.n_samples
+        dims['n_test'] = dims['n_samples'] - dims['n_train']
+        dims['n_in'] = self.n_in
+        dims['n_out'] = self.n_out
+
+        return dims
+   
     def train_sequentially(self, feats=None, target=None,
                            n_iter=0, **kwargs):
         """
@@ -397,7 +420,7 @@ class GP_Surrogate(Campaign):
 
         poi = -1. * uncertatinty
 
-        print('acq-n f-n value of type {0} = {1}'.format(type(poi), poi)) ###DEBUG
+        #print('acq-n f-n value of type {0} = {1}'.format(type(poi), poi)) ###DEBUG
 
         return poi
 
@@ -440,7 +463,7 @@ class GP_Surrogate(Campaign):
             sample = sample[None, :]
 
         mu, std, d = self.model.predict(sample)
-        print('mean predicted for input {1} during optimisation substeps: {0}, std={2}'.format(mu, sample, std)) ###DEBUG
+        #print('mean predicted for input {1} during optimisation substeps: {0}, std={2}'.format(mu, sample, std)) ###DEBUG
 
         #func_val = func(mu, target)        
         func_val = func(mu)
@@ -453,6 +476,6 @@ class GP_Surrogate(Campaign):
         poi = np.divide(-func_val + jitter, std + jitter)[0] # Workaround for dimensionality
         #poi = -func_val[0] #ATTENTION: ###DEBUG checking suspiciously low QoI value from surrogate for optimisation result
 
-        print('acq-n f-n value of type {0} = {1}'.format(type(poi), poi)) ###DEBUG
+        #print('acq-n f-n value of type {0} = {1}'.format(type(poi), poi)) ###DEBUG
 
         return -poi # ATTENTION: this is what being minimized
