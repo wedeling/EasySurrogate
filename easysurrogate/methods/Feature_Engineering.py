@@ -154,7 +154,7 @@ class Feature_Engineering:
         else:
 
             alpha_expand = 0.0
-            beta_jitter  = [0., 0., 0., 0.]
+            beta_jitter  = [0.]*X_cands[0].shape[0]
 
             boundminima = np.array(X_cands).min(axis=0)
             boundmaxima = np.array(X_cands).max(axis=0)
@@ -164,10 +164,10 @@ class Feature_Engineering:
                     ((1-alpha_expand*np.sign(boundminima[i]))*boundminima[i], 
                      (1+alpha_expand*np.sign(boundmaxima[i]))*boundmaxima[i])
                                 )
-            print('optimisation bounds are {0}'.format(currbounds)) ###DEBUG
+            #print('optimisation bounds are {0}'.format(currbounds)) ###DEBUG
 
             opt_start_point = np.array([statistics.mean(x)+beta_jitter[i] for i,x in enumerate(currbounds)])
-            print('starting point for optimization is: {0}'.format(opt_start_point)) ###DEBUG
+            #print('starting point for optimization is: {0}'.format(opt_start_point)) ###DEBUG
 
             newpoints = minimize(
                                 fun=acquisition_function, 
