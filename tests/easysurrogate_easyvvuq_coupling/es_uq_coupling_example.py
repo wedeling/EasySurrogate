@@ -103,11 +103,16 @@ for count, i in enumerate(range(dims['n_train'], dims['n_samples'])):
 feature_names = ["x%d" % (i + 1) for i in range(D)]
 qoi_targ = test_predictions.mean()
 
+print('> Looking for samples to yield: {0}'.format(qoi_targ))
+
 x_new = surrogate.train_sequentially(n_iter=1, feats=feature_names, target=qoi_targ, 
                                                 acquisition_function='poi_sq_dist_to_val') 
 
+qoi_pred = surrogate.predict(x_new.reshape(-1, 1))[0][0]
+
 print('> The new sample in input space is : {0} and the predicted value is : {1}'.format(
-    x_new, surrogate.predict(x_new.reshape(-1, 1))[0]))
+    x_new, qoi_pred))
+
 
 ###############################
 ### EasyVVUQ Campaign - New ###
@@ -127,9 +132,7 @@ print('> Last of existing runs is : \n {0}'.format(runs_list_old[-1]))
 # add new run to the camapign database
 
 # next line is what does the job - only works for a simple case
-run_new = {k:v for k,v in zip(feature_names, x_new[0])}
-# TODO introduce a 'serialization', an inverse to es_campaign.load_easyvvuq_data()
-uq_campaign.add_runs(runs=[run_new])
+es_campaign.add_samples_to_easyvvuq(x_new, uq_campaign, feature_names)
 
 runs_list_new = uq_campaign.list_runs()
 n_sample_new = len(runs_list_new)
@@ -140,7 +143,7 @@ print('> Last run including the new one is : \n {0}'.format(runs_list_new[-1]))
 
 #sampler = uq_campaign.get_active_sampler()
 #uq_campaign.set_sampler(sampler, update=True)
-##TODO: may be sampler need to change
+##TODO: may be sampler need to change - data base does not know about samples - it actually should be updated in the .execute()
 
 #actions = Actions()
 #uq_campaign.replace_actions(app_name=camp_name, actions=actions)
@@ -157,6 +160,5 @@ data_frame_new = uq_campaign.get_collation_result()
 
 # check what are the results for the new run
 
-#print(data_frame_new.describe())
-f_new = data_frame_new.iloc[n_sample_new-1]['f']
-print('> Actual value for a new sample is : {0}'.format(f_new))
+f_new = data_frame_new.iloc[n_sample_new-1]['f'].values[0]
+print('> Actual value for a new sample is: {0} compared to anticipated: {1}'.format(f_new, qoi_targ))

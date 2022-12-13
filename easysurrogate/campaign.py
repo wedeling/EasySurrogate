@@ -327,23 +327,44 @@ class Campaign:
         pickle.dump(state, file)
         file.close()
 
-def add_hp_tuner(self, **kwargs):
-    """
-    Let this campaign object aggregate a single object inherited from Hyperparameter_tuner
+    def add_hp_tuner(self, **kwargs):
+        """
+        Let this campaign object aggregate a single object inherited from Hyperparameter_tuner
 
-    Parameters
+        Parameters
+            ----------
+        **kwargs :
+            Can contain hp_tuner=<name_of_hp_tuner_object>
+
+            Returns
+            -------
+            None.
+        """
+
+        if 'hp_tuner' in kwargs:
+            self.hp_tuner = kwargs['hp_tuner']
+        else:
+            #Error('There was no Hyper-parameter tuner passed')
+            print('There was no Hyper-parameter tuner passed')
+            
+    def add_samples_to_easyvvuq(self, xs_new, easyvvuq_campaign, feature_names):
+        """
+        Add new samples in the simulator input space to a passed easyvvuq_campaign
+
+        Parameters
         ----------
-    **kwargs :
-        Can contain hp_tuner=<name_of_hp_tuner_object>
-
+        xs_new : numpy array of dimension=2
+            input samples for the simulator obtained by an algorithm using a surrogate,
+            a row is a single input vector
+        easyvvuq_campaign : 
+            reference to easyvvuq.Campaign object
+        feature_names: list of strings
+            list of keyword names
         Returns
         -------
         None.
-    """
-
-    if 'hp_tuner' in kwargs:
-        self.hp_tuner = kwargs['hp_tuner']
-    else:
-        #Error('There was no Hyper-parameter tuner passed')
-        print('There was no Hyper-parameter tuner passed')
+        """
         
+        runs_new = [{k:v for k,v in zip(feature_names, xs_new[i])} for i in range(xs_new.shape[0])]
+
+        easyvvuq_campaign.add_runs(runs=runs_new)
