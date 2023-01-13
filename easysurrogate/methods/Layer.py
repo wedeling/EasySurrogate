@@ -32,8 +32,8 @@ class Layer:
         activation : string, optional
             The name of the activation function of the hidden layers.
             The default is 'tanh'.
-        loss : string, optional
-            The name of the loss function. The default is 'squared'.
+        loss : string
+            The name of the loss function.
         bias : boolean, optional
             Use a bias neuron. The default is False.
         batch_size : int, optional

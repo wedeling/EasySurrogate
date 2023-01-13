@@ -63,7 +63,7 @@ class DAS_Layer(Layer):
 
         """
         super().meet_the_neighbors(layer_rm1, layer_rp1)
-        self.D = layer_rm1.n_neurons
+        self.D = layer_rm1.n_neurons + self.layer_rm1.n_bias
 
     def init_weights(self):
         """
@@ -76,18 +76,18 @@ class DAS_Layer(Layer):
         """
         # initialize the weights of the layer, which parameterize the
         # Gram-Schmidt vectors w
-        self.Q = np.random.randn(self.layer_rm1.n_neurons, self.n_neurons) * \
-            np.sqrt(1.0 / self.layer_rm1.n_neurons)
+        self.Q = np.random.randn(self.layer_rm1.n_neurons + self.layer_rm1.n_bias,
+                                 self.n_neurons) * np.sqrt(1.0 / self.layer_rm1.n_neurons)
         # the unnormalized Gram-Schmidt vectors
-        self.w = np.zeros([self.layer_rm1.n_neurons, self.n_neurons])
+        self.w = np.zeros([self.layer_rm1.n_neurons + self.layer_rm1.n_bias, self.n_neurons])
         # compute the Gram-Schmidt vectors, given Q
         self.compute_weights()
         # the gradient of the loss function
-        self.L_grad_W = np.zeros([self.layer_rm1.n_neurons, self.n_neurons])
+        self.L_grad_W = np.zeros([self.layer_rm1.n_neurons + self.layer_rm1.n_bias, self.n_neurons])
         # momentum
-        self.V = np.zeros([self.layer_rm1.n_neurons, self.n_neurons])
+        self.V = np.zeros([self.layer_rm1.n_neurons + self.layer_rm1.n_bias, self.n_neurons])
         # squared gradient
-        self.A = np.zeros([self.layer_rm1.n_neurons, self.n_neurons])
+        self.A = np.zeros([self.layer_rm1.n_neurons + self.layer_rm1.n_bias, self.n_neurons])
 
     def compute_weights(self):
         """

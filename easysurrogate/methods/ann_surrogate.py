@@ -100,7 +100,7 @@ class ANN_Surrogate(Campaign):
         if lags is not None:
             self.feat_eng.initial_condition_feature_history(feats)
 
-    def derivative(self, x, norm=True):
+    def derivative(self, x, norm=True, layer_idx=0):
         """
         Compute a derivative of the network output f(x) with respect to the inputs x.
 
@@ -113,6 +113,8 @@ class ANN_Surrogate(Campaign):
             Compute the gradient of ||f||_2. If False it computes the gradient of
             f, if f is a scalar. If False and f is a vector, the resulting gradient is of the
             column sum of the full Jacobian matrix.
+        layer_idx : int, optional, default is 0.
+            Index for the layer of which to return the derivative. Default is 0, the input layer.
 
         Returns
         -------
@@ -122,7 +124,7 @@ class ANN_Surrogate(Campaign):
         """
         # check that x is of shape (n_in, ) or (n_in, 1)
         assert x.shape[0] == self.neural_net.n_in, \
-        "x must be of shape (n_in,): %d != %d" % (x.shape[0], self.neural_net.n_in)
+            "x must be of shape (n_in,): %d != %d" % (x.shape[0], self.neural_net.n_in)
 
         if x.ndim > 1:
             assert x.shape[1] == 1, "Only pass 1 feature vector at a time"
@@ -135,7 +137,8 @@ class ANN_Surrogate(Campaign):
         x = (x - self.feat_mean) / self.feat_std
 
         # feed forward and compute and the derivatives
-        df_dx = self.neural_net.d_norm_y_dX(x.reshape([1, -1]), feed_forward=True, norm=norm)
+        df_dx = self.neural_net.d_norm_y_dX(x.reshape([1, -1]), feed_forward=True, norm=norm,
+                                            layer_idx=layer_idx)
 
         return df_dx
 

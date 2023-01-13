@@ -61,7 +61,7 @@ class DAS_analysis(BaseAnalysis):
         print(idx)
         return idx, mean
 
-    def get_errors(self, feats, data, relative = True):
+    def get_errors(self, feats, data, relative=True):
         """
         Get the training and test error of the DAS surrogate to screen. This method
         uses the DAS_Surrogate.get_dimensions() dictionary to determine where the split
@@ -110,7 +110,7 @@ class DAS_analysis(BaseAnalysis):
         test_data = data[dims['n_train']:]
         if relative:
             err_test = np.mean(np.linalg.norm(test_data - pred, axis=0) /
-                               np.linalg.norm(test_data,axis=0), axis=0)
+                               np.linalg.norm(test_data, axis=0), axis=0)
             print("Relative test error = %.4f %%" % (err_test * 100))
         else:
             err_test = np.mean(np.linalg.norm(test_data - pred, axis=0), axis=0)

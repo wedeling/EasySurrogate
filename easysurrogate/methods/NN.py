@@ -10,6 +10,7 @@ import numpy as np
 # import h5py
 
 from .Layer import Layer
+from .DAS_Layer import DAS_Layer
 
 
 class ANN:
@@ -21,7 +22,7 @@ class ANN:
                  beta2=0.999, lamb=0.0, n_out=1, loss='squared', activation='tanh',
                  activation_out='linear', n_softmax=0, n_layers=2, n_neurons=16,
                  bias=True, batch_size=1, param_specific_learn_rate=True,
-                 save=True, on_gpu=False, name='ANN',
+                 save=False, on_gpu=False, name='ANN',
                  standardize_X=True, standardize_y=True, **kwargs):
         """
         Initialize the Artificial Neural Network object.
@@ -72,7 +73,7 @@ class ANN:
             Use parameter-specific learing rate. The default is True.
         save : boolean, optional
             Save the neural network to a pickle file after training.
-            The default is True.
+            The default is False.
         on_gpu : boolean, optional
             Train the neural network on a GPU using cupy. NOT IMPLEMENTED IN THIS VERSION.
             The default is False.
@@ -104,6 +105,9 @@ class ANN:
         except IndexError:
             self.n_in = 1
 
+        # number of output neurons
+        self.n_out = n_out
+
         # #use either numpy or cupy via xp based on the on_gpu flag
         # global xp
         # if on_gpu == False:
@@ -128,50 +132,120 @@ class ANN:
         self.standardize_X = standardize_X
         self.standardize_y = standardize_y
 
-        # number of layers (hidden + output)
-        self.n_layers = n_layers
+        # size of the mini batch used in stochastic gradient descent
+        self.batch_size = batch_size
 
-        self.n_neurons = n_neurons
+        ###########################################
+
+        # use a user-specified list of layer objects to create the ANN
+        if 'layers' in kwargs:
+            # user-specified layers
+            self.layers = kwargs['layers']
+
+            assert isinstance(self.layers, list), "layers must be stored in a list"
+
+            # number of layers (hidden + output)
+            self.n_layers = len(self.layers) - 1
+
+            # number of neurons in the hidden layers
+            self.n_neurons = [layer.n_neurons for layer in self.layers[1:-1]]
+
+            # bias per layer
+            self.bias = [layer.bias for layer in self.layers]
+
+            # loss function
+            self.loss = self.layers[-1].loss
+
+            # activation function per hidden layer
+            self.activation = [layer.activation for layer in self.layers[1:-1]]
+
+            # activation of the output layer
+            self.activation_out = self.layers[-1].activation
+
+            # L2 regularization parameter
+            self.lamb = self.layers[-1].lamb
+
+            # number of softmax layers at the output
+            self.n_softmax = self.layers[-1].n_softmax
+
+            self.set_batch_size(self.batch_size)
+
+        # the default option, create the layers using the parameters
+        # of this subroutine
+        else:
+            self.layers = []
+
+            # number of layers (hidden + output)
+            self.n_layers = n_layers
+
+            self.n_neurons = n_neurons
+
+            # use bias neurons
+            if isinstance(bias, bool):
+                self.bias = []
+                for i in range(n_layers):
+                    self.bias.append(bias)
+            else:
+                self.bias = bias
+
+            # loss function type
+            self.loss = loss
+
+            # activation function of the hidden layers
+            self.activation = activation
+
+            # activation function of the output layer
+            self.activation_out = activation_out
+
+            # L2 regularization parameter
+            self.lamb = lamb
+
+            # number of sofmax layers
+            self.n_softmax = n_softmax
+
+        ############################################
+
+        # bias type checking
+        assert isinstance(
+            bias, bool) or isinstance(
+            bias, list), "bias must be boolean or a list of boolan"
+
+        # type checking the number of neurons
+        assert isinstance(self.n_neurons, int) or isinstance(self.n_neurons, list), \
+            "n_neurons must be a list or an integer"
 
         # list of all layer sizes
         self.layer_sizes = [self.n_in]
 
-        # type checking the number of neurons
-        assert type(n_neurons) is int or type(n_neurons) is list, \
-            "n_neurons must be a list or an integer"
-
         # constant size hidden layer
-        if type(n_neurons) is int: 
-            for i in range(n_layers - 1): 
-                self.layer_sizes.append(n_neurons)
+        if isinstance(self.n_neurons, int):
+            for i in range(n_layers - 1):
+                self.layer_sizes.append(self.n_neurons)
         # variable user-specified size hidden layers
         else:
-            for i in range(n_layers - 1): 
-                self.layer_sizes.append(n_neurons[i])
+            for i in range(n_layers - 1):
+                self.layer_sizes.append(self.n_neurons[i])
 
-        # number of output neurons
         self.layer_sizes.append(n_out)
-        self.n_out = n_out
 
-        # bias type checking
-        assert type(bias) is bool or type(bias) is list, "bias must be boolean or a list of boolan"
+        # type checking the activation
+        assert isinstance(activation, str) or isinstance(activation, list), \
+            "activation must be a string or a list of strings"
 
-        # use bias neurons
-        if type(bias) is bool:
-            self.bias = []
-            for i in range(n_layers):
-                self.bias.append(bias)
+        # list of activation functions per layer
+        self.layer_activation = ['linear']
+        # same activation for each hidden layer
+        if isinstance(self.activation, str):
+            for i in range(self.n_layers - 1):
+                self.layer_activation.append(self.activation)
         else:
-            self.bias = bias
+            for i in range(self.n_layers - 1):
+                self.layer_activation.append(self.activation[i])
 
-        # loss function type
-        self.loss = loss
+        self.layer_activation.append(self.activation_out)
 
         # training rate
         self.alpha = alpha
-
-        # L2 regularization parameter
-        self.lamb = lamb
 
         # the rate of decay and decay step for alpha
         self.decay_rate = decay_rate
@@ -186,30 +260,6 @@ class ANN:
         # use parameter specific learning rate
         self.param_specific_learn_rate = param_specific_learn_rate
 
-        # activation function of the hidden layers
-        self.activation = activation
-
-        # type checking the activation
-        assert type(activation) is str or type(activation) is list, \
-            "activation must be a string or a list of strings"
-
-        # list of activation functions per layer
-        self.layer_activation = ['linear']
-        # same activation for each hidden layer
-        if type(activation) is str:
-            for i in range(n_layers - 1):
-                self.layer_activation.append(activation)
-        else:
-            for i in range(n_layers - 1):
-                self.layer_activation.append(activation[i])           
-        self.layer_activation.append(activation_out)
-
-        # activation function of the output layer
-        self.activation_out = activation_out
-
-        # number of sofmax layers
-        self.n_softmax = n_softmax
-
         # save the neural network after training
         self.save = save
         self.name = name
@@ -217,12 +267,18 @@ class ANN:
         # additional variables/dicts etc that must be stored in the ann object
         self.aux_vars = kwargs
 
-        # size of the mini batch used in stochastic gradient descent
-        self.batch_size = batch_size
-
         self.loss_vals = []
 
-        self.init_network(**kwargs)
+        # initialize network using standard setting if no layers
+        # are specified
+        if 'layers' not in kwargs:
+            self.init_network(**kwargs)
+
+        # connect each layer with its neighbours
+        self.connect_layers()
+
+        # print some network stats to screen
+        self.print_network_info()
 
     def init_network(self, **kwargs):
         """
@@ -235,18 +291,19 @@ class ANN:
 
         """
 
-        self.layers = []
-
-        # # add the input layer
-        # self.layers.append(Layer(self.n_in, 0, self.n_layers, self.layer_activation[0],
-        #                          self.loss, self.bias, batch_size=self.batch_size,
-        #                          lamb=self.lamb, on_gpu=self.on_gpu))
-
         # add the inputs and hidden layers
         for r in range(self.n_layers):
-            self.layers.append(Layer(self.layer_sizes[r], r, self.n_layers, self.layer_activation[r],
-                                     self.loss, self.bias[r], batch_size=self.batch_size,
-                                     lamb=self.lamb, on_gpu=self.on_gpu))
+            self.layers.append(
+                Layer(
+                    self.layer_sizes[r],
+                    r,
+                    self.n_layers,
+                    self.layer_activation[r],
+                    self.loss,
+                    self.bias[r],
+                    batch_size=self.batch_size,
+                    lamb=self.lamb,
+                    on_gpu=self.on_gpu))
 
         # add the output layer
         self.layers.append(
@@ -263,9 +320,7 @@ class ANN:
                 on_gpu=self.on_gpu,
                 **kwargs))
 
-        self.connect_layers()
-
-        self.print_network_info()
+        # self.connect_layers()
 
     def connect_layers(self):
         """
@@ -355,7 +410,7 @@ class ANN:
         # return values and index of highest probability and random samples from pmf
         return probs, idx_max, None
 
-    def d_norm_y_dX(self, X_i, batch_size=1, feed_forward=True, norm = True):
+    def d_norm_y_dX(self, X_i, batch_size=1, feed_forward=True, norm=True, layer_idx=0):
         """
         Compute the derivatives of the squared L2 norm of the output wrt
         the inputs.
@@ -372,6 +427,8 @@ class ANN:
             Compute the gradient of ||y||_2. If False it computes the gradient of
             y, if y is a scalar. If False and y is a vector, the resulting gradient is the
             column sum of the full Jacobian matrix.
+        layer_idx : int, optional, default is 0.
+            Index for the layer of which to return the derivative. Default is 0, the input layer.
 
         Returns
         -------
@@ -388,8 +445,8 @@ class ANN:
             if i > 0:
                 self.layers[i].compute_y_grad_W()
 
-        # delta_hy of the input layer = the derivative of the normed output
-        return self.layers[0].delta_hy
+        # delta_hy of the (input) layer = the derivative of the normed output
+        return self.layers[layer_idx].delta_hy
 
     def back_prop(self, y_i):
         """
@@ -411,9 +468,72 @@ class ANN:
         for i in range(self.n_layers, 0, -1):
             self.layers[i].back_prop(y_i)
 
+    # def batch(self, X_i, y_i, alpha=0.001, beta1=0.9, beta2=0.999):
+    #     """
+    #     Update the weights using a mini batch.
+
+    #     Parameters
+    #     ----------
+    #     X_i : array
+    #         The input features of the mini batch.
+    #     y_i : array
+    #         The target data of the mini batch.
+    #     alpha : float, optional
+    #         The learning rate. The default is 0.001.
+    #     beta1 : float, optional
+    #         Momentum parameter controlling the moving average of the loss gradient.
+    #         Used for the parameter-specific learning rate. The default is 0.9.
+    #     beta2 : float, optional
+    #         Parameter controlling the moving average of the squared gradient.
+    #         Used for the parameter-specific learning rate. The default is 0.999.
+
+    #     Returns
+    #     -------
+    #     None.
+
+    #     """
+    #     self.feed_forward(X_i, self.batch_size)
+    #     self.back_prop(y_i)
+
+    #     for r in range(1, self.n_layers + 1):
+
+    #         layer_r = self.layers[r]
+
+    #         # momentum
+    #         layer_r.V = beta1 * layer_r.V + (1.0 - beta1) * layer_r.L_grad_W
+    #         # moving average of squared gradient magnitude
+    #         layer_r.A = beta2 * layer_r.A + (1.0 - beta2) * layer_r.L_grad_W**2
+
+    #         # select learning rate
+    #         if not self.param_specific_learn_rate:
+    #             # same alpha for all weights
+    #             alpha_i = alpha
+    #         # param specific learning rate
+    #         else:
+    #             # RMSProp
+    #             alpha_i = alpha / (np.sqrt(layer_r.A + 1e-8))
+
+    #             # Adam
+    #             #alpha_t = alpha*np.sqrt(1.0 - beta2**t)/(1.0 - beta1**t)
+    #             #alpha_i = alpha_t/(np.sqrt(layer_r.A + 1e-8))
+
+    #         # gradient descent update step with L2 regularization
+    #         if self.lamb > 0.0:
+    #             layer_r.W = (1.0 - layer_r.Lamb * alpha_i) * layer_r.W - alpha_i * layer_r.V
+    #         # without regularization
+    #         else:
+    #             layer_r.W = layer_r.W - alpha_i * layer_r.V
+
+    #             # Nesterov momentum
+    #             # layer_r.W += -alpha*beta1*layer_r.V
+
     def batch(self, X_i, y_i, alpha=0.001, beta1=0.9, beta2=0.999):
         """
         Update the weights using a mini batch.
+
+        In the case of a deep-active subspace layer, update the weights of the
+        neural network and the weights of the Gram-Schmidt vectors using a
+        mini batch.
 
         Parameters
         ----------
@@ -435,6 +555,7 @@ class ANN:
         None.
 
         """
+
         self.feed_forward(X_i, self.batch_size)
         self.back_prop(y_i)
 
@@ -442,10 +563,18 @@ class ANN:
 
             layer_r = self.layers[r]
 
-            # momentum
-            layer_r.V = beta1 * layer_r.V + (1.0 - beta1) * layer_r.L_grad_W
-            # moving average of squared gradient magnitude
-            layer_r.A = beta2 * layer_r.A + (1.0 - beta2) * layer_r.L_grad_W**2
+            # Deep active subspace layer
+            if isinstance(layer_r, DAS_Layer):
+                # momentum
+                layer_r.V = beta1 * layer_r.V + (1.0 - beta1) * layer_r.L_grad_Q
+                # moving average of squared gradient magnitude
+                layer_r.A = beta2 * layer_r.A + (1.0 - beta2) * layer_r.L_grad_Q**2
+            # standard layer
+            else:
+                # momentum
+                layer_r.V = beta1 * layer_r.V + (1.0 - beta1) * layer_r.L_grad_W
+                # moving average of squared gradient magnitude
+                layer_r.A = beta2 * layer_r.A + (1.0 - beta2) * layer_r.L_grad_W**2
 
             # select learning rate
             if not self.param_specific_learn_rate:
@@ -456,25 +585,27 @@ class ANN:
                 # RMSProp
                 alpha_i = alpha / (np.sqrt(layer_r.A + 1e-8))
 
-                # Adam
-                #alpha_t = alpha*np.sqrt(1.0 - beta2**t)/(1.0 - beta1**t)
-                #alpha_i = alpha_t/(np.sqrt(layer_r.A + 1e-8))
-
             # gradient descent update step with L2 regularization
             if self.lamb > 0.0:
                 layer_r.W = (1.0 - layer_r.Lamb * alpha_i) * layer_r.W - alpha_i * layer_r.V
             # without regularization
             else:
-                layer_r.W = layer_r.W - alpha_i * layer_r.V
-
-                # Nesterov momentum
-                # layer_r.W += -alpha*beta1*layer_r.V
+                # Deep active subspace layer
+                if isinstance(layer_r, DAS_Layer):
+                    # update the Q weights
+                    layer_r.Q = layer_r.Q - alpha_i * layer_r.V
+                    # compute the weights W(Q) via Gram Schmidt
+                    layer_r.compute_weights()
+                # standard layer
+                else:
+                    layer_r.W = layer_r.W - alpha_i * layer_r.V
 
     # train the neural network
+
     def train(
             self,
             n_batch,
-            store_loss=False,
+            store_loss=True,
             sequential=False,
             verbose=True):
         """
@@ -485,12 +616,12 @@ class ANN:
         n_batch : int
             The number of mini-batch iterations.
         store_loss : boolean, optional
-            Store the values of the loss function. The default is False.
+            Store the values of the loss function. The default is True.
         sequential : boolean, optional
             Sample a sequential slab of data, starting from a random point.
             The default is False.
         verbose : boolean, optional
-            Print information to screen while training. The default is True.
+            Print information to screen while training. The default is False.
 
         Returns
         -------
