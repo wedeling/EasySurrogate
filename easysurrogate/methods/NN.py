@@ -236,11 +236,11 @@ class ANN:
         self.layer_activation = ['linear']
         # same activation for each hidden layer
         if isinstance(self.activation, str):
-            for i in range(n_layers - 1):
-                self.layer_activation.append(activation)
+            for i in range(self.n_layers - 1):
+                self.layer_activation.append(self.activation)
         else:
-            for i in range(n_layers - 1):
-                self.layer_activation.append(activation[i])
+            for i in range(self.n_layers - 1):
+                self.layer_activation.append(self.activation[i])
 
         self.layer_activation.append(self.activation_out)
 
