@@ -125,6 +125,10 @@ class GaussianProcessRegressor():
         return Eta
 
     def fit_cov(self, X, X_var=False, covariance='regular'):
+        """
+        Calculate covariance given a sample in input space
+        (assumes stationarity of the stochastic process)
+        """
 
         #K = [self.kernel(i, j, sigma_f=self.sigma_f, l=self.l) for (i, j) in product(X, X)]
         #K = np.array(K).reshape(self.n, self.n)
@@ -133,8 +137,10 @@ class GaussianProcessRegressor():
         self.set_covariance(K)
 
         if not X_var:
+            # if X variance is not given, and the noise is assumed to be i.i.d.
             K_modif = self.K + (self.sigma_n ** 2) * np.eye(self.n)
         else:
+            # if the noise is not i.i.d. and X variance is given
             Eta = self.calc_noise(X_var)
             K_modif = self.K + Eta
                     
@@ -197,6 +203,9 @@ class GaussianProcessRegressor():
         self.optmize_hyperparameters(X, y, X_var, loss='nmll')
 
     def predict_mean(self, X_new):
+        """
+        Returns the mean of posterior conditioned on X_new
+        """
 
         # Size of the new sample
 
@@ -229,6 +238,9 @@ class GaussianProcessRegressor():
         return f_bar_star
 
     def predict_var(self, X_new, likelihood='gaussian'):
+        """
+        Returns the variance of posterior conditioned on X_new
+        """
 
         likelihood = self.process_type
 
@@ -285,7 +297,7 @@ class GaussianProcessRegressor():
         Returns
         -------
             y_mean: array_like
-            An array of values withe the same length as X meaning the mean of the p(y|X) posterior of the regression model
+            An array of values with the same length as X containing the mean of the p(y|X) posterior of the regression model
         """
 
         y_mean = self.predict_mean(X)
@@ -365,7 +377,7 @@ class GaussianProcessRegressor():
     def neg_marg_log_likelihood(self, y, X, theta, sigma_n, X_var=False, beta=0., h=lambda x:x, likelihood='gaussian'):
         """
         Returns:
-            nmml: float
+            nmll: float
             -log p(y|X, theta, sigma, beta)
         """
 
@@ -428,7 +440,7 @@ class GaussianProcessRegressor():
 
         # TODO: Think of better polymorphism with Python: 
         #  - different function passed
-        #  - different class implemenetation for GPR/STP
+        #  - different class implemenetation for GPR/TPR
         #  - decorators? 
         # + if no implementation -> throw exceptions/log errors
         
@@ -463,7 +475,7 @@ class GaussianProcessRegressor():
 
     def nmll_hp(self, hpval):
         """
-        Calculates marginal log likelohood for given data and kernel parameter value
+        Calculates negative marginal log likelohood for given data and kernel parameter value
         Function signature complies with scipy.optimize.minimize() 
         """  
         
@@ -524,6 +536,7 @@ def gibbs_ns_kernel(x, y, l, l_func=lambda x: x):
 
     return pref_val * exp_val
 
+@counted
 def sq_exp_kernel_function(x, y, sigma_f=1., l=1.):
     """
     Defines squared exponential kernel function, same as RBF
