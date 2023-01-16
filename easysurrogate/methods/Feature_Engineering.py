@@ -115,7 +115,8 @@ class Feature_Engineering:
         pass
 
     def choose_feature_from_acquisition(self, acquisition_function, X_cands,
-                                       candidate_search=True, n_new_cands=1):
+                                       candidate_search=True, n_new_cands=1,
+                                       alpha_expand = 0.25,):
         """
         Returns a new parameter value as a minimum of acquisition function, as well as its index among suggested
         candidates index in surrogate test set.
@@ -137,8 +138,9 @@ class Feature_Engineering:
         candidate_search: boolean, if True search among the list of candidate values,
             if False generate new value within boundary box as minimum using scipy.minimize()
         n_new_cands: integer, number of new candidate input points to return
+        alpha_expand: float, factor to enlarge every dimension of search box in input space
 
-        Returns
+                Returns
         -------
         array
         feed_forward(X)
@@ -153,7 +155,9 @@ class Feature_Engineering:
 
         else:
 
-            alpha_expand = 0.0
+            #parameter to enlarge the search box in input space
+            alpha_expand = 0.6
+            #parameter to translate the initial point of search
             beta_jitter  = [0.]*X_cands[0].shape[0]
 
             boundminima = np.array(X_cands).min(axis=0)
