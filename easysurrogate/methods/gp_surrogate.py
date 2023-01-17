@@ -288,13 +288,18 @@ class GP_Surrogate(Campaign):
         if save_history:
             self.design_history = []
 
+        if 'savefile_postfix' in kwargs:
+            file_path_postfix = '_' + kwargs['savefile_postfix']
+        else:
+            file_path_postfix = ''
+
         if self.backend == 'scikit-learn' or self.backend == 'local':
 
             """
             0) iterate for n_iter
                 1) state on step n: object has X_train, X_test, their indices, model instance
                 2) find set of candidates at minima of acq function X_cand; now object has
-                X_train:=X_train U X_cand, X_test = X_test U_ X_cand, global inidces and set sizes updated
+                    X_train:=X_train U X_cand, X_test = X_test U_ X_cand, global inidces and set sizes updated
                 3) model instance is updated : first approach to train new model for new X_train
             """
 
@@ -309,11 +314,11 @@ class GP_Surrogate(Campaign):
                 
                 X_new = self.x_scaler.inverse_transform(X_new)
 
-                #TODO optimisation works weel for scikitlearn+gaussian+rbf --> test for local/student-t/matern
+                #TODO optimisation works well for scikitlearn+gaussian+rbf --> test for local/student-t/matern
                 
                 #TODO: local Matern-3/2 implementation gives spurious zeros for some (x,y) pairs
 
-                cand_file_path = 'surrogate_al_cands.csv'
+                cand_file_path = 'surrogate_al_cands' + file_path_postfix + '.csv'
                 np.savetxt(cand_file_path, X_new, header=''.join([f+',' for f in feats]), comments='', delimiter=',')
                 print('>Performed a single optimisation iteration, the suggested candidates are in {0}'.format(cand_file_path))
                 
