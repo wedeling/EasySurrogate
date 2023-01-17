@@ -27,7 +27,7 @@ HOME = os.path.abspath(os.path.dirname(__file__))
 features_names = ['te_value', 'ti_value', 'te_ddrho', 'ti_ddrho']
 target_names = ['ti_transp_flux']
 
-es_campaign = es.Campaign(load_state=True, file_path='model_val_LocStudentMatern_19122022.pickle')
+es_campaign = es.Campaign(load_state=True, file_path='model_val_LocGaussianMatern_13012023.pickle')
 
 qoi_targ=2099023.289881937 #TODO: read from prevous script or campaign files
 
@@ -51,15 +51,15 @@ print('Adding these runs: {0} \n'.format(runs_new))
 
 uq_db_file_name = 'campaign.db'
 uq_campaign_name_prefix = 'VARY_1FT_GEM_NT_'
-uq_campaing_folder_name = 'akgbbn1a'
-uq_db_file_name_full = 'sqlite:///' + uq_campaign_name_prefix + uq_campaing_folder_name + '/' + uq_db_file_name
+uq_campaign_folder_name = 'akgbbn1a'
+uq_db_file_name_full = 'sqlite:///' + uq_campaign_name_prefix + uq_campaign_folder_name + '/' + uq_db_file_name
 uq_campaign = uq.Campaign(name=uq_campaign_name_prefix, db_location=uq_db_file_name_full)
 
 runs_list_old = uq_campaign.list_runs()
 print('> Number of existing runs is: {0}'.format(len(runs_list_old)))
 print('> Last of existing runs is : \n {0}'.format(runs_list_old[-1]))
 
-# Add new run to the camapign database
+# Add new runs to the campaign database
 
 # Next line is what does the job - only works for a simple case
 uq_campaign.add_runs(runs=runs_new)
