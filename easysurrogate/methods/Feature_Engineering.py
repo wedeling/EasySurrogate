@@ -156,7 +156,7 @@ class Feature_Engineering:
         else:
 
             #parameter to enlarge the search box in input space
-            alpha_expand = 0.6
+            alpha_expand = 0.0
             #parameter to translate the initial point of search
             beta_jitter  = [0.]*X_cands[0].shape[0]
 
@@ -173,20 +173,21 @@ class Feature_Engineering:
             opt_start_point = np.array([statistics.mean(x)+beta_jitter[i] for i,x in enumerate(currbounds)])
             #print('starting point for optimization is: {0}'.format(opt_start_point)) ###DEBUG
 
-            newpoints = minimize(
+            opt_results = minimize(
                                 fun=acquisition_function, 
                                 x0=opt_start_point,
-                                method='Powell',
+                                method='L-BFGS-B', ###'SLSQP', #'COBYLA', #'Newton-CG', #'CG', #'L-BFGS-B', #'Nelder-Mead', #'BFGS', #'Powell',
                                 bounds=currbounds, # bounds for current GP case
                                 )
-                                
+            print('Results of optimisation (by scipy): {0}'.format(opt_results)) ###DEBUG
+                 
             # Just a stand in
             x_min_ind_test = 0
             x_min_ind_glob = 0
-            x_min = 0.
+            x_min = opt_start_point
 
-            if newpoints.success:
-                x_min = newpoints['x']
+            if opt_results.success:
+                x_min = opt_results['x']
                 print('x_min={0}'.format(x_min)) ###DEBUG
 
         print('Using new %d samples to retrain the ML model' % n_new_cands)
