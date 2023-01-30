@@ -402,9 +402,16 @@ class Layer:
 
             # for multinomial classification
             elif self.loss == 'cross_entropy':
-
-                # (see eq. 3.22 of Aggarwal book)
-                self.delta_ho = self.o_i - y_i
+                # one-hot encoded data (y_i contains only 0's and 1's)
+                if np.array_equal(y_i, y_i.astype(bool)):
+                    # (see eq. 3.22 of Aggarwal book)
+                    self.delta_ho = self.o_i - y_i
+                # y_i is a more general probability mass function
+                # delta_ho_i = sum_j(y_j * o_i) - y_i
+                else:
+                    self.delta_ho = np.array([(self.o_i[i] * y_i).sum(axis=0) 
+                                              for i in range(y_i.shape[0])])
+                    self.delta_ho -= y_i
 
             elif self.loss == 'kernel_mixture' and self.n_softmax > 0:
 
