@@ -6,7 +6,8 @@ import pickle
 import tkinter as tk
 from tkinter import filedialog
 import numpy as np
-# from scipy.stats import rv_discrete
+from scipy.stats import bernoulli
+from tqdm import tqdm
 # import h5py
 
 from .Layer import Layer
@@ -134,6 +135,9 @@ class ANN:
 
         # size of the mini batch used in stochastic gradient descent
         self.batch_size = batch_size
+        
+        # set dropout to False, can be changed in train subroutine
+        self.dropout = False
 
         ###########################################
 
@@ -362,10 +366,22 @@ class ANN:
         else:
             self.layers[0].h = np.ones([self.n_in + 1, batch_size])
             self.layers[0].h[0:self.n_in, :] = X_i.T
+        
+        # apply dropout to the input layer
+        if self.dropout:
+            r = bernoulli.rvs(self.dropout_prob[0], size=X_i.T.shape)
+            self.layers[0].h[0:self.n_in, :] *= r
 
-        for i in range(1, self.n_layers + 1):
+        for i in range(1, self.n_layers):
             # compute the output on the layer using matrix-maxtrix multiplication
-            self.layers[i].compute_output(batch_size)
+            if self.dropout: # with dropout
+                self.layers[i].compute_output(batch_size, dropout=self.dropout,
+                                              dropout_prob = self.dropout_prob[i])
+            else: # without
+                self.layers[i].compute_output(batch_size)
+                
+        # output layer, never use dropout here
+        self.layers[i + 1].compute_output(batch_size)
 
         return self.layers[-1].h
 
@@ -468,66 +484,7 @@ class ANN:
         for i in range(self.n_layers, 0, -1):
             self.layers[i].back_prop(y_i)
 
-    # def batch(self, X_i, y_i, alpha=0.001, beta1=0.9, beta2=0.999):
-    #     """
-    #     Update the weights using a mini batch.
-
-    #     Parameters
-    #     ----------
-    #     X_i : array
-    #         The input features of the mini batch.
-    #     y_i : array
-    #         The target data of the mini batch.
-    #     alpha : float, optional
-    #         The learning rate. The default is 0.001.
-    #     beta1 : float, optional
-    #         Momentum parameter controlling the moving average of the loss gradient.
-    #         Used for the parameter-specific learning rate. The default is 0.9.
-    #     beta2 : float, optional
-    #         Parameter controlling the moving average of the squared gradient.
-    #         Used for the parameter-specific learning rate. The default is 0.999.
-
-    #     Returns
-    #     -------
-    #     None.
-
-    #     """
-    #     self.feed_forward(X_i, self.batch_size)
-    #     self.back_prop(y_i)
-
-    #     for r in range(1, self.n_layers + 1):
-
-    #         layer_r = self.layers[r]
-
-    #         # momentum
-    #         layer_r.V = beta1 * layer_r.V + (1.0 - beta1) * layer_r.L_grad_W
-    #         # moving average of squared gradient magnitude
-    #         layer_r.A = beta2 * layer_r.A + (1.0 - beta2) * layer_r.L_grad_W**2
-
-    #         # select learning rate
-    #         if not self.param_specific_learn_rate:
-    #             # same alpha for all weights
-    #             alpha_i = alpha
-    #         # param specific learning rate
-    #         else:
-    #             # RMSProp
-    #             alpha_i = alpha / (np.sqrt(layer_r.A + 1e-8))
-
-    #             # Adam
-    #             #alpha_t = alpha*np.sqrt(1.0 - beta2**t)/(1.0 - beta1**t)
-    #             #alpha_i = alpha_t/(np.sqrt(layer_r.A + 1e-8))
-
-    #         # gradient descent update step with L2 regularization
-    #         if self.lamb > 0.0:
-    #             layer_r.W = (1.0 - layer_r.Lamb * alpha_i) * layer_r.W - alpha_i * layer_r.V
-    #         # without regularization
-    #         else:
-    #             layer_r.W = layer_r.W - alpha_i * layer_r.V
-
-    #             # Nesterov momentum
-    #             # layer_r.W += -alpha*beta1*layer_r.V
-
-    def batch(self, X_i, y_i, alpha=0.001, beta1=0.9, beta2=0.999):
+    def batch(self, X_i, y_i, alpha=0.001, beta1=0.9, beta2=0.999, **kwargs):
         """
         Update the weights using a mini batch.
 
@@ -555,7 +512,7 @@ class ANN:
         None.
 
         """
-
+        
         self.feed_forward(X_i, self.batch_size)
         self.back_prop(y_i)
 
@@ -600,14 +557,13 @@ class ANN:
                 else:
                     layer_r.W = layer_r.W - alpha_i * layer_r.V
 
-    # train the neural network
-
     def train(
             self,
             n_batch,
             store_loss=True,
             sequential=False,
-            verbose=True):
+            verbose=True,
+            dropout=False, **kwargs):
         """
         Train the neural network using stochastic gradient descent.
 
@@ -622,6 +578,12 @@ class ANN:
             The default is False.
         verbose : boolean, optional
             Print information to screen while training. The default is False.
+        dropout : boolean, optional
+            Use dropout regularization. The default is False. To manually
+            specify the dropout probabilities, specify the keyword argument
+            "dropout_prob", as a list of probabilities of retaining neurons
+            per layer. Otherwise, 0.8 is used for the input layer, 
+            and 0.5 for the hidden layers.
 
         Returns
         -------
@@ -629,7 +591,19 @@ class ANN:
 
         """
 
-        for i in range(n_batch):
+        if dropout:
+            self.dropout = dropout
+            # use standard dropout probabilities
+            if 'dropout_prob' not in kwargs:
+                self.dropout_prob = [0.8]
+                for i in range(self.n_layers - 1):
+                    self.dropout_prob.append(0.5)
+            # user-specified dropout probabilities
+            else:
+                self.dropout_prob = kwargs['dropout_prob']
+
+        # loop with tqdm progress bar
+        for i in tqdm(range(n_batch)):
 
             # select a random training instance (X, y)
             if not sequential:
@@ -655,20 +629,22 @@ class ANN:
 
             # store the loss value
             if store_loss:
-                # l = 0.0
-                # for k in range(self.n_out):
-                # l += self.layers[-1].L_i
-
                 l = self.layers[-1].L_i
                 loss_i = np.mean(l)
                 self.loss_vals.append(loss_i)
 
                 if np.mod(i, 1000) == 0:
                     if verbose:
-                        print('Batch', i, 'learning rate', alpha, 'loss:', loss_i)
-                    # note: appending a cupy value to a list is inefficient -
-                    # if done every iteration
-                    # it will slow down executing significantly
+                        # print('Batch', i, 'learning rate', alpha, 'loss:', loss_i)
+                        tqdm.write(' loss = %.4f' % (loss_i,))
+
+        if self.dropout:
+            # scale all weight matrices by dropout prob after training
+            for i in range(1, self.n_layers + 1):
+                self.layers[1].W *= self.dropout_prob[i - 1]
+
+            # turn off dropout after training
+            self.dropout = False
 
         if self.save:
             self.save_ANN()
@@ -801,12 +777,13 @@ class ANN:
             X = self.X
             y = self.y
         else:
-            print('Computing number of misclassifications wrt specified data (',
-                  X.shape[0], 'samples)')
+            print('Computing number of misclassifications wrt specified data, %d samples' % (y.size,))
 
         n_samples = X.shape[0]
-
-        for i in range(n_samples):
+        error_idx = []
+        
+        # loop with tqdm progress bar
+        for i in tqdm(range(n_samples)):
             _, max_idx_ann, _ = self.get_softmax(X[i].reshape([1, self.n_in]))
 
             max_idx_data = np.array([np.where(y_j == 1.0)[0]
@@ -815,15 +792,12 @@ class ANN:
             for j in range(self.n_softmax):
                 if max_idx_ann[j] != max_idx_data[j]:
                     n_misclass[j] += 1
-
-            if np.mod(i, 1000) == 0:
-                print('Computing misclassification error:',
-                      np.around(i / n_samples * 100, 1), '%')
+                    error_idx.append(i)
 
         print('Number of misclassifications =', n_misclass)
         print('Misclassification percentage =', n_misclass / n_samples * 100, '%')
 
-        return n_misclass / n_samples
+        return n_misclass / n_samples, error_idx
 
     def get_n_weights(self):
         """

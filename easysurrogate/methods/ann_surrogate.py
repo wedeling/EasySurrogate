@@ -30,8 +30,10 @@ class ANN_Surrogate(Campaign):
               n_layers=2, n_neurons=100,
               loss='squared',
               activation='tanh',
+              learning_rate = 0.001, decay_rate = 0.9, beta1 = 0.9,
               batch_size=64, lamb=0.0,
-              standardize_X=True, standardize_y=True, **kwargs):
+              standardize_X=True, standardize_y=True,
+              dropout=False, **kwargs):
         """
         Perform back propagation to train the ANN
 
@@ -49,8 +51,17 @@ class ANN_Surrogate(Campaign):
         loss : string, optional
             The name of the loss function. The default is 'squared'.
         activation : Type of activation function. The default is 'tanh'.
+        learing_rate : the baseline learning rate. Is made parameter specific
+                       via RMSProp. Th edefault is 0.001.
+        decay_rate : float, optional
+                     Factor multiplying the decay rate every decay_step 
+                     iterations. Default is 0.9.
+        beta1 : float, optional
+                Momentum parameter controlling the moving average of the loss gradient.
+                Used for the parameter-specific learning rate. The default is 0.9.
         batch_size : Mini batch size. The default is 64.
         lamb : L2 regularization parameter. The default is 0.0.
+        dropout : Boolean flag for use of dropout regularization. 
 
         Returns
         -------
@@ -73,8 +84,6 @@ class ANN_Surrogate(Campaign):
         # prepare the training data
         X_train, y_train, _, _ = self.feat_eng.get_training_data(
             feats, target, lags=lags, local=local, test_frac=test_frac, train_first=True)
-        # get the maximum lag that was specified
-        # TODO for 20 grid points returns (n_samples x n_features) as training dataset
         self.max_lag = self.feat_eng.max_lag
 
         # number of output neurons
@@ -86,16 +95,20 @@ class ANN_Surrogate(Campaign):
                                          n_out=n_out,
                                          loss=loss,
                                          activation=activation, batch_size=batch_size,
-                                         lamb=lamb, decay_step=10**4, decay_rate=0.9,
+                                         alpha=learning_rate,
+                                         lamb=lamb, decay_step=10**4, 
+                                         decay_rate=decay_rate, beta1=beta1,
                                          standardize_X=standardize_X,
                                          standardize_y=standardize_y,
-                                         save=False, **kwargs)
+                                         save=False,
+                                         **kwargs)
 
         print('===============================')
         print('Training Artificial Neural Network...')
 
         # train network for n_iter mini batches
-        self.neural_net.train(n_iter, store_loss=True)
+        self.neural_net.train(n_iter, store_loss=True, dropout=dropout,
+                              **kwargs)
         self.set_data_stats()
         if lags is not None:
             self.feat_eng.initial_condition_feature_history(feats)
