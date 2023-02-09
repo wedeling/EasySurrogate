@@ -31,7 +31,8 @@ class QSN_Surrogate(Campaign):
               n_bins=10, test_frac=0.0,
               n_layers=2, n_neurons=100,
               activation='leaky_relu',
-              batch_size=64, lamb=0.0, **kwargs):
+              batch_size=64, lamb=0.0,
+              standardize_X = True, **kwargs):
         """
         Perform back propagation to train the QSN
 
@@ -50,6 +51,7 @@ class QSN_Surrogate(Campaign):
         activation : Type of activation function. The default is 'leaky_relu'.
         batch_size : Mini batch size. The default is 64.
         lamb : L2 regularization parameter. The default is 0.0.
+        standardize_X : standardize the input features. Default is True.
 
         Returns
         -------
@@ -75,6 +77,7 @@ class QSN_Surrogate(Campaign):
         # prepare the training data
         X_train, y_train, _, _ = self.feat_eng.get_training_data(
             feats, target, lags=lags, local=local, test_frac=test_frac)
+
         # get the maximum lag that was specified
         self.max_lag = self.feat_eng.max_lag
 
@@ -98,7 +101,7 @@ class QSN_Surrogate(Campaign):
                                          loss='cross_entropy',
                                          activation=activation, batch_size=batch_size,
                                          lamb=lamb, decay_step=10**4, decay_rate=0.9,
-                                         standardize_X=True, standardize_y=False,
+                                         standardize_X=standardize_X, standardize_y=False,
                                          save=False)
 
         print('===============================')
@@ -189,3 +192,27 @@ class QSN_Surrogate(Campaign):
         else:
             self.output_mean = 0.0
             self.output_std = 1.0
+
+
+    def get_dimensions(self):
+        """
+        Get some useful dimensions of the QSN surrogate. Returns a dict with the number
+        of training samples (n_train), the number of data samples (n_samples),
+        the number of test samples (n_test), the number of input neurons (n_in),
+        and the number of output_neurons (n_out).
+
+        Returns
+        -------
+        dims : dict
+            The dimensions dictionary.
+
+        """
+
+        dims = {}
+        dims['n_train'] = self.feat_eng.n_train
+        dims['n_samples'] = self.feat_eng.n_samples
+        dims['n_test'] = dims['n_samples'] - dims['n_train']
+        dims['n_in'] = self.neural_net.n_in
+        dims['n_out'] = self.neural_net.n_out
+
+        return dims

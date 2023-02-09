@@ -84,7 +84,7 @@ class ANN_analysis(BaseAnalysis):
         relative : boolean, default is True
             Compute relative instead of absolute errors.
         return_predictions : boolean, default is False
-            Also return the traiin and test predictions.
+            Also return the train and test predictions.
 
         Returns
         -------

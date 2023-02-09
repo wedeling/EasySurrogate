@@ -3,7 +3,7 @@ Class for a neural network Layer.
 """
 import sys
 import numpy as np
-from scipy.stats import norm
+from scipy.stats import norm, bernoulli
 
 
 class Layer:
@@ -154,7 +154,7 @@ class Layer:
         if self.bias:
             self.Lamb[-1, :] = 0.0
 
-    def compute_output(self, batch_size):
+    def compute_output(self, batch_size, dropout = False, **kwargs):
         """
         Compute the output of the current layer in one shot using matrix -
         vector/matrix multiplication.
@@ -206,6 +206,10 @@ class Layer:
         else:
             print('Unknown activation type')
             sys.exit()
+
+        if dropout:
+            r = bernoulli.rvs(kwargs['dropout_prob'], size = self.h.shape)
+            self.h *= r
 
         # add bias neuron output
         if self.bias:
@@ -402,9 +406,16 @@ class Layer:
 
             # for multinomial classification
             elif self.loss == 'cross_entropy':
-
-                # (see eq. 3.22 of Aggarwal book)
-                self.delta_ho = self.o_i - y_i
+                # one-hot encoded data (y_i contains only 0's and 1's)
+                if np.array_equal(y_i, y_i.astype(bool)):
+                    # (see eq. 3.22 of Aggarwal book)
+                    self.delta_ho = self.o_i - y_i
+                # y_i is a more general probability mass function
+                # delta_ho_i = sum_j(y_j * o_i) - y_i
+                else:
+                    self.delta_ho = np.array([(self.o_i[i] * y_i).sum(axis=0) 
+                                              for i in range(y_i.shape[0])])
+                    self.delta_ho -= y_i
 
             elif self.loss == 'kernel_mixture' and self.n_softmax > 0:
 
@@ -459,7 +470,7 @@ class Layer:
         """
         h_rm1 = self.layer_rm1.h
         delta_ho_grad_Phi = self.delta_ho * self.grad_Phi
-        self.L_grad_W = np.dot(h_rm1, delta_ho_grad_Phi.T)
+        self.L_grad_W = np.dot(h_rm1, delta_ho_grad_Phi.T)# / self.batch_size
 
     def back_prop(self, y_i):
         """
