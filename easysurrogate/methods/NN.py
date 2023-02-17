@@ -3,12 +3,17 @@ Class for an artificial neural network.
 """
 
 import pickle
-import tkinter as tk
-from tkinter import filedialog
 import numpy as np
 from scipy.stats import bernoulli
 from tqdm import tqdm
-# import h5py
+
+try:
+    import tkinter as tk
+    from tkinter import filedialog
+except ImportError:
+    print("WARNING: tkinter not imported")
+    print("save_ANN and load_ANN have no graphical support, \
+          use these by specifying file_path=")
 
 from .Layer import Layer
 from .DAS_Layer import DAS_Layer
