@@ -40,7 +40,8 @@ class GP_analysis(BaseAnalysis):
                                         y_test_pred, 
                                         y_test_pred_var=None,
                                         y_test_orig_var=None,
-                                        name='Predictions against ground truth values'
+                                        name='Predictions against ground truth values',
+                                        addit_label='',
                                        ):
         """
         Plots original values of QoI on X axis and predicted values on Y axis
@@ -62,7 +63,7 @@ class GP_analysis(BaseAnalysis):
                 yerr=1.96 * y_test_pred_var,
                 xerr=1.96 * y_test_orig_var,
                 label='variance of GPR model on test and train data',
-                fmt='+')
+                fmt='.')
 
         elif y_test_pred_var is not None and y_test_orig_var is None:
 
@@ -70,8 +71,8 @@ class GP_analysis(BaseAnalysis):
                 x=y_test_orig,
                 y=y_test_pred,
                 yerr=1.96 * y_test_pred_var,
-                label='variance of GPR model on test data',
-                fmt='+')
+                label='variance of GPR model on test data \n ' + addit_label,
+                fmt='.')
 
         elif y_test_pred_var is None and y_test_orig_var is not None:
 
@@ -80,7 +81,7 @@ class GP_analysis(BaseAnalysis):
                 y=y_test_pred,
                 xerr=1.96 * y_test_orig_var,
                 label='variance of GPR model on train data',
-                fmt='+')
+                fmt='.')
 
         else:
 
@@ -89,8 +90,8 @@ class GP_analysis(BaseAnalysis):
         plt.plot(y_test_orig, y_test_orig, 'k--')
 
         # Adding error bands around original mean
-        plt.plot(y_test_orig, (1.+val_err)*y_test_orig, 'k--', alpha=0.25)
-        plt.plot(y_test_orig, (1.-val_err)*y_test_orig, 'k--', alpha=0.25)
+        plt.plot(y_test_orig, (1.+val_err)*y_test_orig, 'k--', alpha=0.25, label="+{0}%".format(val_err*100))
+        plt.plot(y_test_orig, (1.-val_err)*y_test_orig, 'k--', alpha=0.25, label="-{0}%".format(val_err*100))
 
         # Limitting plot to make it square
         maxlim = max((1.+val_err)*y_test_orig)
@@ -433,6 +434,40 @@ class GP_analysis(BaseAnalysis):
         err_abs = np.subtract(y_pred[:y_t_len, :], y_test)
         err_rel = np.divide(err_abs, y_test)
 
+        X_test_scale = self.gp_surrogate.x_scaler.transform(X_test)
+        y_test_scale = self.gp_surrogate.y_scaler.transform(y_test)
+        r2_test = self.get_r2_score(X_test_scale, y_test_scale)
+        print('R2 score for the test data is : {:.3}'.format(r2_test))
+
+        mse_test   = 0.
+        mse_train  = 0.
+        rmse_test  = 0.
+        rmse_train = 0.
+        if not only_train_set:
+            mse_test  = mse(y_pred[:y_t_len, 0], y_test_plot[:, 0])
+            rmse_test = mse(y_pred[:y_t_len, 0], y_test_plot[:, 0], squared=False)
+            print('MSE of the GPR prediction is: MSE={:.3} RMSE={:.3}'.format(mse_test, rmse_test))
+        else:
+            print('MSE of the GPR prediction for training set is: {:.3}'.format(
+                mse(y_pred_train[:, 0], y_train_plot[:, 0])))
+
+        if not only_train_set:
+            print('Mean relative test error is {:.3}'.format(np.abs(err_rel).mean()))
+
+        self.y_pred = y_pred
+        self.err_abs = err_abs
+        self.err_rel = err_rel
+        self.r2_test = r2_test
+
+        # Save the prediction results
+        csv_array = np.concatenate(
+                (y_test_plot[:, 0].reshape(-1,1), 
+                y_pred[:y_t_len, 0].reshape(-1,1), 
+                y_var_pred.reshape(y_pred[:y_t_len, 0].shape).reshape(-1,1)), #TODO ugly
+                axis=1)
+        np.savetxt('res.csv', csv_array, delimiter=",")
+
+
         print("Printing and plotting the evaluation results")
         #TODO: resolve case whe y_groundtruth==0.0
         #TODO: add color for test case in Err_abs and Err_rel plots
@@ -449,6 +484,7 @@ class GP_analysis(BaseAnalysis):
                 y_pred[:y_t_len, 0], 
                 y_var_pred.reshape(y_pred[:y_t_len, 0].shape),
                 #y_var_pred_train.reshape(y_pred_train[:,0].shape),
+                addit_label="R2={0:.3}".format(r2_test),
                                                 )
 
         train_n = self.gp_surrogate.feat_eng.n_samples - y_t_len
@@ -478,22 +514,4 @@ class GP_analysis(BaseAnalysis):
                         train_n=train_n, out_color='b',
                              )
 
-        r2_test = self.get_r2_score(X_test, y_test)
-        print('R2 score for the test data is : {:.3}'.format(r2_test))
-
-        if not only_train_set:
-            print('MSE of the GPR prediction is: {:.3}'.format(
-                mse(y_pred[:y_t_len, 0], y_test_plot[:, 0])))
-        else:
-            print('MSE of the GPR prediction for training set is: {:.3}'.format(
-                mse(y_pred_train[:, 0], y_train_plot[:, 0])))
-
-        if not only_train_set:
-            print('Mean relative test error is {:.3}'.format(np.abs(err_rel).mean()))
-
-        self.y_pred = y_pred
-        self.err_abs = err_abs
-        self.err_rel = err_rel
-        self.r2_test = r2_test
-
-        return err_abs, err_rel
+        return err_abs, err_rel, r2_test
