@@ -63,7 +63,7 @@ feat_train, targ_train, feat_test, targ_test = campaign.surrogate.feat_eng.\
     get_training_data(features, target, index=campaign.surrogate.feat_eng.train_indices)
 
 analysis = es.analysis.GP_analysis(gp_surrogate=campaign.surrogate)
-err_test_abs, err_test,= analysis.get_regression_error(
+err_test_abs, err_test, r2_test = analysis.get_regression_error(
     feat_test,
     targ_test,
     feat_train,
@@ -73,8 +73,10 @@ err_test_abs, err_test,= analysis.get_regression_error(
 
 err_test_tot = float(np.abs(err_test).mean())
 
+loss = 1. - r2_test
+
 # Writing an output
-output = {'test_error': err_test_tot}
+output = {'loss': loss}
 with open('output.json', 'w') as of:
     json_string = json.dumps(output)
     of.write(json_string)

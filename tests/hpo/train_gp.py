@@ -82,7 +82,7 @@ def clean_grid_by_rules(header, vals, def_vals):
 
         vals_new.append([x for k,x in d.items()])
 
-    print('> Using {0} different parameter values combinations insted of full {1}'.format(len(vals_new), len(vals)))
+    print('> Using {0} different parameter values combinations instead of full {1}'.format(len(vals_new), len(vals)))
 
     return vals_new
 
@@ -144,7 +144,7 @@ encoder = uq.encoders.GenericEncoder(
 )
 
 # Decoder should take a training, or better validation, loss values from an ML model for given hyperparameter value
-qoi = ['test_error']
+qoi = ['loss']
 decoder = uq.decoders.JSONDecoder(
     target_filename='output.json',
     output_columns=qoi,
@@ -215,8 +215,8 @@ with open(res_file, "bw") as rf:
 analysis.analyse(collation_results)
 analysis.analyse(results)
 
-minrowidx = collation_results['test_error'].idxmin()
+minrowidx = collation_results['loss'].idxmin()
 print("Best model so far: {0}".format(collation_results.iloc[minrowidx,:]))
 
-#test_error = results.describe('test_error')
-#print(test_error)
+#loss = results.describe('loss')
+#print(loss)
