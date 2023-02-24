@@ -97,10 +97,12 @@ class GaussianProcessRegressor():
 
     def calc_covariance(self, X, kernel, sigma_f, l, n):
         """
+        X - scaled to N(0,1)
         Returns:
              K: array_like
              covaraince defined element-wise as kernel function of X
         """
+
 
         K = [kernel(i, j, sigma_f=sigma_f, l=l) for (i, j) in product(X, X)]
         
@@ -318,7 +320,10 @@ class GaussianProcessRegressor():
 
         f = self.predict_mean(X)
         y_mean = y.mean()
-        r2 = 1 - np.multiply(y - f, y - f).sum() / (np.multiply(y - y_mean, y - y_mean).sum())
+
+        #print('y={0}, f={1}, X={2}'.format(y, f, X)) ###DEBUG
+
+        r2 = 1. - np.multiply(y - f, y - f).sum() / (np.multiply(y - y_mean, y - y_mean).sum())
         return r2
 
     def r2_score_hp(self, hpval):
