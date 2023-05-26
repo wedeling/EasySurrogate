@@ -176,7 +176,7 @@ class Layer:
         if self.activation == 'linear':
             self.h = a
         elif self.activation == 'sigmoid':
-            self.h = 1.0 / (1.0 - np.exp(-a))
+            self.h = 1.0 / (1.0 + np.exp(-a))
         elif self.activation == 'relu':
             self.h = np.maximum(np.zeros([a.shape[0], a.shape[1]]), a)
         elif self.activation == 'leaky_relu':

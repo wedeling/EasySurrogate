@@ -582,7 +582,7 @@ class ANN:
             Sample a sequential slab of data, starting from a random point.
             The default is False.
         verbose : boolean, optional
-            Print information to screen while training. The default is False.
+            Print information to screen while training. The default is True.
         dropout : boolean, optional
             Use dropout regularization. The default is False. To manually
             specify the dropout probabilities, specify the keyword argument
