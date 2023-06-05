@@ -296,6 +296,8 @@ class Layer:
                     # if a neuron does not fire, e.g. in the case of RelU activation,
                     # we get a RuntimeWarning. Just add a small constant in this case.
                     self.L_i = -np.sum(y_i * np.log(self.o_i + 1e-20))
+            elif self.loss == 'binary_cross_entropy':
+                self.L_i = - y_i * np.log(h) - (1 - y_i) * np.log(1 - h) 
             elif self.loss == 'kernel_mixture' and self.n_softmax > 0:
 
                 if y_i.ndim == 1:
@@ -416,14 +418,20 @@ class Layer:
                     self.delta_ho = np.array([(self.o_i[i] * y_i).sum(axis=0) 
                                               for i in range(y_i.shape[0])])
                     self.delta_ho -= y_i
+            elif self.loss == 'binary_cross_entropy':
+                
+                self.delta_ho = -1 / (h - (1 - y_i))
 
             elif self.loss == 'kernel_mixture' and self.n_softmax > 0:
 
                 self.delta_ho = self.o_i - self.p_i
 
         else:
-            print('Can only initialize delta_oo in output layer')
-            sys.exit()
+            # if the output layer is connected to another layer AFTER
+            # it's own index r (at r + 1), take the gradient from that
+            # layer. Allows to back propagate loss from one network to 
+            # the next as in GANs.
+            self.delta_ho = self.layer_rp1.delta_ho
 
     def compute_delta_ho(self):
         """
@@ -457,7 +465,7 @@ class Layer:
         """
         h_rm1 = self.layer_rm1.h
         delta_hy_grad_Phi = self.delta_hy * self.grad_Phi
-        self.y_grad_W = np.dot(h_rm1, delta_hy_grad_Phi.T)
+        self.y_grad_W = np.dot(h_rm1, delta_hy_grad_Phi.T) / self.batch_size
 
     def compute_L_grad_W(self):
         """
@@ -470,7 +478,7 @@ class Layer:
         """
         h_rm1 = self.layer_rm1.h
         delta_ho_grad_Phi = self.delta_ho * self.grad_Phi
-        self.L_grad_W = np.dot(h_rm1, delta_ho_grad_Phi.T)# / self.batch_size
+        self.L_grad_W = np.dot(h_rm1, delta_ho_grad_Phi.T) / self.batch_size
 
     def back_prop(self, y_i):
         """

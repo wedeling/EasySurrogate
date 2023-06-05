@@ -312,7 +312,8 @@ class ANN:
                     self.bias[r],
                     batch_size=self.batch_size,
                     lamb=self.lamb,
-                    on_gpu=self.on_gpu))
+                    on_gpu=self.on_gpu,
+                    **kwargs))
 
         # add the output layer
         self.layers.append(
@@ -388,6 +389,9 @@ class ANN:
         # output layer, never use dropout here
         self.layers[i + 1].compute_output(batch_size)
 
+        return self.layers[-1].h
+
+    def get_last_prediction(self):
         return self.layers[-1].h
 
     def get_softmax(self, X_i):
@@ -488,10 +492,32 @@ class ANN:
         # start back propagation over hidden layers, starting with output layer
         for i in range(self.n_layers, 0, -1):
             self.layers[i].back_prop(y_i)
-
-    def batch(self, X_i, y_i, alpha=0.001, beta1=0.9, beta2=0.999, **kwargs):
+        self.layers[0].compute_delta_ho()
+        
+    def batch(self, X_i, y_i):
         """
-        Update the weights using a mini batch.
+        Run a minibatch. Feed X_i forward through the network and 
+        compute the loss gradient via back propagation.
+
+        Parameters
+        ----------
+        X_i : array
+            The input features of the mini batch.
+        y_i : array
+            The target data of the mini batch.
+
+        Returns
+        -------
+        None.
+
+        """
+
+        self.feed_forward(X_i, self.batch_size)
+        self.back_prop(y_i)
+        
+    def update_weights(self, alpha=0.001, **kwargs):
+        """
+        Update the weights after a mini batch.
 
         In the case of a deep-active subspace layer, update the weights of the
         neural network and the weights of the Gram-Schmidt vectors using a
@@ -505,12 +531,6 @@ class ANN:
             The target data of the mini batch.
         alpha : float, optional
             The learning rate. The default is 0.001.
-        beta1 : float, optional
-            Momentum parameter controlling the moving average of the loss gradient.
-            Used for the parameter-specific learning rate. The default is 0.9.
-        beta2 : float, optional
-            Parameter controlling the moving average of the squared gradient.
-            Used for the parameter-specific learning rate. The default is 0.999.
 
         Returns
         -------
@@ -518,8 +538,8 @@ class ANN:
 
         """
         
-        self.feed_forward(X_i, self.batch_size)
-        self.back_prop(y_i)
+        # self.feed_forward(X_i, self.batch_size)
+        # self.back_prop(y_i)
 
         for r in range(1, self.n_layers + 1):
 
@@ -528,15 +548,15 @@ class ANN:
             # Deep active subspace layer
             if isinstance(layer_r, DAS_Layer):
                 # momentum
-                layer_r.V = beta1 * layer_r.V + (1.0 - beta1) * layer_r.L_grad_Q
+                layer_r.V = self.beta1 * layer_r.V + (1.0 - self.beta1) * layer_r.L_grad_Q
                 # moving average of squared gradient magnitude
-                layer_r.A = beta2 * layer_r.A + (1.0 - beta2) * layer_r.L_grad_Q**2
+                layer_r.A = self.beta2 * layer_r.A + (1.0 - self.beta2) * layer_r.L_grad_Q**2
             # standard layer
             else:
                 # momentum
-                layer_r.V = beta1 * layer_r.V + (1.0 - beta1) * layer_r.L_grad_W
+                layer_r.V = self.beta1 * layer_r.V + (1.0 - self.beta1) * layer_r.L_grad_W
                 # moving average of squared gradient magnitude
-                layer_r.A = beta2 * layer_r.A + (1.0 - beta2) * layer_r.L_grad_W**2
+                layer_r.A = self.beta2 * layer_r.A + (1.0 - self.beta2) * layer_r.L_grad_W**2
 
             # select learning rate
             if not self.param_specific_learn_rate:
@@ -627,10 +647,10 @@ class ANN:
             # run the batch
             self.batch(
                 self.X[rand_idx],
-                self.y[rand_idx].T,
-                alpha=alpha,
-                beta1=self.beta1,
-                beta2=self.beta2)
+                self.y[rand_idx].T)
+            
+            # update the weights based on the computed loss gradient
+            self.update_weights(alpha=alpha, **kwargs)
 
             # store the loss value
             if store_loss:
