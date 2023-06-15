@@ -30,7 +30,7 @@ class ANN_Surrogate(Campaign):
               n_layers=2, n_neurons=100,
               loss='squared',
               activation='tanh',
-              learning_rate = 0.001, decay_rate = 0.9, beta1 = 0.9,
+              learning_rate=0.001, decay_rate=0.9, beta1=0.9,
               batch_size=64, lamb=0.0,
               standardize_X=True, standardize_y=True,
               dropout=False, **kwargs):
@@ -54,14 +54,14 @@ class ANN_Surrogate(Campaign):
         learing_rate : the baseline learning rate. Is made parameter specific
                        via RMSProp. Th edefault is 0.001.
         decay_rate : float, optional
-                     Factor multiplying the decay rate every decay_step 
+                     Factor multiplying the decay rate every decay_step
                      iterations. Default is 0.9.
         beta1 : float, optional
                 Momentum parameter controlling the moving average of the loss gradient.
                 Used for the parameter-specific learning rate. The default is 0.9.
         batch_size : Mini batch size. The default is 64.
         lamb : L2 regularization parameter. The default is 0.0.
-        dropout : Boolean flag for use of dropout regularization. 
+        dropout : Boolean flag for use of dropout regularization.
 
         Returns
         -------
@@ -96,7 +96,7 @@ class ANN_Surrogate(Campaign):
                                          loss=loss,
                                          activation=activation, batch_size=batch_size,
                                          alpha=learning_rate,
-                                         lamb=lamb, decay_step=10**4, 
+                                         lamb=lamb, decay_step=10**4,
                                          decay_rate=decay_rate, beta1=beta1,
                                          standardize_X=standardize_X,
                                          standardize_y=standardize_y,

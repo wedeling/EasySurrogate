@@ -32,7 +32,7 @@ class QSN_Surrogate(Campaign):
               n_layers=2, n_neurons=100,
               activation='leaky_relu',
               batch_size=64, lamb=0.0,
-              standardize_X = True, **kwargs):
+              standardize_X=True, **kwargs):
         """
         Perform back propagation to train the QSN
 
@@ -192,7 +192,6 @@ class QSN_Surrogate(Campaign):
         else:
             self.output_mean = 0.0
             self.output_std = 1.0
-
 
     def get_dimensions(self):
         """
