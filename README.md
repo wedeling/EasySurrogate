@@ -1,6 +1,6 @@
 # EasySurrogate
 
-This is EasySurrogate, a toolkit designed to facilitate the creation of surrogate models for multiscale simulations. The development of this software is funded by the EU Horizon 2020 Verified Exascale Computing for Multiscale Applications ([VECMA](www.vecma.eu)) project.
+This is EasySurrogate, a toolkit designed to facilitate the creation of surrogate models for multiscale simulations. The development of this software is funded by the EU Horizon 2020 Verified Exascale Computing for Multiscale Applications ([VECMA](www.vecma.eu)) project, and the [SEAVEA](https://www.seavea-project.org/) project.
 
 ## Requirements
 
