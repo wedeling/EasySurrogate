@@ -27,7 +27,8 @@ class ANN:
     def __init__(self, X, y, alpha=0.001, decay_rate=1.0, decay_step=10**5, beta1=0.9,
                  beta2=0.999, lamb=0.0, n_out=1, loss='squared', activation='tanh',
                  activation_out='linear', n_softmax=0, n_layers=2, n_neurons=16,
-                 bias=True, batch_size=1, param_specific_learn_rate=True,
+                 bias=True, batch_size=1, batch_norm=False,
+                 param_specific_learn_rate=True,
                  save=False, on_gpu=False, name='ANN',
                  standardize_X=True, standardize_y=True, **kwargs):
         """
@@ -75,6 +76,8 @@ class ANN:
             Use a bias neuron. The default is True.
         batch_size : int, optional
             The size of the mini batch. The default is 1.
+        batch_norm : boolean, optional
+            Use batch normalization. The default is False.
         param_specific_learn_rate : boolean, optional
             Use parameter-specific learing rate. The default is True.
         save : boolean, optional
@@ -140,7 +143,13 @@ class ANN:
 
         # size of the mini batch used in stochastic gradient descent
         self.batch_size = batch_size
-        
+
+        # flags for the use of batch normalization
+        self.batch_norm = [False]   # no batch norm in input layer
+        for i in range(n_layers - 1):
+            self.batch_norm.append(batch_norm)
+        self.batch_norm.append(False)
+
         # set dropout to False, can be changed in train subroutine
         self.dropout = False
 
@@ -311,8 +320,10 @@ class ANN:
                     self.loss,
                     self.bias[r],
                     batch_size=self.batch_size,
+                    batch_norm=self.batch_norm[r],
                     lamb=self.lamb,
-                    on_gpu=self.on_gpu))
+                    on_gpu=self.on_gpu,
+                    **kwargs))
 
         # add the output layer
         self.layers.append(
@@ -371,7 +382,7 @@ class ANN:
         else:
             self.layers[0].h = np.ones([self.n_in + 1, batch_size])
             self.layers[0].h[0:self.n_in, :] = X_i.T
-        
+
         # apply dropout to the input layer
         if self.dropout:
             r = bernoulli.rvs(self.dropout_prob[0], size=X_i.T.shape)
@@ -379,15 +390,18 @@ class ANN:
 
         for i in range(1, self.n_layers):
             # compute the output on the layer using matrix-maxtrix multiplication
-            if self.dropout: # with dropout
+            if self.dropout:  # with dropout
                 self.layers[i].compute_output(batch_size, dropout=self.dropout,
-                                              dropout_prob = self.dropout_prob[i])
-            else: # without
+                                              dropout_prob=self.dropout_prob[i])
+            else:  # without
                 self.layers[i].compute_output(batch_size)
-                
+
         # output layer, never use dropout here
         self.layers[i + 1].compute_output(batch_size)
 
+        return self.layers[-1].h
+
+    def get_last_prediction(self):
         return self.layers[-1].h
 
     def get_softmax(self, X_i):
@@ -488,10 +502,32 @@ class ANN:
         # start back propagation over hidden layers, starting with output layer
         for i in range(self.n_layers, 0, -1):
             self.layers[i].back_prop(y_i)
+        self.layers[0].compute_delta_ho()
 
-    def batch(self, X_i, y_i, alpha=0.001, beta1=0.9, beta2=0.999, **kwargs):
+    def batch(self, X_i, y_i):
         """
-        Update the weights using a mini batch.
+        Run a minibatch. Feed X_i forward through the network and
+        compute the loss gradient via back propagation.
+
+        Parameters
+        ----------
+        X_i : array
+            The input features of the mini batch.
+        y_i : array
+            The target data of the mini batch.
+
+        Returns
+        -------
+        None.
+
+        """
+
+        self.feed_forward(X_i, self.batch_size)
+        self.back_prop(y_i)
+
+    def update_weights(self, alpha=0.001, **kwargs):
+        """
+        Update the weights after a mini batch.
 
         In the case of a deep-active subspace layer, update the weights of the
         neural network and the weights of the Gram-Schmidt vectors using a
@@ -505,21 +541,15 @@ class ANN:
             The target data of the mini batch.
         alpha : float, optional
             The learning rate. The default is 0.001.
-        beta1 : float, optional
-            Momentum parameter controlling the moving average of the loss gradient.
-            Used for the parameter-specific learning rate. The default is 0.9.
-        beta2 : float, optional
-            Parameter controlling the moving average of the squared gradient.
-            Used for the parameter-specific learning rate. The default is 0.999.
 
         Returns
         -------
         None.
 
         """
-        
-        self.feed_forward(X_i, self.batch_size)
-        self.back_prop(y_i)
+
+        # self.feed_forward(X_i, self.batch_size)
+        # self.back_prop(y_i)
 
         for r in range(1, self.n_layers + 1):
 
@@ -528,24 +558,49 @@ class ANN:
             # Deep active subspace layer
             if isinstance(layer_r, DAS_Layer):
                 # momentum
-                layer_r.V = beta1 * layer_r.V + (1.0 - beta1) * layer_r.L_grad_Q
+                layer_r.V = self.beta1 * layer_r.V + (1.0 - self.beta1) * layer_r.L_grad_Q
                 # moving average of squared gradient magnitude
-                layer_r.A = beta2 * layer_r.A + (1.0 - beta2) * layer_r.L_grad_Q**2
+                layer_r.A = self.beta2 * layer_r.A + (1.0 - self.beta2) * layer_r.L_grad_Q**2
             # standard layer
             else:
                 # momentum
-                layer_r.V = beta1 * layer_r.V + (1.0 - beta1) * layer_r.L_grad_W
+                layer_r.V = self.beta1 * layer_r.V + (1.0 - self.beta1) * layer_r.L_grad_W
                 # moving average of squared gradient magnitude
-                layer_r.A = beta2 * layer_r.A + (1.0 - beta2) * layer_r.L_grad_W**2
+                layer_r.A = self.beta2 * layer_r.A + (1.0 - self.beta2) * layer_r.L_grad_W**2
+
+                # if batch normalization is used
+                if self.batch_norm[r]:
+                    # momentum beta parameter
+                    layer_r.bn.V_beta = self.beta1 * layer_r.bn.V_beta + \
+                        (1.0 - self.beta1) * layer_r.bn.L_grad_beta
+                    # moving average of squared gradient magnitude
+                    layer_r.bn.A_beta = self.beta2 * layer_r.bn.A_beta + \
+                        (1.0 - self.beta2) * layer_r.bn.L_grad_beta**2
+
+                    # momentum beta parameter
+                    layer_r.bn.V_gamma = self.beta1 * layer_r.bn.V_gamma + \
+                        (1.0 - self.beta1) * layer_r.bn.L_grad_gamma
+                    # moving average of squared gradient magnitude
+                    layer_r.bn.A_gamma = self.beta2 * layer_r.bn.A_gamma + \
+                        (1.0 - self.beta2) * layer_r.bn.L_grad_gamma**2
 
             # select learning rate
             if not self.param_specific_learn_rate:
-                # same alpha for all weights
-                alpha_i = alpha
+                # same learning rate for all weights
+                alpha_i = alpha_i_beta = alpha_i_gamma = alpha
             # param specific learning rate
             else:
                 # RMSProp
                 alpha_i = alpha / (np.sqrt(layer_r.A + 1e-8))
+
+                if self.batch_norm[r]:
+                    # RMSProp param specific learning rate for alpha and beta
+                    alpha_i_beta = alpha / (np.sqrt(layer_r.bn.A_beta + 1e-8))
+                    alpha_i_gamma = alpha / (np.sqrt(layer_r.bn.A_gamma + 1e-8))
+
+                    # update beta and gamma
+                    layer_r.bn.beta = layer_r.bn.beta - alpha_i_beta * layer_r.bn.V_beta
+                    layer_r.bn.gamma = layer_r.bn.gamma - alpha_i_gamma * layer_r.bn.V_gamma
 
             # gradient descent update step with L2 regularization
             if self.lamb > 0.0:
@@ -582,12 +637,12 @@ class ANN:
             Sample a sequential slab of data, starting from a random point.
             The default is False.
         verbose : boolean, optional
-            Print information to screen while training. The default is False.
+            Print information to screen while training. The default is True.
         dropout : boolean, optional
             Use dropout regularization. The default is False. To manually
             specify the dropout probabilities, specify the keyword argument
             "dropout_prob", as a list of probabilities of retaining neurons
-            per layer. Otherwise, 0.8 is used for the input layer, 
+            per layer. Otherwise, 0.8 is used for the input layer,
             and 0.5 for the hidden layers.
 
         Returns
@@ -606,6 +661,9 @@ class ANN:
             # user-specified dropout probabilities
             else:
                 self.dropout_prob = kwargs['dropout_prob']
+
+        # set the training flag to True for any layer that uses batch normalization
+        self.set_batch_norm_training_flag(True)
 
         # loop with tqdm progress bar
         for i in tqdm(range(n_batch)):
@@ -627,10 +685,10 @@ class ANN:
             # run the batch
             self.batch(
                 self.X[rand_idx],
-                self.y[rand_idx].T,
-                alpha=alpha,
-                beta1=self.beta1,
-                beta2=self.beta2)
+                self.y[rand_idx].T)
+
+            # update the weights based on the computed loss gradient
+            self.update_weights(alpha=alpha, **kwargs)
 
             # store the loss value
             if store_loss:
@@ -650,6 +708,9 @@ class ANN:
 
             # turn off dropout after training
             self.dropout = False
+
+        # set the training flag to False for any layer that uses batch normalization
+        self.set_batch_norm_training_flag(False)
 
         if self.save:
             self.save_ANN()
@@ -755,6 +816,28 @@ class ANN:
         for i in range(self.n_layers + 1):
             self.layers[i].batch_size = batch_size
 
+    def set_batch_norm_training_flag(self, training):
+        """
+        Set the training flag for any layers that use batch normalization.
+        If True normalization is done with the mean and standard deviation
+        computed per mini batch. During inference (training = False), a
+        moving average of both moments (computed during training) is used
+        for normalization.
+
+        Parameters
+        ----------
+        training : bool
+            Training flag.
+
+        Returns
+        -------
+        None.
+
+        """
+
+        for r in np.where(self.batch_norm)[0]:
+            self.layers[r].bn.set_training(training)
+
     def compute_misclass_softmax(self, X=None, y=None):
         """
         Compute the number of misclassifications for the sofmax layer(s).
@@ -786,7 +869,7 @@ class ANN:
 
         n_samples = X.shape[0]
         error_idx = []
-        
+
         # loop with tqdm progress bar
         for i in tqdm(range(n_samples)):
             _, max_idx_ann, _ = self.get_softmax(X[i].reshape([1, self.n_in]))

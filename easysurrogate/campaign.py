@@ -14,6 +14,7 @@ except ImportError:
     print("save_ANN and load_ANN have no graphical support, \
           use these by specifying file_path=")
 
+
 class Campaign:
     """
     The main EasySurrogate Campaign object

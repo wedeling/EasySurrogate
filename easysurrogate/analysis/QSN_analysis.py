@@ -31,7 +31,7 @@ class QSN_analysis(BaseAnalysis):
 
         """
 
-        if not 'X' in kwargs:
+        if 'X' not in kwargs:
             X = self.qsn_surrogate.neural_net.X
             y = self.qsn_surrogate.neural_net.y
         else:
@@ -50,13 +50,13 @@ class QSN_analysis(BaseAnalysis):
 
         binnumbers = np.zeros([n_samples, n_vars]).astype('int')
         y_idx = np.zeros([n_samples, n_bins * n_vars])
-        
+
         for i in range(n_vars):
 
             bins = self.qsn_surrogate.feat_eng.bins[i]
 
             _, _, binnumbers[:, i] = \
-                stats.binned_statistic(data[:, i], np.zeros(n_samples), 
+                stats.binned_statistic(data[:, i], np.zeros(n_samples),
                                        statistic='count', bins=bins)
 
             unique_binnumber = np.unique(binnumbers[:, i])
@@ -103,29 +103,29 @@ class QSN_analysis(BaseAnalysis):
         y_idx_train = self.bin_data(data[0:dims['n_train']])
         y_idx_test = self.bin_data(data[dims['n_train']:])
 
-        X_train = (feats[0:dims['n_train'], :] - self.qsn_surrogate.feat_mean) / self.qsn_surrogate.feat_std
-        X_test = (feats[dims['n_train']:, :] - self.qsn_surrogate.feat_mean) / self.qsn_surrogate.feat_std
+        X_train = (feats[0:dims['n_train'], :] - self.qsn_surrogate.feat_mean) / \
+            self.qsn_surrogate.feat_std
+        X_test = (feats[dims['n_train']:, :] - self.qsn_surrogate.feat_mean) / \
+            self.qsn_surrogate.feat_std
 
         self.qsn_surrogate.neural_net.compute_misclass_softmax(X=X_train, y=y_idx_train)
         self.qsn_surrogate.neural_net.compute_misclass_softmax(X=X_test, y=y_idx_test)
 
-
     def get_KL_errors(self, feats, ref_distributions):
-        
+
         n_samples = feats.shape[0]
         n_softmax = self.qsn_surrogate.n_softmax
-        
+
         for i in range(n_samples):
             o_i, _, _ = self.qsn_surrogate.neural_net.get_softmax(feats[i].reshape([1, -1]))
-            
+
             KL_div = np.zeros(n_softmax)
             for j, y_j in enumerate(np.split(ref_distributions[i], n_softmax)):
 
                 idx_gt0 = np.where(y_j > 0.0)[0]
-                KL_div[j] = -np.sum( y_j[idx_gt0] * np.log( o_i[j][idx_gt0] / y_j[idx_gt0]))
+                KL_div[j] = -np.sum(y_j[idx_gt0] * np.log(o_i[j][idx_gt0] / y_j[idx_gt0]))
 
             print("KL divergence sample %d = %s" % (i, KL_div))
-                
 
     # def make_movie(self, n_frames=500):
     #     """
