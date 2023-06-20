@@ -26,8 +26,8 @@ class DAS_network(ANN):
                  param_specific_learn_rate=True, loss='squared',
                  activation='tanh', activation_out='linear', activation_das='linear',
                  n_softmax=0, n_layers=2, n_neurons=16,
-                 bias=True, batch_size=1, save=True,
-                 name='DAS', on_gpu=False,
+                 bias=True, batch_size=1, batch_norm=False, 
+                 save=True, name='DAS', on_gpu=False,
                  standardize_X=True, standardize_y=True, **kwargs):
         """
         Initialize the Deep Active Subspace surrogate object.
@@ -78,6 +78,9 @@ class DAS_network(ANN):
             Use a bias neuron. The default is True.
         batch_size : int, optional
             The size of the mini batch. The default is 1.
+        batch_norm : boolean or list of booleans, optional
+            Use batch normalization in hidden layers. Not used in the DAS layer.
+            The default is False.
         save : boolean, optional
             Save the neural network to a pickle file after training.
             The default is True.
@@ -102,7 +105,7 @@ class DAS_network(ANN):
 
         # the activation of the DAS layer
         self.activation_das = activation_das
-
+        
         # set all the common parameters via the parent ANN class,
         # but overwrite the init_network subsroutine in this class
         super().__init__(X, y, alpha=alpha, decay_rate=decay_rate,
@@ -110,7 +113,7 @@ class DAS_network(ANN):
                          lamb=lamb, n_out=n_out, loss=loss, activation=activation,
                          activation_out=activation_out, n_softmax=n_softmax,
                          n_layers=n_layers, n_neurons=n_neurons, bias=bias,
-                         batch_size=batch_size,
+                         batch_size=batch_size, batch_norm=batch_norm,
                          param_specific_learn_rate=param_specific_learn_rate,
                          save=save, on_gpu=on_gpu, name=name,
                          standardize_X=standardize_X, standardize_y=standardize_y,
@@ -135,6 +138,7 @@ class DAS_network(ANN):
         # add the input layer
         self.layers.append(Layer(self.n_in, 0, self.n_layers, 'linear',
                                  self.loss, False, batch_size=self.batch_size,
+                                 batch_norm = False,
                                  lamb=self.lamb, on_gpu=self.on_gpu))
 
         # by default, the 1st layer does not have a bias neuron. This way
@@ -158,6 +162,7 @@ class DAS_network(ANN):
         for r in range(2, n_hidden):
             self.layers.append(Layer(self.n_neurons, r, self.n_layers, self.layer_activation[r],
                                      self.loss, self.bias[r], batch_size=self.batch_size,
+                                     batch_norm=self.batch_norm[r],
                                      lamb=self.lamb, on_gpu=self.on_gpu))
 
         # add the output layer
@@ -169,112 +174,8 @@ class DAS_network(ANN):
                 self.activation_out,
                 self.loss,
                 batch_size=self.batch_size,
+                batch_norm=False,
                 lamb=self.lamb,
                 n_softmax=self.n_softmax,
                 on_gpu=self.on_gpu,
                 **kwargs))
-
-        # super().connect_layers()
-        # super().print_network_info()
-
-    # I REMOVED THIS AS IT IS NOT STRICTLY NECESSARY, THE ONLY DIFFERENCE
-    # IS THAT THE ANN FEED_FORWARD SUBROUTINE CAN HAVE A BIAS. THE LAYER
-    # BEFORE THE DAS LAYER DOES NOT HAVE A BIAS, WHICH WAS TYPICALLY THE
-    # INPUT LAYER. MAYBE IT CAN HAVE A BIAS, ALTHOUGH IT PROBABLY SHOULDN'T
-    # HAVE ONE BY DEFAULT. CHECK OUT.
-    # def feed_forward(self, X_i, batch_size=1):
-    #     """
-    #     Run the deep active subspace network forward.
-
-    #     Parameters
-    #     ----------
-    #     X_i : array
-    #         The feauture array, needs to have shape [batch size, number of features].
-    #     batch_size : int, optional
-    #         The bath size. The default is 1.
-
-    #     Returns
-    #     -------
-    #     array
-    #         The prediction of the deep active subspace neural network.
-    #     """
-
-    #     # set the features at the output of in the input layer
-    #     self.layers[0].h = X_i.T
-
-    #     for i in range(1, self.n_layers + 1):
-    #         # compute the output on the layer using matrix-maxtrix multiplication
-    #         self.layers[i].compute_output(batch_size)
-
-    #     return self.layers[-1].h
-
-    # I MOVED THIS TOO TO THE ANN CLASS
-    # def batch(self, X_i, y_i, alpha=0.001, beta1=0.9, beta2=0.999):
-    #     """
-    #     Update the weights of the neural network and the weights of
-    #     the Gram-Schmidt vectors using a mini batch.
-
-    #     Parameters
-    #     ----------
-    #     X_i : array
-    #         The input features of the mini batch.
-    #     y_i : array
-    #         The target data of the mini batch.
-    #     alpha : float, optional
-    #         The learning rate. The default is 0.001.
-    #     beta1 : float, optional
-    #         Momentum parameter controlling the moving average of the loss gradient.
-    #         Used for the parameter-specific learning rate. The default is 0.9.
-    #     beta2 : float, optional
-    #         Parameter controlling the moving average of the squared gradient.
-    #         Used for the parameter-specific learning rate. The default is 0.999.
-
-    #     Returns
-    #     -------
-    #     None.
-
-    #     """
-
-    #     self.feed_forward(X_i, self.batch_size)
-    #     self.back_prop(y_i)
-
-    #     for r in range(1, self.n_layers + 1):
-
-    #         layer_r = self.layers[r]
-
-    #         # Deep active subspace layer
-    #         if isinstance(layer_r, DAS_Layer):
-    #             # momentum
-    #             layer_r.V = beta1 * layer_r.V + (1.0 - beta1) * layer_r.L_grad_Q
-    #             # moving average of squared gradient magnitude
-    #             layer_r.A = beta2 * layer_r.A + (1.0 - beta2) * layer_r.L_grad_Q**2
-    #         # standard layer
-    #         else:
-    #             # momentum
-    #             layer_r.V = beta1 * layer_r.V + (1.0 - beta1) * layer_r.L_grad_W
-    #             # moving average of squared gradient magnitude
-    #             layer_r.A = beta2 * layer_r.A + (1.0 - beta2) * layer_r.L_grad_W**2
-
-    #         # select learning rate
-    #         if not self.param_specific_learn_rate:
-    #             # same alpha for all weights
-    #             alpha_i = alpha
-    #         # param specific learning rate
-    #         else:
-    #             # RMSProp
-    #             alpha_i = alpha / (np.sqrt(layer_r.A + 1e-8))
-
-    #         # gradient descent update step with L2 regularization
-    #         if self.lamb > 0.0:
-    #             layer_r.W = (1.0 - layer_r.Lamb * alpha_i) * layer_r.W - alpha_i * layer_r.V
-    #         # without regularization
-    #         else:
-    #             # Deep active subspace layer
-    #             if isinstance(layer_r, DAS_Layer):
-    #                 # update the Q weights
-    #                 layer_r.Q = layer_r.Q - alpha_i * layer_r.V
-    #                 # compute the weights W(Q) via Gram Schmidt
-    #                 layer_r.compute_weights()
-    #             # standard layer
-    #             else:
-    #                 layer_r.W = layer_r.W - alpha_i * layer_r.V

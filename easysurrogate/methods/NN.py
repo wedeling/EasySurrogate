@@ -76,7 +76,7 @@ class ANN:
             Use a bias neuron. The default is True.
         batch_size : int, optional
             The size of the mini batch. The default is 1.
-        batch_norm : boolean, optional
+        batch_norm : boolean or list of booleans, optional
             Use batch normalization. The default is False.
         param_specific_learn_rate : boolean, optional
             Use parameter-specific learing rate. The default is True.
@@ -144,11 +144,20 @@ class ANN:
         # size of the mini batch used in stochastic gradient descent
         self.batch_size = batch_size
 
-        # flags for the use of batch normalization
-        self.batch_norm = [False]   # no batch norm in input layer
-        for i in range(n_layers - 1):
-            self.batch_norm.append(batch_norm)
-        self.batch_norm.append(False)
+        assert type(batch_norm) is bool or type(batch_norm) is list, \
+            "batch_norm must be a boolean value or a list of boolean values"
+
+        # manually specified flags for the use of batch normalization
+        if type(batch_norm) is list:
+            assert len(batch_norm) == n_layers + 1, \
+                "batch_norm flag must be set for every layer"
+            self.batch_norm = batch_norm
+        # standard flag for batch normalization
+        else:
+            self.batch_norm = [False]   # no batch norm in input layer
+            for i in range(n_layers - 1):
+                self.batch_norm.append(batch_norm)
+            self.batch_norm.append(False)
 
         # set dropout to False, can be changed in train subroutine
         self.dropout = False

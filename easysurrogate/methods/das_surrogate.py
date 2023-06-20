@@ -36,7 +36,7 @@ class DAS_Surrogate(Campaign):
     def train(self, feats, target, d, n_iter, test_frac=0.0,
               n_layers=2, n_neurons=100,
               activation='tanh', activation_das='linear', loss='squared',
-              batch_size=64, lamb=0.0,
+              batch_size=64, batch_norm=False,  lamb=0.0,
               standardize_X=True, standardize_y=True, **kwargs):
         """
         Perform backpropagation to train the DAS network
@@ -67,6 +67,9 @@ class DAS_Surrogate(Campaign):
             and 'logistic'.
         batch_size : integer, optional
             The minibatch size. The default is 64.
+        batch_norm : boolean or list of booleans, optional
+            Use batch normalization in hidden layers. Not used in the DAS layer.
+            The default is False.
         lamb : float, optional
             L2 weight regularization parameter. The default is 0.0.
         standardize_X : Boolean, optional
@@ -100,6 +103,11 @@ class DAS_Surrogate(Campaign):
         else:
             n_softmax = 0
 
+        self.batch_norm = [False, False]   # no batch norm in input and DAS layer
+        for i in range(n_layers - 2):
+            self.batch_norm.append(batch_norm)
+        self.batch_norm.append(False)
+
         # create the feed-forward ANN
         self.neural_net = es.methods.DAS_network(
             X_train,
@@ -113,6 +121,7 @@ class DAS_Surrogate(Campaign):
             activation=activation,
             activation_das=activation_das,
             batch_size=batch_size,
+            batch_norm=self.batch_norm,
             lamb=lamb,
             decay_step=10**4,
             decay_rate=0.9,
@@ -124,9 +133,15 @@ class DAS_Surrogate(Campaign):
         print('===============================')
         print('Training Deep Active Subspace Neural Network...')
 
+        # set the training flag to True in any layer that uses batch normalization
+        self.neural_net.set_batch_norm_training_flag(True)
+
         # train network for n_iter mini batches
         self.neural_net.train(n_iter, store_loss=True)
         self.set_data_stats()
+
+        # set the training flag to False in any layer that uses batch normalization
+        self.neural_net.set_batch_norm_training_flag(False)
 
     def derivative(self, x, norm=True):
         """

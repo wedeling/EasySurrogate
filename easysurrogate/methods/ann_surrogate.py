@@ -31,7 +31,8 @@ class ANN_Surrogate(Campaign):
               loss='squared',
               activation='tanh',
               learning_rate=0.001, decay_rate=0.9, beta1=0.9,
-              batch_size=64, lamb=0.0,
+              batch_size=64, batch_norm=False,
+              lamb=0.0,
               standardize_X=True, standardize_y=True,
               dropout=False, **kwargs):
         """
@@ -60,6 +61,8 @@ class ANN_Surrogate(Campaign):
                 Momentum parameter controlling the moving average of the loss gradient.
                 Used for the parameter-specific learning rate. The default is 0.9.
         batch_size : Mini batch size. The default is 64.
+        batch_norm : boolean, optional
+            Use batch normalization. The default is False.
         lamb : L2 regularization parameter. The default is 0.0.
         dropout : Boolean flag for use of dropout regularization.
 
@@ -94,7 +97,9 @@ class ANN_Surrogate(Campaign):
                                          n_layers=n_layers, n_neurons=n_neurons,
                                          n_out=n_out,
                                          loss=loss,
-                                         activation=activation, batch_size=batch_size,
+                                         activation=activation, 
+                                         batch_size=batch_size,
+                                         batch_norm=batch_norm,
                                          alpha=learning_rate,
                                          lamb=lamb, decay_step=10**4,
                                          decay_rate=decay_rate, beta1=beta1,
@@ -106,9 +111,16 @@ class ANN_Surrogate(Campaign):
         print('===============================')
         print('Training Artificial Neural Network...')
 
+        # set the training flag to True in any layer that uses batch normalization
+        self.neural_net.set_batch_norm_training_flag(True)
+
         # train network for n_iter mini batches
         self.neural_net.train(n_iter, store_loss=True, dropout=dropout,
                               **kwargs)
+
+        # set the training flag to False in any layer that uses batch normalization
+        self.neural_net.set_batch_norm_training_flag(False)
+
         self.set_data_stats()
         if lags is not None:
             self.feat_eng.initial_condition_feature_history(feats)

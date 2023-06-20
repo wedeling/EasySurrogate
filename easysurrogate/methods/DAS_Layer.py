@@ -45,6 +45,8 @@ class DAS_Layer(Layer):
                          bias=bias, batch_size=batch_size)
         self.d = d
         self.name = 'DAS_layer'
+        # do not use batch normalization
+        self.batch_norm = False
 
     def meet_the_neighbors(self, layer_rm1, layer_rp1):
         """
