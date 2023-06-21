@@ -243,7 +243,7 @@ class Feature_Engineering:
         # compute the size of the training set based on value of test_frac
         self.n_train = round(self.n_samples * (1.0 - test_frac))
         # number of testing points, as what is left after excluding training set
-        self.n_test = np.int(self.n_samples - self.n_train)
+        self.n_test = int(self.n_samples - self.n_train)
         # get indices of samples  to be used for training
         # 1) train_first True: choose first (1-test_frac) fraction of the data set points, if points arranged in time
         # 2) train_first False: choose (1-test_frac) fraction of data set at

@@ -689,7 +689,7 @@ class ANN:
                 rand_idx = np.arange(start, start + self.batch_size)
 
             # compute learning rate
-            alpha = self.alpha * self.decay_rate**(np.int(i / self.decay_step))
+            alpha = self.alpha * self.decay_rate**(int(i / self.decay_step))
 
             # run the batch
             self.batch(

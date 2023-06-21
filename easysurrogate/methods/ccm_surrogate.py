@@ -32,7 +32,7 @@ class CCM_Surrogate:
         # number of training samples
         self.n_samples = feats[0].shape[0]
         # compute the size of the training set based on value of test_frac
-        self.n_train = np.int(self.n_samples * (1.0 - test_frac))
+        self.n_train = int(self.n_samples * (1.0 - test_frac))
         print('Using first', self.n_train, 'of', self.n_samples, 'samples to train QSN')
 
         # list of features
