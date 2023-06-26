@@ -461,9 +461,13 @@ class Layer:
         grad_Phi_rp1 = self.layer_rp1.grad_Phi
 
         # the weight matrix of the next layer
-        W_rp1 = self.layer_rp1.W
+        W_rp1 = self.get_weights_next_layer()
 
         self.delta_ho = np.dot(W_rp1, delta_ho_rp1 * grad_Phi_rp1)[0:self.n_neurons, :]
+
+    def get_weights_next_layer(self):
+
+        return self.layer_rp1_W
 
     def compute_y_grad_W(self):
         """

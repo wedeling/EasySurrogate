@@ -43,8 +43,8 @@ class CCM_Surrogate:
         print('Creating time-lagged training data...')
         # X_lagged, _ = self.feat_eng.lag_training_data(X, np.zeros(self.n_train), lags)
         # Y_lagged, _ = self.feat_eng.lag_training_data(y, np.zeros(self.n_train), lags)
-        X_lagged, _ = self.feat_eng.get_training_data(X, np.zeros(self.n_train), lags=lags)
-        Y_lagged, _ = self.feat_eng.get_training_data(y, np.zeros(self.n_train), lags=lags)
+        X_lagged, _, _, _ = self.feat_eng.get_training_data(X, np.zeros(self.n_train), lags=lags)
+        Y_lagged, _, _, _ = self.feat_eng.get_training_data(y, np.zeros(self.n_train), lags=lags)
         print('done')
 
         # total number of conditional variables including lagged terms

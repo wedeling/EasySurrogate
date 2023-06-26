@@ -16,36 +16,43 @@ from itertools import chain, product, cycle
 import matplotlib.pyplot as plt
 import sys
 from scipy.spatial import ConvexHull
-
+import easysurrogate as es
+from tqdm import tqdm
 
 class Resampler:
 
-    def __init__(self, c, r_ip1, N, N_bins, lags, store_frame_rate=1,
-                 min_count=0):
+    def __init__(self, c, r_ip1, N, N_bins, lags=None, min_count=0):
+
+        self.name = "Resampler Surrogate"
+
+        # number of unique conditioning variables (not including lags)
+        #self.N_covar = c.shape[1]
+
+        # create a Feature_Engineering object
+        self.feat_eng = es.methods.Feature_Engineering()
+
+        c, r_ip1, _, _ = self.feat_eng.get_training_data(c, r_ip1, lags=lags)
+        r_ip1 = r_ip1.flatten()
 
         # total number of conditional variables including lagged terms
         self.N_c = c.shape[1]
-
-        # number of unique conditioning variables (not including lags)
-        self.N_covar = len(lags)
 
         self.N = N
         self.r_ip1 = r_ip1
         self.c = c
         self.N_bins = N_bins
         self.lags = lags
-        self.max_lag = np.max(list(chain(*lags)))
+        self.max_lag = self.feat_eng.max_lag
         self.covar = {}
 
-        for i in range(self.N_covar):
-            self.covar[i] = []
+        # for i in range(self.N_covar):
+        #     self.covar[i] = []
 
         bins = self.get_bins(N_bins)
 
-        # count = numver of r_ip1 samples in each bin
-        # binedges = same as bins
+        # count = number of r_ip1 samples in each bin
         # binnumber = bin indices of the r_ip1 samples. A 1D array, no matter N_c
-        count, binedges, binnumber = stats.binned_statistic_dd(
+        count, _, binnumber = stats.binned_statistic_dd(
             c, r_ip1, statistic='count', bins=bins)
 
         # the unique set of binnumers which have at least one r_ip1 sample
@@ -135,9 +142,6 @@ class Resampler:
             outliers_idx = np.in1d(binnumbers_i, unique_binnumbers_i[idx]).nonzero()[0]
             N_outliers = outliers_idx.size
 
-#            if self.verbose == True:
-#                print(N_outlier_bins, ' bins with', N_outliers ,'outlier samples found')
-
             # x location of outliers
             x_outliers = np.copy(c_i[outliers_idx])
 
@@ -158,10 +162,6 @@ class Resampler:
 
             # overwrite outliers in binnumbers_i with nearest non-empty binnumber
             binnumbers_closest = self.binnumbers_nonempty[closest_idx]
-
-#            if self.verbose == True:
-#                print('Moving', binnumbers_i[outliers_idx], '-->', binnumbers_closest)
-
             binnumbers_i[outliers_idx] = binnumbers_closest
 
     # create an apriori mapping between every possible bin and the nearest
@@ -189,10 +189,7 @@ class Resampler:
 
         mapping = np.zeros(self.max_binnumber).astype('int')
 
-        for i in range(self.max_binnumber):
-
-            if np.mod(i, 10) == 0:
-                progress(i, self.max_binnumber)
+        for i in tqdm(range(self.max_binnumber)):
 
             # bin is nonempty, just use current idx
             if np.in1d(i, self.unique_binnumbers):
@@ -267,18 +264,15 @@ class Resampler:
 
     # the data-driven model for the unresolved scales
     # Given c_i return r at time i+1 (r_ip1)
-    def get_sample(self, c_i, n_mc=1):
-
+    def _feed_forward(self, c_i, n_mc=1):
+        
+        c_i = c_i.reshape([self.N, -1])
+        
         # find in which bins the c_i samples fall
         _, _, binnumbers_i = stats.binned_statistic_dd(c_i, np.zeros(self.N), bins=self.bins)
 
-        # dynamically corrects binnumbers_i if outliers are found
-        #self.check_outliers(binnumbers_i, c_i)
-
         # static correction for outliers, using precomputed mapping array
         binnumbers_i = self.mapping[binnumbers_i]
-
-        #self.check_outliers(binnumbers_i, c_i)
 
         # convert 1D binnumbers_i to equivalent ND indices
         x_idx = np.unravel_index(binnumbers_i, [len(b) + 1 for b in self.bins])
@@ -296,9 +290,27 @@ class Resampler:
         r = np.zeros([n_mc, self.N, self.N])
 
         for i in range(n_mc):
-            r[i, :, :] = self.r_ip1[self.idx_of_bin[start + I[:, i]]].reshape([self.N, self.N])
+            r[i, :, :] = self.r_ip1[self.idx_of_bin[start + I[:, i]]]#.reshape([self.N, self.N])
 
-        return np.mean(r, 0)  # , binnumbers_i
+        return np.mean(r, 0)
+
+    def predict(self, feat):
+        """
+        Make a prediction f(feat). Here, f is given by Resampler._feed_foward.
+
+        Parameters
+        ----------
+        feat : array of list of arrays
+               The feature array of a list of feature arrays on which to evaluate the surrogate.
+
+        Returns
+        -------
+        array
+            the prediction of the neural net.
+
+        """
+
+        return self.feat_eng._predict(feat.flatten(), self._feed_forward)
 
     # the data-driven model for the unresolved scales
     # Given c_i return bin averaged r at time i+1
@@ -320,32 +332,32 @@ class Resampler:
         # , self.rstd[x_idx].reshape([self.N, self.N])
         return self.rmean[x_idx].reshape([self.N, self.N])
 
-    # append the covariates supplied to the binning object during simulation
-    # to self.covars
-    # Note: use list to dynamically append, array is very slow
-    def append_covar(self, c_i):
+    # # append the covariates supplied to the binning object during simulation
+    # # to self.covars
+    # # Note: use list to dynamically append, array is very slow
+    # def append_covar(self, c_i):
 
-        for i in range(self.N_covar):
-            self.covar[i].append(c_i[:, i])
+    #     for i in range(self.N_covar):
+    #         self.covar[i].append(c_i[:, i])
 
-            # if max number of covariates is reached, remove first item
-            if len(self.covar[i]) > self.max_lag:
-                self.covar[i].pop(0)
+    #         # if max number of covariates is reached, remove first item
+    #         if len(self.covar[i]) > self.max_lag:
+    #             self.covar[i].pop(0)
 
-    # return lagged covariates, assumes constant lag
-    # Note: typecast to array if spatially varying lag is required
-    def get_covar(self):
+    # # return lagged covariates, assumes constant lag
+    # # Note: typecast to array if spatially varying lag is required
+    # def get_covar(self):
 
-        c_i = np.zeros([self.N, self.N_c])
+    #     c_i = np.zeros([self.N, self.N_c])
 
-        idx = 0
+    #     idx = 0
 
-        for i in range(self.N_covar):
-            for lag in self.lags[i]:
-                c_i[:, idx] = self.covar[i][-lag]
-                idx += 1
+    #     for i in range(self.N_covar):
+    #         for lag in self.lags[i]:
+    #             c_i[:, idx] = self.covar[i][-lag]
+    #             idx += 1
 
-        return c_i
+    #     return c_i
 
     def print_bin_info(self):
         print('-------------------------------')
@@ -364,18 +376,3 @@ class Resampler:
             bins.append(np.linspace(np.min(self.c[:, i]), np.max(self.c[:, i]), N_bins[i] + 1))
 
         return bins
-
-
-def progress(count, total, status=''):
-    """
-    progress bar for the command line
-    Source: https://gist.github.com/vladignatyev/06860ec2040cb497f0f3
-    """
-    bar_len = 60
-    filled_len = int(round(bar_len * count / float(total)))
-
-    percents = round(100.0 * count / float(total), 1)
-    bar = '=' * filled_len + '-' * (bar_len - filled_len)
-
-    sys.stdout.write('[%s] %s%s ...%s\r' % (bar, percents, '%', status))
-    sys.stdout.flush()  # As suggested by Rom Ruben (see: http://stackoverflow.com/questions/3173320/text-progress-bar-in-the-console/27871113#comment50529068_27871113)
