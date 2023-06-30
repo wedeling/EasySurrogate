@@ -26,7 +26,7 @@ class DAS_network(ANN):
                  param_specific_learn_rate=True, loss='squared',
                  activation='tanh', activation_out='linear', activation_das='linear',
                  n_softmax=0, n_layers=2, n_neurons=16,
-                 bias=True, batch_size=1, batch_norm=False, 
+                 bias=True, batch_size=1, batch_norm=False,
                  save=True, name='DAS', on_gpu=False,
                  standardize_X=True, standardize_y=True, **kwargs):
         """
@@ -105,7 +105,7 @@ class DAS_network(ANN):
 
         # the activation of the DAS layer
         self.activation_das = activation_das
-        
+
         # set all the common parameters via the parent ANN class,
         # but overwrite the init_network subsroutine in this class
         super().__init__(X, y, alpha=alpha, decay_rate=decay_rate,
@@ -136,10 +136,13 @@ class DAS_network(ANN):
         n_hidden = self.n_layers
 
         # add the input layer
-        self.layers.append(Layer(self.n_in, 0, self.n_layers, 'linear',
-                                 self.loss, False, batch_size=self.batch_size,
-                                 batch_norm = False,
+        self.layers.append(Layer(self.n_in, 'linear',
+                                 bias=False, batch_size=self.batch_size,
+                                 batch_norm=False,
                                  lamb=self.lamb, on_gpu=self.on_gpu))
+
+        # dimension of the full input space
+        self.D = self.n_in
 
         # by default, the 1st layer does not have a bias neuron. This way
         # the orthogonal vectors are only related to the D inputs, and not the
@@ -149,9 +152,8 @@ class DAS_network(ANN):
         # add the deep active subspace layer
         self.layers.append(
             DAS_Layer(
-                self.d,
-                self.n_layers,
-                self.bias[1],
+                self.d, self.D,
+                bias=self.bias[1],
                 activation=self.activation_das,
                 batch_size=self.batch_size))
 
@@ -160,7 +162,7 @@ class DAS_network(ANN):
 
         # add the hidden layers
         for r in range(2, n_hidden):
-            self.layers.append(Layer(self.n_neurons, r, self.n_layers, self.layer_activation[r],
+            self.layers.append(Layer(self.n_neurons, self.layer_activation[r],
                                      self.loss, self.bias[r], batch_size=self.batch_size,
                                      batch_norm=self.batch_norm[r],
                                      lamb=self.lamb, on_gpu=self.on_gpu))
@@ -169,8 +171,6 @@ class DAS_network(ANN):
         self.layers.append(
             Layer(
                 self.n_out,
-                r + 1,
-                self.n_layers,
                 self.activation_out,
                 self.loss,
                 batch_size=self.batch_size,

@@ -138,44 +138,47 @@ class ANN:
             self.y_mean = np.mean(y, axis=0)
             self.y_std = np.std(y, axis=0)
             self.y = (y - self.y_mean) / self.y_std
+
         self.standardize_X = standardize_X
         self.standardize_y = standardize_y
-
-        # size of the mini batch used in stochastic gradient descent
-        self.batch_size = batch_size
-
-        assert type(batch_norm) is bool or type(batch_norm) is list, \
-            "batch_norm must be a boolean value or a list of boolean values"
-
-        # manually specified flags for the use of batch normalization
-        if type(batch_norm) is list:
-            assert len(batch_norm) == n_layers + 1, \
-                "batch_norm flag must be set for every layer"
-            self.batch_norm = batch_norm
-        # standard flag for batch normalization
-        else:
-            self.batch_norm = [False]   # no batch norm in input layer
-            for i in range(n_layers - 1):
-                self.batch_norm.append(batch_norm)
-            self.batch_norm.append(False)
 
         # set dropout to False, can be changed in train subroutine
         self.dropout = False
 
+        # size of the mini batch used in stochastic gradient descent
+        self.batch_size = batch_size
+
         ###########################################
 
-        # use a user-specified list of layer objects to create the ANN
+        # use a user-specified list of Layer objects to create the ANN
         if 'layers' in kwargs:
             # user-specified layers
             self.layers = kwargs['layers']
 
             assert isinstance(self.layers, list), "layers must be stored in a list"
 
+            # find the indices of the input & hidden layers
+            self.input_idx = np.where([layer.layer_rm1 is None for layer in self.layers])[0]
+            self.hidden_idx = np.where([layer.layer_rm1 is not None and layer.layer_rp1 is not None
+                                        for layer in self.layers])[0]
+            # still assume that the last layer is the output layer
+            # self.output_idx = np.where([layer.layer_rp1 == None for layer in self.layers])[0]
+
+            # set the r index of each layer
+            for r, layer in enumerate(self.layers):
+                layer.r = r
+
+            # set the output layer flag for the last layer
+            self.layers[-1].output_layer = True
+
             # number of layers (hidden + output)
             self.n_layers = len(self.layers) - 1
 
-            # number of neurons in the hidden layers
-            self.n_neurons = [layer.n_neurons for layer in self.layers[1:-1]]
+            # number of neurons in the input layer(s)
+            self.n_in = [self.layers[i].n_neurons for i in self.input_idx]
+
+            # number of neurons in the hidden layer(s)
+            self.n_neurons = [self.layers[i].n_neurons for i in self.hidden_idx]
 
             # bias per layer
             self.bias = [layer.bias for layer in self.layers]
@@ -195,7 +198,17 @@ class ANN:
             # number of softmax layers at the output
             self.n_softmax = self.layers[-1].n_softmax
 
+            # set the batch size
             self.set_batch_size(self.batch_size)
+
+            # set the batch normalization array (which layers use it)
+            # self._set_batch_norm(batch_norm)
+            self.batch_norm = [layer.batch_norm for layer in self.layers]
+
+            # initialize weights for all layers except input layers
+            for layer in self.layers:
+                if layer.layer_rm1 is not None:
+                    layer.init_weights()
 
         # the default option, create the layers using the parameters
         # of this subroutine
@@ -205,6 +218,7 @@ class ANN:
             # number of layers (hidden + output)
             self.n_layers = n_layers
 
+            # number of neurons per hidden layer
             self.n_neurons = n_neurons
 
             # use bias neurons
@@ -230,6 +244,32 @@ class ANN:
             # number of sofmax layers
             self.n_softmax = n_softmax
 
+            # list of all layer sizes
+            self.layer_sizes = [self.n_in]
+
+            # constant size hidden layer
+            if isinstance(self.n_neurons, int):
+                for i in range(n_layers - 1):
+                    self.layer_sizes.append(self.n_neurons)
+            # variable user-specified size hidden layers
+            else:
+                for i in range(n_layers - 1):
+                    self.layer_sizes.append(self.n_neurons[i])
+
+            self.layer_sizes.append(n_out)
+
+            # list of activation functions per layer
+            self.layer_activation = ['linear']
+            # same activation for each hidden layer
+            if isinstance(self.activation, str):
+                for i in range(self.n_layers - 1):
+                    self.layer_activation.append(self.activation)
+            else:
+                for i in range(self.n_layers - 1):
+                    self.layer_activation.append(self.activation[i])
+
+            self.layer_activation.append(self.activation_out)
+
         ############################################
 
         # bias type checking
@@ -241,35 +281,9 @@ class ANN:
         assert isinstance(self.n_neurons, int) or isinstance(self.n_neurons, list), \
             "n_neurons must be a list or an integer"
 
-        # list of all layer sizes
-        self.layer_sizes = [self.n_in]
-
-        # constant size hidden layer
-        if isinstance(self.n_neurons, int):
-            for i in range(n_layers - 1):
-                self.layer_sizes.append(self.n_neurons)
-        # variable user-specified size hidden layers
-        else:
-            for i in range(n_layers - 1):
-                self.layer_sizes.append(self.n_neurons[i])
-
-        self.layer_sizes.append(n_out)
-
         # type checking the activation
         assert isinstance(activation, str) or isinstance(activation, list), \
             "activation must be a string or a list of strings"
-
-        # list of activation functions per layer
-        self.layer_activation = ['linear']
-        # same activation for each hidden layer
-        if isinstance(self.activation, str):
-            for i in range(self.n_layers - 1):
-                self.layer_activation.append(self.activation)
-        else:
-            for i in range(self.n_layers - 1):
-                self.layer_activation.append(self.activation[i])
-
-        self.layer_activation.append(self.activation_out)
 
         # training rate
         self.alpha = alpha
@@ -296,16 +310,46 @@ class ANN:
 
         self.loss_vals = []
 
-        # initialize network using standard setting if no layers
+        # initialize network using standard setting if no custom layers
         # are specified
         if 'layers' not in kwargs:
+            self.input_idx = np.array([0])
+            self.hidden_idx = np.arange(1, self.n_layers)
+            self._set_batch_norm(batch_norm)
             self.init_network(**kwargs)
+            # connect each layer with its neighbours in a standard sequential fashion
+            self.connect_layers()
 
-        # connect each layer with its neighbours
-        self.connect_layers()
+        # set the trainable flag of the input layers to zero
+        for i in self.input_idx:
+            self.layers[i].trainable = False
+        # layer indices which have trainable weights
+        self.trainable_layers = np.where([layer.trainable for layer in self.layers])[0]
 
         # print some network stats to screen
         self.print_network_info()
+
+    def _set_batch_norm(self, batch_norm):
+
+        assert isinstance(batch_norm, bool) or isinstance(batch_norm, list), \
+            "batch_norm must be a boolean value or a list of boolean values"
+
+        # manually specified flags for the use of batch normalization
+        if isinstance(batch_norm, list):
+            assert len(batch_norm) == self.n_layers + 1, \
+                "batch_norm flag must be set for every layer"
+            self.batch_norm = batch_norm
+        # standard flag for batch normalization
+        else:
+            self.batch_norm = np.zeros(self.n_layers + 1, dtype=bool)
+            # no batch norm in input layer
+            for i in self.input_idx:
+                self.batch_norm[i] = False
+
+            for i in self.hidden_idx:
+                self.batch_norm[i] = batch_norm
+
+            self.batch_norm[-1] = False
 
     def init_network(self, **kwargs):
         """
@@ -323,8 +367,8 @@ class ANN:
             self.layers.append(
                 Layer(
                     self.layer_sizes[r],
-                    r,
-                    self.n_layers,
+                    # r,
+                    # self.n_layers,
                     self.layer_activation[r],
                     self.loss,
                     self.bias[r],
@@ -338,8 +382,8 @@ class ANN:
         self.layers.append(
             Layer(
                 self.n_out,
-                self.n_layers,
-                self.n_layers,
+                # self.n_layers,
+                # self.n_layers,
                 self.activation_out,
                 self.loss,
                 bias=False,
@@ -362,10 +406,11 @@ class ANN:
         """
 
         self.layers[0].meet_the_neighbors(None, self.layers[1])
-        self.layers[-1].meet_the_neighbors(self.layers[-2], None)
 
         for i in range(1, self.n_layers):
             self.layers[i].meet_the_neighbors(self.layers[i - 1], self.layers[i + 1])
+
+        self.layers[-1].meet_the_neighbors(self.layers[-2], None)
 
     def feed_forward(self, X_i, batch_size=1):
         """
@@ -373,8 +418,9 @@ class ANN:
 
         Parameters
         ----------
-        X_i : array
-            The feauture array, needs to have shape [batch size, number of features].
+        X_i : array or list
+            The feature / list of feautes for each inpt layer.
+            Each feature needs to have shape [batch size, number of features].
         batch_size : int, optional
             The bath size. The default is 1.
 
@@ -385,19 +431,26 @@ class ANN:
 
         """
 
-        # set the features at the output of in the input layer
-        if not self.bias[0]:
-            self.layers[0].h = X_i.T
-        else:
-            self.layers[0].h = np.ones([self.n_in + 1, batch_size])
-            self.layers[0].h[0:self.n_in, :] = X_i.T
+        if isinstance(X_i, np.ndarray):
+            X_i = [X_i]
 
-        # apply dropout to the input layer
-        if self.dropout:
-            r = bernoulli.rvs(self.dropout_prob[0], size=X_i.T.shape)
-            self.layers[0].h[0:self.n_in, :] *= r
+        # loop over all input layers
+        for count, i in enumerate(self.input_idx):
+            # set the features at the output of in the input layer
+            if not self.bias[i]:
+                self.layers[i].h = X_i[count].T
+            else:
+                n_in = self.layers[i].n_neurons
+                self.layers[i].h = np.ones([n_in + 1, batch_size])
+                self.layers[i].h[0:n_in, :] = X_i[count].T
 
-        for i in range(1, self.n_layers):
+            # apply dropout to the input layer
+            if self.dropout:
+                r = bernoulli.rvs(self.dropout_prob[i], size=X_i[count].T.shape)
+                self.layers[0].h[0:n_in, :] *= r
+
+        # loop over all hidden layers
+        for i in self.hidden_idx:
             # compute the output on the layer using matrix-maxtrix multiplication
             if self.dropout:  # with dropout
                 self.layers[i].compute_output(batch_size, dropout=self.dropout,
@@ -406,7 +459,7 @@ class ANN:
                 self.layers[i].compute_output(batch_size)
 
         # output layer, never use dropout here
-        self.layers[i + 1].compute_output(batch_size)
+        self.layers[-1].compute_output(batch_size)
 
         return self.layers[-1].h
 
@@ -509,9 +562,14 @@ class ANN:
         """
 
         # start back propagation over hidden layers, starting with output layer
-        for i in range(self.n_layers, 0, -1):
-            self.layers[i].back_prop(y_i)
-        self.layers[0].compute_delta_ho()
+        for i in range(self.n_layers, -1, -1):
+            # do not back prop over input layers (do not compute dl/dW)
+            if not np.in1d(i, self.input_idx):
+                self.layers[i].back_prop(y_i)
+
+        # do compute the loss gardient wrt input values (dL/dh)
+        for i in self.input_idx:
+            self.layers[i].compute_delta_ho()
 
     def batch(self, X_i, y_i):
         """
@@ -557,10 +615,9 @@ class ANN:
 
         """
 
-        # self.feed_forward(X_i, self.batch_size)
-        # self.back_prop(y_i)
-
-        for r in range(1, self.n_layers + 1):
+        # for r in range(1, self.n_layers + 1):
+        # loop over hidden and output layers
+        for r in self.trainable_layers:
 
             layer_r = self.layers[r]
 
@@ -571,7 +628,7 @@ class ANN:
                 # moving average of squared gradient magnitude
                 layer_r.A = self.beta2 * layer_r.A + (1.0 - self.beta2) * layer_r.L_grad_Q**2
             # standard layer
-            else:
+            elif isinstance(layer_r, Layer):
                 # momentum
                 layer_r.V = self.beta1 * layer_r.V + (1.0 - self.beta1) * layer_r.L_grad_W
                 # moving average of squared gradient magnitude
@@ -866,6 +923,10 @@ class ANN:
 
         """
 
+        # TODO: make it work for the case of multiple input layers
+        assert not isinstance(self.n_in, list), \
+            "subroutine only works if there is 1 input layer"
+
         n_misclass = np.zeros(self.n_softmax)
 
         # compute misclassification error of the training set if X and y are not set
@@ -909,8 +970,9 @@ class ANN:
 
         n_weights = 0
 
-        for i in range(1, self.n_layers + 1):
+        for i in self.hidden_idx:
             n_weights += self.layers[i].W.size
+        n_weights += self.layers[-1].W.size
 
         print('This neural network has', n_weights, 'weights.')
 
@@ -933,7 +995,7 @@ class ANN:
         print('Loss function =', self.loss)
         print('Number of neurons per hidden layer =', self.n_neurons)
         print('Number of output neurons =', self.n_out)
-        print('Activation =', self.layer_activation)
+        print('Activation = %s' % ([layer.activation for layer in self.layers]))
         # print('On GPU =', self.on_gpu)
         self.get_n_weights()
         print('===============================')

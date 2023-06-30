@@ -36,7 +36,7 @@ class DAS_Surrogate(Campaign):
     def train(self, feats, target, d, n_iter, test_frac=0.0,
               n_layers=2, n_neurons=100,
               activation='tanh', activation_das='linear', loss='squared',
-              batch_size=64, batch_norm=False,  lamb=0.0,
+              batch_size=64, batch_norm=False, lamb=0.0,
               standardize_X=True, standardize_y=True, **kwargs):
         """
         Perform backpropagation to train the DAS network

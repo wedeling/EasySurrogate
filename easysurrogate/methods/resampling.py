@@ -19,6 +19,7 @@ from scipy.spatial import ConvexHull
 import easysurrogate as es
 from tqdm import tqdm
 
+
 class Resampler:
 
     def __init__(self, c, r_ip1, N, N_bins, lags=None, min_count=0):
@@ -265,9 +266,9 @@ class Resampler:
     # the data-driven model for the unresolved scales
     # Given c_i return r at time i+1 (r_ip1)
     def _feed_forward(self, c_i, n_mc=1):
-        
+
         c_i = c_i.reshape([self.N, -1])
-        
+
         # find in which bins the c_i samples fall
         _, _, binnumbers_i = stats.binned_statistic_dd(c_i, np.zeros(self.N), bins=self.bins)
 
@@ -278,7 +279,7 @@ class Resampler:
         x_idx = np.unravel_index(binnumbers_i, [len(b) + 1 for b in self.bins])
         x_idx = [x_idx[i] - 1 for i in range(self.N_c)]
         x_idx = tuple(x_idx)
-        
+
         # random integers between 0 and max bin count for each index in binnumbers_i
         I = np.floor(self.count[x_idx].reshape([self.N, 1]) *
                      np.random.rand(self.N, n_mc)).astype('int')
@@ -290,7 +291,7 @@ class Resampler:
         r = np.zeros([n_mc, self.N, self.N])
 
         for i in range(n_mc):
-            r[i, :, :] = self.r_ip1[self.idx_of_bin[start + I[:, i]]]#.reshape([self.N, self.N])
+            r[i, :, :] = self.r_ip1[self.idx_of_bin[start + I[:, i]]]  # .reshape([self.N, self.N])
 
         return np.mean(r, 0)
 

@@ -97,7 +97,7 @@ class ANN_Surrogate(Campaign):
                                          n_layers=n_layers, n_neurons=n_neurons,
                                          n_out=n_out,
                                          loss=loss,
-                                         activation=activation, 
+                                         activation=activation,
                                          batch_size=batch_size,
                                          batch_norm=batch_norm,
                                          alpha=learning_rate,

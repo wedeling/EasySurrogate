@@ -1,5 +1,6 @@
 from .resampling import Resampler
 from .NN import ANN
+from .Layer import Layer
 from .SimpleBin import SimpleBin
 from .Feature_Engineering import Feature_Engineering
 #from .RNN import RNN
@@ -10,8 +11,10 @@ from .kmn_surrogate import KMN_Surrogate
 from .reduced_surrogate import Reduced_Surrogate
 from .ann_surrogate import ANN_Surrogate
 from .DAS_network import DAS_network
-from .CumSum_Layer import CumSum_Layer
+# from .CumSum_Layer import CumSum_Layer
 from .das_surrogate import DAS_Surrogate
+from .DAS_Layer import DAS_Layer
 from .gp_surrogate import GP_Surrogate
 from .GP import GP
 from .batch_normalization import Batch_Normalization
+from .Concatenate import Concatenate

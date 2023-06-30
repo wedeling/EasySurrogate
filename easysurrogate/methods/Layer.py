@@ -1,11 +1,13 @@
 """
 Class for a neural network Layer.
 """
+
 import sys
 import numpy as np
 from scipy.stats import norm, bernoulli
 
-from.batch_normalization import Batch_Normalization
+from .batch_normalization import Batch_Normalization
+from .Concatenate import Concatenate
 
 
 class Layer:
@@ -17,7 +19,7 @@ class Layer:
         Springer 10 (2018): 978-3.
     """
 
-    def __init__(self, n_neurons, r, n_layers, activation, loss, bias=False,
+    def __init__(self, n_neurons, activation, loss=None, bias=False,
                  batch_size=1, batch_norm=False, lamb=0.0, on_gpu=False,
                  n_softmax=0, **kwargs):
         """
@@ -27,10 +29,6 @@ class Layer:
         ----------
         n_neurons : int, optional
             The number of neurons per hidden layer. The default is 16.
-        r : int
-            The layer index, 0 being the input layer and n_layers the output layer.
-        n_layers : int, optional
-            The number of layers, not counting the input layer. The default is 2.
         activation : string, optional
             The name of the activation function of the hidden layers.
             The default is 'tanh'.
@@ -57,8 +55,9 @@ class Layer:
         """
 
         self.n_neurons = n_neurons
-        self.r = r
-        self.n_layers = n_layers
+        # self.r = r
+        # self.n_layers = n_layers
+        self.output_layer = False
         self.activation = activation
         self.loss = loss
         self.bias = bias
@@ -66,6 +65,8 @@ class Layer:
         self.batch_norm = batch_norm
         self.lamb = lamb
         self.n_softmax = n_softmax
+        self.layer_rm1 = self.layer_rp1 = None
+        self.trainable = True
 
         # #use either numpy or cupy via xp based on the on_gpu flag
         # global xp
@@ -92,7 +93,7 @@ class Layer:
 
         # if a kernel mixture network is used and this is the last layer:
         # store kernel means and standard deviations
-        if loss == 'kernel_mixture' and r == n_layers:
+        if loss == 'kernel_mixture':  # and r == n_layers:
             self.kernel_means = kwargs['kernel_means']
             self.kernel_stds = kwargs['kernel_stds']
 
@@ -102,6 +103,10 @@ class Layer:
 
         if batch_norm:
             self.bn = Batch_Normalization(self)
+
+    def __call__(self, layer_rm1):
+        self.layer_rm1 = layer_rm1
+        layer_rm1.layer_rp1 = self
 
     def meet_the_neighbors(self, layer_rm1, layer_rp1):
         """
@@ -119,21 +124,22 @@ class Layer:
         None.
 
         """
-        # if this layer is an input layer
-        if self.r == 0:
-            self.layer_rm1 = None
-            self.layer_rp1 = layer_rp1
-        # if this layer is an output layer
-        elif self.r == self.n_layers:
-            self.layer_rm1 = layer_rm1
-            self.layer_rp1 = None
-        # if this layer is hidden
-        else:
-            self.layer_rm1 = layer_rm1
-            self.layer_rp1 = layer_rp1
 
-        # fill the layer with neurons
-        if self.r != 0:
+        self.layer_rm1 = layer_rm1
+        self.layer_rp1 = layer_rp1
+
+        # set the r index (0 for inout, n_layers for output layer)
+        if self.layer_rm1 is None:
+            self.r = 0  # input layer: r = 0
+        else:
+            self.r = layer_rm1.r + 1  # r of previous layer + 1
+
+        # if this is the output layer: n_layers = r
+        if layer_rp1 is None:
+            self.output_layer = True
+
+        # fill the layer with neurons if it is not an input layer
+        if self.layer_rm1 is not None:
             self.init_weights()
 
     def init_weights(self):
@@ -467,7 +473,10 @@ class Layer:
 
     def get_weights_next_layer(self):
 
-        return self.layer_rp1_W
+        if isinstance(self.layer_rp1, Concatenate):
+            return self.layer_rp1.get_weights(self.r)
+        else:
+            return self.layer_rp1.W
 
     def compute_y_grad_W(self):
         """
@@ -514,7 +523,8 @@ class Layer:
 
         """
 
-        if self.r == self.n_layers:
+        # if self.r == self.n_layers:
+        if self.output_layer:
             self.compute_delta_oo(y_i)
         else:
             self.compute_delta_ho()
