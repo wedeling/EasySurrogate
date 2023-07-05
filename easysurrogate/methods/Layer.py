@@ -467,7 +467,7 @@ class Layer:
 
     def get_weights_next_layer(self):
 
-        return self.layer_rp1_W
+        return self.layer_rp1.W
 
     def compute_y_grad_W(self):
         """
