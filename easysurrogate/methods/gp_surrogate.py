@@ -18,7 +18,7 @@ class GP_Surrogate(Campaign):
 
     def __init__(self, backend='scikit-learn', **kwargs):
         """
-        GP_surrogate class for Gaussian Process Regression
+        GP_Surrogate class for Gaussian Process Regression
 
         """
         print('Creating Gaussian Process Object')
@@ -114,7 +114,6 @@ class GP_Surrogate(Campaign):
         else:
             self.process_type = kwargs['process_type']
         
-        # prepare the training data
         X_train, y_train, X_test, y_test = self.feat_eng.get_training_data(
             feats, target, local=False, test_frac=test_frac, train_first=False)
 
@@ -133,6 +132,7 @@ class GP_Surrogate(Campaign):
         # create a GP process
         print('===============================')
         print('Fitting Gaussian Process...')
+        print(f">GP_Surrogate: self.n_out={self.n_out}") ###DEBUG
         self.model = es.methods.GP(
             kernel=self.kernel,
             n_in=self.n_in,
@@ -149,6 +149,7 @@ class GP_Surrogate(Campaign):
 
         # get dimensionality of the output
         self.n_out = y_train.shape[1]
+        print(f">GP_Surrogate: self.n_out={self.n_out}") ###DEBUG
 
         # get the dimesionality of te input
         self.n_in = X_train.shape[1]
@@ -175,12 +176,15 @@ class GP_Surrogate(Campaign):
         # TODO unlike ANNs, GPs should provide API for vectorised .predict() and other methods
         y, std, _ = self.feat_eng._predict(x, feed_forward=lambda t: self.model.predict(t))
 
+        print(f"> y in gp_surrogate.predict: {y}") ###DEBUG
+
         y = self.y_scaler.inverse_transform(y)
 
         self.y_scaler.with_mean = False
         std = self.y_scaler.inverse_transform(std * np.ones(y.shape))
         self.y_scaler.with_mean = True
 
+        print(f">GP_Surrogate: y={y}") ###DEBUG
         return y, std
 
     def save_state(self, state=None, **kwargs):
