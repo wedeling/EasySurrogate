@@ -23,7 +23,11 @@ class GaussianProcessRegressor():
         """
 
         # Dimensionality of output
-        self.n_y_dim = 1
+        if 'n_y_dim' not in kwargs:
+            self.n_y_dim = 1
+        else:
+            #TODO: check if current implementation supports vector output - LA should work due to kernel usage
+            self.n_y_dim = kwargs['n_y_dim']
 
         # Dimensionality of input
         if 'n_x_dim' not in kwargs:
