@@ -1,14 +1,21 @@
 import time as t
 import numpy as np
+import sys
+from datetime import datetime
 
 import easysurrogate as es
 
 features_names = ['te_value', 'ti_value', 'te_ddrho', 'ti_ddrho']
 target_names = ['te_transp_flux', 'ti_transp_flux', 'te_transp_flux_std', 'ti_transp_flux_std']
 
+if len(sys.argv) < 2 :
+    index = 0
+else:
+    index = sys.argv[1]
+
 np.random.seed(42)
 
-SEQDES = False #True
+SEQDES = False #True if Sequential Design of Experiments to be used
 
 campaign = es.Campaign(load_state=False)
 
@@ -35,14 +42,32 @@ campaign = es.Campaign(load_state=False)
 # 5) Case from single flux tube GEM UQ campaign (4 parameters, tensor product of grid with 2 points per DoF)
 #data_file_name = 'gem_uq_16_std.hdf5'
 #data_file_name = 'gem_uq_79_std.hdf5'
-data_file_name = 'gem_uq_81_std.hdf5'
-features_names_selected = features_names
-target_name_selected = [target_names[1]] # model for [1 - means ; 3- std] of data
+# data_file_name = 'gem_uq_81_std.hdf5'
+# features_names_selected = features_names
+# target_name_selected = [target_names[1]] # model for [1 - means ; 3- std] of data
 
-# Create a surrogate and its model; train and save it
+# 6) Case from single flux tube GEM UQ campaign (4 parameters, tensor product of grid with 2 points per DoF)
+#                       and 2 outputs - now fictisious (2 are the same)
+
+# #data_file_name = 'gem_uq_16_std.hdf5'
+# #data_file_name = 'gem_uq_79_std.hdf5'
+# data_file_name = 'gem_uq_81_std.hdf5'
+# features_names_selected = features_names
+# target_name_selected = [target_names[1], target_names[1]] # model for [1 - means ; 3- std] of data
+
+# 7) Case from 8 flux tube GEM UQ campaign (4 parameters, tensor product of grid with 2 points per DoF)
+#                       and 4 outputs -> in total, output vector of dimensionality 32, as well input dimensionalty of 32
+
+data_file_name = f"gem_uq_648_transp_std_{index}.hdf5"
+features_names_selected = features_names
+target_name_selected = [target_names[0],target_names[1]]
+
+
+# === Create a surrogate and its model; train and save it
 
 # Create a campaign object
 data_frame = campaign.load_hdf5_data(file_path=data_file_name)
+#print(f">train_model, data_frame={data_frame}") ###DEBUG
 
 # prepare lists of features and array of targets
 features = [data_frame[k] for k in features_names_selected if k in data_frame]
@@ -51,28 +76,32 @@ target = np.concatenate([data_frame[k] for k in target_name_selected if k in dat
 time_init_start = t.time()
 
 gp_param = {
-            'backend': 'local', #'scikit-learn'
-            'process_type': 'student_t', #'gaussian'
-            'kernel': 'Matern', #'RBF'
+            'backend': 'scikit-learn', #'local'
+            'process_type': 'gaussian', #'student_t'
+            'kernel': 'RBF', #'Matern'
             'length_scale': 1.0,  #[1.]*len(features),
             'noize': 0.1,
             'nu_matern': 1.5,
             'nu_stp': 10,
             'bias': 0.,
             'nonstationary': False,
-            'test_frac': 0.5,
+            'test_frac': 0.0, #0.1,
             'n_iter': 5,
            }
 
 surrogate = es.methods.GP_Surrogate(
                             backend=gp_param['backend'],
                             n_in=len(features),
+                            n_out=target.shape[1],
                                    )
 
 print('Time to initialise the surrogate: {:.3} s'.format(t.time() - time_init_start))
 
+#print(f"> target from train_model: \n {target}") ###DEBUG
+
 time_train_start = t.time()
 
+#print(f">train_model, target={target}") ###DEBUG
 surrogate.train(features, 
                 target, 
                 test_frac=gp_param['test_frac'],
@@ -90,7 +119,8 @@ surrogate.train(features,
 print('Time to train the surrogate: {:.3} s'.format(t.time() - time_train_start))
 surrogate.model.print_model_info()
 
-save_model_file_name = 'model_val_LocStudentMatern_30112022.pickle'
+date_str = datetime.now().strftime("%Y%m%d")
+save_model_file_name = f"model_val_SkitGaussianRBF_transp_{index}_{date_str}.pickle"
 
 campaign.add_app(name='gp_campaign', surrogate=surrogate)
 campaign.save_state(file_path=save_model_file_name)

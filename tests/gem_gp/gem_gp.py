@@ -1,10 +1,16 @@
 import time as t
 import numpy as np
+import sys
 
 import easysurrogate as es
 
 features_names = ['te_value', 'ti_value', 'te_ddrho', 'ti_ddrho']
 target_names = ['te_transp_flux', 'ti_transp_flux', 'te_transp_flux_std', 'ti_transp_flux_std']
+
+if len(sys.argv) < 2 :
+    index = 0
+else:
+    index = sys.argv[1]
 
 features_names_selected = features_names
 target_name_selected = target_names
@@ -61,6 +67,9 @@ target_name_selected = target_names
 
 # 5'') Case from single flux tube GEM UQ campaign - 81 runs (4 parameters, tensor product of grid with 3 points per DoF)
 # saved_model_file_path = 'model_val_LocStudentMatern_30112022.pickle'
+# saved_model_file_path = 'model_val_LocStudentMatern_30112022.pickle'
+
+# saved_model_file_path = 'model_r40_2tgjrzg_.pickle'
 
 # features_names_selected = features_names
 # target_name_selected = [target_names[1]]
@@ -70,14 +79,40 @@ target_name_selected = target_names
 # data_frame_train = campaign.load_hdf5_data(file_path='gem_uq_81_std.hdf5')
 
 # 6) Cases predicted by AL GPR model, the values should yield results close to 2099023.289881937 
-saved_model_file_path = 'model_val_LocStudentMatern_30112022.pickle'
+#saved_model_file_path = 'model_val_LocStudentMatern_30112022.pickle'
+#
+# features_names_selected = features_names
+# target_name_selected = [target_names[1]]
+# campaign = es.Campaign(load_state=True, file_path=saved_model_file_path)
+
+# data_frame = campaign.load_hdf5_data(file_path='gpr_al_6_val.hdf5')
+# data_frame_train = campaign.load_hdf5_data(file_path='gem_uq_81_std.hdf5')
+
+# 6') Case from single flux tube GEM UQ campaign - 81 runs (4 parameters, tensor product of grid with 3 points per DoF)
+#               and 2 outputs - now fictisious (2 are the same)
+#
+# features_names_selected = features_names
+# target_name_selected = [target_names[1], target_names[1]]
+#
+# #saved_model_file_path = 'model_val_LocStudentMatern_10052023.pickle'
+# saved_model_file_path = 'gem_es_model_muscle3_13062023.pickle'
+# data_file = f"gem_uq_81_std.hdf5"
+
+# 7) Case from 8 flux tube GEM UQ campaign (4 parameters, tensor product of grid with 2 points per DoF)
+#                       and 4 outputs -> 8 independent surrogate models
 
 features_names_selected = features_names
-target_name_selected = [target_names[1]]
+target_name_selected = [target_names[0], target_names[1]]
+
+saved_model_file_path = f"model_val_SkitGaussianRBF_transp_{index}_20230925.pickle"
+data_file = f"gem_uq_648_transp_std_{index}.hdf5"
+
+# Creating campaign
+
 campaign = es.Campaign(load_state=True, file_path=saved_model_file_path)
 
-data_frame = campaign.load_hdf5_data(file_path='gpr_al_6_val.hdf5')
-data_frame_train = campaign.load_hdf5_data(file_path='gem_uq_81_std.hdf5')
+data_frame = campaign.load_hdf5_data(file_path=data_file)
+data_frame_train = campaign.load_hdf5_data(file_path=data_file)
 
 # To use or not to use analysis of sequential design results
 SEQDES = False
@@ -89,6 +124,9 @@ target_train = np.concatenate([data_frame_train[k]
 
 feat_train, targ_train, feat_test, targ_test = campaign.surrogate.feat_eng.\
     get_training_data(features_train, target_train, index=campaign.surrogate.feat_eng.train_indices)
+
+#print(f"target_train: \n{target_train}") ###DEBUG
+#print(f"targ_test: \n{targ_test}") ###DEBUG
 
 #feat_test = feat_train ###DEBUG
 #targ_test = targ_train ###DEBUG
@@ -107,6 +145,7 @@ if SEQDES:
 
 analysis.get_regression_error(feat_test, targ_test, feat_train, targ_train, 
                               #index=[i for i in range(16)] #DEBUG
+                              addit_name=str(index),
                              )
 
 # Cross-correlation functions
