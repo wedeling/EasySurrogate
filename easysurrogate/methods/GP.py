@@ -171,6 +171,8 @@ class GP:
 
         try:
             n_out = y.shape[1]
+            print(f">GP: y.shape={y.shape}") ###DEBUG
+            print(f">GP: self.n_out={self.n_out}") ###DEBUG
             if self.n_out != n_out:
                 raise RuntimeError('Size of training data target is different from expected')
         except IndexError:
@@ -199,6 +201,7 @@ class GP:
         elif self.backend == 'local':
 
             self.instance = es.methods.GaussianProcessRegressor(
+                                            n_y_dim=self.n_out,
                                             kernel=self.kernel_argument, 
                                             process_type=self.process_type,
                                             sigma_n=float(self.noize_argument),
@@ -216,18 +219,20 @@ class GP:
         if self.backend == 'scikit-learn':
             # for single sample X_i should be nparray(1, n_feat)
             m, v = self.instance.predict(X_i.reshape(1, -1), return_std=True)
-            d = np.zeros(m.shape)
+            d = np.zeros(m.shape) # a stub
         
         elif self.backend == 'mogp':
             m, v, d = self.instance.predict(X_i, unc=True, deriv=True)
         
         elif self.backend == 'local':
             m, v = self.instance.predict(X_i, return_std=True)
-            d = np.zeros(m.shape)
+            d = np.zeros(m.shape) # a stub
 
         else:
             raise NotImplementedError('Currently supporting only scikit-learn, mogp, and custom backend')
             #raise NotImplementedError('Non-stationary kernels are not implemented in MOGP')
+
+        print(f"y_avg in GP.predict: {m}") ###DEBUG
 
         return m, v, d
 
