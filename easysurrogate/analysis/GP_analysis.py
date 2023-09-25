@@ -9,6 +9,15 @@ import numpy as np
 from scipy import stats
 from sklearn.metrics import mean_squared_error as mse
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+import matplotlib.patches as patches
+
+#latexplotlib
+import latexplotlib as lpl
+plt.style.use("default")
+plt.rcParams.update({
+    "font.family": "serif", 
+    "text.usetex": False,
+            })
 
 class GP_analysis(BaseAnalysis):
     """
@@ -21,7 +30,7 @@ class GP_analysis(BaseAnalysis):
 
         self.gp_surrogate = gp_surrogate
 
-    def plot_err(self, error, name, original=None):
+    def plot_err(self, error, name, original=None, addit_name=''):
         plt.ioff()
         plt.title(name)
         plt.plot(range(len(error)), error, '.', label='GP metamodel error', color='b')
@@ -32,7 +41,7 @@ class GP_analysis(BaseAnalysis):
         plt.legend()
         plt.grid('both')
         #plt.yscale("symlog") #if comment then TEMP
-        plt.savefig('gp_abs_err.svg')
+        plt.savefig(f"gp_abs_err_{addit_name}.pdf")
         plt.close()
 
     def plot_predictions_vs_groundtruth(self,
@@ -40,84 +49,119 @@ class GP_analysis(BaseAnalysis):
                                         y_test_pred, 
                                         y_test_pred_var=None,
                                         y_test_orig_var=None,
-                                        name='Predictions against ground truth values',
+                                        name=f"Predictions against ground truth values",
                                         addit_label='',
+                                        addit_name='',
                                        ):
         """
         Plots original values of QoI on X axis and predicted values on Y axis
         """
 
-        plt.ioff()
+        #plt.ioff()
 
-        fig = plt.figure()
+        plt.style.use("latex12pt")
+        plt.rcParams.update({"axes.grid": True, "font.family": "serif", "text.usetex": False})
+        #lpl_context = [550, 350]
+        lpl_context = [347, 549] # LNCS paper size
+        lpl_context = [347, int(549*1.25)] # LNCS paper size - WIDENED
+        lpl_context = [600, 1000]
+        lpl.size.set(*lpl_context)
 
-        val_err = 0.25
+        #fig = plt.figure()
+        #fig, ax = plt.subplots()
+        fig, ax = lpl.subplots(1, 1, scale=0.5) #,aspect='equal',
 
-        plt.title(name)
+        val_err = 0.15
+        beta_expplot = 0.05
+
+        #ax.set_title(name)
 
         if y_test_pred_var is not None and y_test_orig_var is not None:
 
-            plt.errorbar(
+            ax.errorbar(
                 x=y_test_orig,
                 y=y_test_pred,
                 yerr=1.96 * y_test_pred_var,
                 xerr=1.96 * y_test_orig_var,
-                label='variance of GPR model on test and train data',
-                fmt='.')
+                label=f"variance of GPR model on test and train data",
+                fmt='b.')
 
         elif y_test_pred_var is not None and y_test_orig_var is None:
 
-            plt.errorbar(
+            ax.errorbar(
                 x=y_test_orig,
                 y=y_test_pred,
                 yerr=1.96 * y_test_pred_var,
-                label='variance of GPR model on test data \n ' + addit_label,
-                fmt='.')
+                label=f"mean and 95% CI of GPR \nmodel on test data; {addit_label}",
+                fmt='b.')
 
         elif y_test_pred_var is None and y_test_orig_var is not None:
 
-            plt.errorbar(
+            ax.errorbar(
                 x=y_test_orig,
                 y=y_test_pred,
                 xerr=1.96 * y_test_orig_var,
-                label='variance of GPR model on train data',
-                fmt='.')
+                label=f"variance of GPR model on train data",
+                fmt='b.')
 
         else:
 
-            plt.plot(y_test_orig, y_test_pred, label='pred-s vs g.t.', fmt='.')
+            ax.plot(y_test_orig, y_test_pred, label=f"pred-s vs g.t.", fmt='.')
 
-        plt.plot(y_test_orig, y_test_orig, 'k--')
+        # Adding a mean of X=Y
+        ax.plot(y_test_orig, y_test_orig, 'k-')
 
         # Adding error bands around original mean
-        plt.plot(y_test_orig, (1.+val_err)*y_test_orig, 'k--', alpha=0.25, label="+{0}%".format(val_err*100))
-        plt.plot(y_test_orig, (1.-val_err)*y_test_orig, 'k--', alpha=0.25, label="-{0}%".format(val_err*100))
+        ax.plot(y_test_orig, (1.+val_err)*y_test_orig, 'k-', alpha=0.25, label=f"+/-{val_err*100}% error")
+        ax.plot(y_test_orig, (1.-val_err)*y_test_orig, 'k-', alpha=0.25,) # label="-{0}%".format(val_err*100))
 
         # Limitting plot to make it square
-        maxlim = max((1.+val_err)*y_test_orig)
+        maxlim = max((1.+val_err)*(1.+beta_expplot)*y_test_orig)
         minlim = min((1.-val_err)*y_test_orig)
-        maxlim_less = max(y_test_orig)
+        maxlim_less = max(y_test_orig)*(1.+beta_expplot)
         minlim_less = min(y_test_orig)
-        plt.xlim(minlim_less, maxlim_less)
-        plt.ylim(minlim, maxlim)
+        ax.set_xlim(minlim_less, maxlim_less)
+        ax.set_ylim(minlim, maxlim)
+
+        #Adding a highlight square for the results
+        #TODO: undo hardcode
+        ref_low = 1.35E+6
+        ref_high = 3.9E+6
+        ref_high = maxlim_less = max(y_test_orig)*(1.+beta_expplot/2)
+        ref_delta = ref_high - ref_low
+
+        box_color = 'green'
+        box_alpha = 0.9
+        box_style = '-'
+        ax.hlines(y=ref_low, xmin=ref_low, xmax=ref_high, color=box_color, linestyle=box_style, alpha=box_alpha, label=f"region of interest")
+        ax.hlines(y=ref_high, xmin=ref_low, xmax=ref_high, color=box_color, linestyle=box_style, alpha=box_alpha)
+        ax.vlines(x=ref_low, ymin=ref_low, ymax=ref_high, color=box_color, linestyle=box_style, alpha=box_alpha)
+        ax.vlines(x=ref_high, ymin=ref_low, ymax=ref_high, color=box_color, linestyle=box_style, alpha=box_alpha)
+        # TODO: consider shading out outer part with hatches
+
+        #rect = patches.Rectangle((ref_low, ref_high), ref_delta, ref_delta, linewidth=1, edgecolor='gray', facecolor='none', alpha=0.25)
+        #ax.add_patch(rect)
 
         # Scaling of the plots
-        #plt.yscale('symlog') #if comment then TEMP
-        #plt.xscale('symlog') #if comment then TEMP
+        #ax.yscale('symlog') #if comment then TEMP
+        #ax.xscale('symlog') #if comment then TEMP
 
-        plt.grid(True, which='both', axis='both')
-        plt.xlabel('Original values')
-        plt.ylabel('Predicted values')
-        plt.legend()
-        plt.tight_layout()
-        plt.savefig('pred_vs_orig.svg')
+        ax.ticklabel_format(useMathText=True)
+
+        ax.legend(fancybox=True, framealpha=0.5, loc='best')
+        #ax.grid(True, which='both', axis='both')
+        ax.set_xlabel(f"Original values")
+        ax.set_ylabel(f"Predicted values")
+        #fig.tight_layout()
+        fig.savefig(f"pred_vs_orig_{addit_name}.pdf")
         plt.close()
 
     def plot_res(self,
                  x_train, y_train_pred, y_train_orig,
                  x_test=None, y_test_pred=None, y_test_orig=None,
                  y_var_pred_test=None, y_var_pred_train=None,
-                 name='', num='1', type_train='rand', train_n=10, out_color='b', output_folder=''):
+                 name='', num='1', type_train='rand', train_n=10, out_color='b', 
+                 output_folder='', addit_name=''):
 
         plt.ioff()
         plt.figure(figsize=(12, 15))
@@ -235,7 +279,9 @@ class GP_analysis(BaseAnalysis):
             type_train +
             '_' +
             str(train_n) +
-            '.svg',
+            '_' +
+            addit_name +
+            '.pdf',
             bbox_inches='tight',
             dpi=100)
         plt.clf()
@@ -265,7 +311,7 @@ class GP_analysis(BaseAnalysis):
 
         plt.legend(loc='best')
         plt.title('PDF of simulated and predicted target values')
-        plt.savefig(filename + '.svg')
+        plt.savefig(filename + '.pdf')
         plt.close()
 
     def plot_2d_design_history(self, x_test=None, y_test=None):
@@ -364,6 +410,11 @@ class GP_analysis(BaseAnalysis):
             None
         """
 
+        if 'addit_name' in kwargs:
+            addit_name = kwargs['addit_name']
+        else:
+            addit_name = ''
+
         if index is not None:
             X_test = self.gp_surrogate.model.X[index]
             y_test = self.gp_surrogate.model.y[index]
@@ -378,6 +429,7 @@ class GP_analysis(BaseAnalysis):
 
         print("Prediction of new QoI")
         # TODO make predict call work on a (n_samples, n_features) np array
+        # TODO: IMPORTANT - it's needed for vector outputs e.g. (Q_e, Q_i) and currently reshaping is a bloody mess
 
         y_pred = []
         y_var_pred = []
@@ -405,6 +457,8 @@ class GP_analysis(BaseAnalysis):
             
         y_pred_train = np.squeeze(np.array(y_pred_train), axis=1)
         y_var_pred_train = np.squeeze(np.array(y_var_pred_train), axis=1)
+
+        print(f"y_test: \n{y_test}") ###DEBUG
 
         # Check if we a working with a vector or scalar QoI:
         #  If it is vector then consider only the first component
@@ -434,8 +488,10 @@ class GP_analysis(BaseAnalysis):
         err_abs = np.subtract(y_pred[:y_t_len, :], y_test)
         err_rel = np.divide(err_abs, y_test)
 
+        # Scale back the features and targets
         X_test_scale = self.gp_surrogate.x_scaler.transform(X_test)
         y_test_scale = self.gp_surrogate.y_scaler.transform(y_test)
+
         r2_test = self.get_r2_score(X_test_scale, y_test_scale)
         print('R2 score for the test data is : {:.3}'.format(r2_test))
 
@@ -465,8 +521,7 @@ class GP_analysis(BaseAnalysis):
                 y_pred[:y_t_len, 0].reshape(-1,1), 
                 y_var_pred.reshape(y_pred[:y_t_len, 0].shape).reshape(-1,1)), #TODO ugly
                 axis=1)
-        np.savetxt('res.csv', csv_array, delimiter=",")
-
+        np.savetxt(f"res_{addit_name}.csv", csv_array, delimiter=",")
 
         print("Printing and plotting the evaluation results")
         #TODO: resolve case whe y_groundtruth==0.0
@@ -484,7 +539,8 @@ class GP_analysis(BaseAnalysis):
                 y_pred[:y_t_len, 0], 
                 y_var_pred.reshape(y_pred[:y_t_len, 0].shape),
                 #y_var_pred_train.reshape(y_pred_train[:,0].shape),
-                addit_label="R2={0:.3}".format(r2_test),
+                addit_label=f"$R^{{2}}={{{r2_test:.3}}}$",
+                addit_name=addit_name,
                                                 )
 
         train_n = self.gp_surrogate.feat_eng.n_samples - y_t_len
@@ -501,6 +557,7 @@ class GP_analysis(BaseAnalysis):
                         y_var_pred.reshape(y_pred[:y_t_len, 0].shape), y_var_pred_train.reshape(y_pred_train[:, 0].shape),
                         name=r'$Y_i$', num='1', type_train='rand',
                         train_n=train_n, out_color='b',
+                        addit_name=addit_name,
                              )
             
             else:
@@ -512,6 +569,7 @@ class GP_analysis(BaseAnalysis):
                         y_var_pred_train=y_var_pred_train.reshape(y_pred_train[:, 0].shape),
                         name=r'$Y_i$', num='1', type_train='rand',
                         train_n=train_n, out_color='b',
+                        addit_name=addit_name,
                              )
 
         return err_abs, err_rel, r2_test
