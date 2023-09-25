@@ -57,10 +57,10 @@ campaign = es.Campaign(load_state=False)
 # Case from single flux tube GEM UQ campaign (4 parameters, tensor product of grid with 3 points per DoF) - longer runs, fixed a permutation of input-outputs
 data = load_csv_file(input_file='resuq_main_ti_transp_flux_all_akgbbn1a_9.csv', 
                      n_runs=81,
-                     output_dim=2,
+                     output_dim=4, #2,
                      std=True,
                      startcol=3,
                      )
-campaign.store_data_to_hdf5(data, file_path='gem_uq_81_std.hdf5')
+campaign.store_data_to_hdf5(data, file_path='gem_uq_81_full.hdf5')
 
 #TODO: Make script read the data based on the given UQ DB name given

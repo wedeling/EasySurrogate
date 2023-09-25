@@ -11,7 +11,7 @@ np.random.seed(42)
 campaign = es.Campaign(load_state=False)
 
 # Case from single flux tube GEM UQ campaign (4 parameters, tensor product of grid with 2 points per DoF)
-data_file_name = 'gem_uq_81_std.hdf5'
+data_file_name = 'gem_uq_81_full.hdf5'
 features_names_selected = features_names
 target_name_selected = [target_names[1]] # model for [1 - means ; 3- std] of data
 
@@ -66,7 +66,7 @@ surrogate.train(features,
 print('Time to train the surrogate: {:.3} s'.format(t.time() - time_train_start))
 surrogate.model.print_model_info()
 
-save_model_file_name = 'model_val_SkitGaussianRbf_16012023.pickle'
+save_model_file_name = 'model_val_LocStudentMatern_20011023.pickle'
 
 campaign.add_app(name='gp_campaign', surrogate=surrogate)
 campaign.save_state(file_path=save_model_file_name)
