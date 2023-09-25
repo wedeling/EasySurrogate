@@ -91,6 +91,7 @@ class Feature_Engineering:
             # no lags and non local, create a single vector of X and feed forward
             if not local:
                 feat = np.concatenate(X)
+                print(f">Feature_Engineering: before feed_forward(feat)") ###DEBUG
                 return feed_forward(feat)
             # no lags and local, get feature vector and loop over 2nd dimension
             else:
@@ -100,6 +101,7 @@ class Feature_Engineering:
                 y = []
                 for p in range(n_points):
                     y.append(feed_forward(X[p]))  # GP case: for single sample should be one point
+                    print(f">Feature_Engineering: before np.array(.).flatten() y={y}") ###DEBUG
                 return np.array(y).flatten()
 
     def filter_values(self, feats, interval):
@@ -263,6 +265,9 @@ class Feature_Engineering:
         # number of points in the computational grid
         self.n_points = feats[0].shape[1]
 
+        # number of output components
+        self.n_out_dim = target.shape[-1]
+
         # Depends on the way the test points are chosen
         # compute the size of the training set based on value of test_frac
         self.n_train = round(self.n_samples * (1.0 - test_frac))
@@ -312,10 +317,10 @@ class Feature_Engineering:
             # create a separate training set for every grid point
             for i in range(self.n_points):
                 X[i] = [X_i[self.train_indices, i] for X_i in feats]
-                y[i] = target[self.train_indices].reshape([-1, 1])
+                y[i] = target[self.train_indices].reshape([-1, self.n_out_dim])
                 if self.n_test > 0:
                     X_r[i] = [X_i[self.test_indices, i] for X_i in feats]
-                    y_r[i] = target[self.test_indices, i].reshape([-1, 1])
+                    y_r[i] = target[self.test_indices, i].reshape([-1, self.n_out_dim])
 
         X_train = []
         y_train = []
@@ -382,6 +387,8 @@ class Feature_Engineering:
         else:
             X_test = np.empty((0, X_train.shape[1]))
             y_test = np.empty((0, y_train.shape[1]))
+
+        #print(f"> y_train in Feature_Engineering.get_training_data: \n{y_train}") ###DEBUG
 
         return X_train, y_train, X_test, y_test
 
