@@ -21,17 +21,20 @@ from tqdm import tqdm
 
 class Resampler:
 
-    def __init__(self, c, r_ip1, N, N_bins, lags=None, min_count=0):
+    def __init__(self, c, r_ip1, N, N_bins, lags=None, min_count=0, init_feats=True):
 
         self.name = "Resampler Surrogate"
 
-        # number of unique conditioning variables (not including lags)
-        #self.N_covar = c.shape[1]
-
         # create a Feature_Engineering object
         self.feat_eng = es.methods.Feature_Engineering()
+        
+        if lags != None:
+            self.feat_eng.empty_feature_history(lags)
+            self.feat_eng.initial_condition_feature_history(c, start=0)
+            init_feats = False
 
-        c, r_ip1, _, _ = self.feat_eng.get_training_data(c, r_ip1, lags=lags)
+        c, r_ip1, _, _ = self.feat_eng.get_training_data(c, r_ip1, lags=lags, 
+                                                         init_feats=init_feats)
         r_ip1 = r_ip1.flatten()
 
         # total number of conditional variables including lagged terms
@@ -44,9 +47,6 @@ class Resampler:
         self.lags = lags
         self.max_lag = self.feat_eng.max_lag
         self.covar = {}
-
-        # for i in range(self.N_covar):
-        #     self.covar[i] = []
 
         bins = self.get_bins(N_bins)
 
@@ -266,7 +266,7 @@ class Resampler:
     # Given c_i return r at time i+1 (r_ip1)
     def _feed_forward(self, c_i, n_mc=1):
         
-        c_i = c_i.reshape([self.N, -1])
+        # c_i = c_i.reshape([self.N_c, -1])
         
         # find in which bins the c_i samples fall
         _, _, binnumbers_i = stats.binned_statistic_dd(c_i, np.zeros(self.N), bins=self.bins)
@@ -290,11 +290,11 @@ class Resampler:
         r = np.zeros([n_mc, self.N, self.N])
 
         for i in range(n_mc):
-            r[i, :, :] = self.r_ip1[self.idx_of_bin[start + I[:, i]]]#.reshape([self.N, self.N])
+            r[i, :, :] = self.r_ip1[self.idx_of_bin[start + I[:, i]]].reshape([self.N, self.N])
 
         return np.mean(r, 0)
 
-    def predict(self, feat):
+    def predict(self, feat, n_mc=1):
         """
         Make a prediction f(feat). Here, f is given by Resampler._feed_foward.
 
@@ -310,7 +310,25 @@ class Resampler:
 
         """
 
-        return self.feat_eng._predict(feat.flatten(), self._feed_forward)
+        if not isinstance(feat, list):
+            feat = [feat]
+
+        # make sure all feature vectors have the same ndim.
+        # This will raise an error when for instance X1.shape = (10,) and X2.shape = (10, 1)
+        ndims = [X_i.ndim for X_i in feat]
+        assert all([ndim == ndims[0] for ndim in ndims]), "All features must have the same ndim"
+
+        # make sure features are at most two dimensional arrays
+        assert ndims[0] <= 2, "Only 1 or 2 dimensional arrays are allowed as features."
+        
+        # time-lagged surrogate
+        if self.lags is not None:
+
+            # append the current state X to the feature history
+            self.feat_eng.append_feat(feat)
+            feat = self.feat_eng.get_feat_history()
+       
+        return self._feed_forward(feat.reshape([1, -1]), n_mc)
 
     # the data-driven model for the unresolved scales
     # Given c_i return bin averaged r at time i+1

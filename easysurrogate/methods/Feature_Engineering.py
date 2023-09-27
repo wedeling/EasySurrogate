@@ -179,7 +179,7 @@ class Feature_Engineering:
             test_frac=0.0,
             valid_frac=0.0,
             train_first=True,
-            index=None):
+            index=None, **kwargs):
         """
         Generate training data. Training data can be made (time) lagged and/or local.
 
@@ -305,7 +305,7 @@ class Feature_Engineering:
             print('Creating time-lagged training data...')
             # lag every training set in X and y
             for i in range(len(X)):
-                X_train_i, y_train_i = self.lag_training_data(X[i], y[i], lags=lags)
+                X_train_i, y_train_i = self.lag_training_data(X[i], y[i], lags=lags, **kwargs)
                 X_train.append(X_train_i)
                 y_train.append(y_train_i)
             if self.n_test > 0:
@@ -652,12 +652,12 @@ class Feature_Engineering:
         for l in lags:
             self.lags.append(np.sort(l)[::-1])
 
-        # self.max_lag = np.max(list(chain(*lags)))
+        self.max_lag = np.max(list(chain(*lags)))
 
         self.feat_history = {}
 
         # the number of feature arrays that make up the total input feature vector
-        # self.n_feat_arrays = len(lags)
+        self.n_feat_arrays = len(lags)
 
         for i in range(self.n_feat_arrays):
             self.feat_history[i] = []
@@ -681,7 +681,9 @@ class Feature_Engineering:
         None.
 
         """
+        print('foo1')
         for i in range(self.max_lag):
+            print('foo2')
             if not self.local:
                 feat = [X_i[start + i] for X_i in feats]
             else:
