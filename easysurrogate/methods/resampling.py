@@ -303,8 +303,8 @@ class Resampler:
         x_mid_pad = [0.5 * (bins_padded[i][1:] + bins_padded[i][0:-1]) for i in range(self.N_c)]
         self.x_mid_pad_tensor = np.array(list(product(*x_mid_pad)))
 
-        # # total number bins
-        # self.max_binnumber = self.x_mid_pad_tensor.shape[0]
+        # total number bins
+        self.max_binnumber = self.x_mid_pad_tensor.shape[0]
 
         # # slow implementation using for loop
         # mapping = np.zeros(self.max_binnumber).astype('int')
