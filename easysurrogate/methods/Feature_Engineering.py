@@ -356,8 +356,8 @@ class Feature_Engineering:
             y_test = np.concatenate(y_test)
             print('done preparing data')
         else:
-            X_test = None #np.empty((0, X_train.shape[1]))
-            y_test = None #np.empty((0, y_train.shape[1]))
+            X_test = None  # np.empty((0, X_train.shape[1]))
+            y_test = None  # np.empty((0, y_train.shape[1]))
 
         return X_train, y_train, X_test, y_test
 
@@ -681,9 +681,7 @@ class Feature_Engineering:
         None.
 
         """
-        print('foo1')
         for i in range(self.max_lag):
-            print('foo2')
             if not self.local:
                 feat = [X_i[start + i] for X_i in feats]
             else:

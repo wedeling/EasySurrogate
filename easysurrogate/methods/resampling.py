@@ -4,52 +4,148 @@ CLASS FOR THE BINNING SURROGATE PROCEDURE
 -------------------------------------------------------------------------------
 Reference:
 N. Verheul, D. Crommelin,
-"Data-driven stochastic representations of unresolved features in multiscale models"
-Communications in Mathematical Sciences, 14, 5, 2016.
+"Data-driven stochastic representations of unresolved features in
+ multiscale models", Communications in Mathematical Sciences, 14, 5, 2016.
+
 Code: W. Edeling
 ===============================================================================
 """
 
+from itertools import chain, product
 import numpy as np
 from scipy import stats
-from itertools import chain, product, cycle
 import matplotlib.pyplot as plt
-import sys
-from scipy.spatial import ConvexHull
 import easysurrogate as es
 from tqdm import tqdm
 
-class Resampler:
 
-    def __init__(self, c, r_ip1, N, N_bins, lags=None, min_count=0, init_feats=True):
+class Resampler:
+    """
+    ===========================================================================
+    Binning surrogate model, resamples reference data
+    ---------------------------------------------------------------------------
+    Reference:
+    N. Verheul, D. Crommelin,
+    "Data-driven stochastic representations of unresolved features in
+     multiscale models", Communications in Mathematical Sciences, 14, 5, 2016.
+
+    Code: W. Edeling
+    ===========================================================================
+    """
+
+    def __init__(self, c, r_ip1, N_bins, lags=None, min_count=1,
+                 init_feats=True):
+        """
+        Create a Resampler object
+
+        Parameters
+        ----------
+        c : array or list of arrays
+            Data for each of the conditioning variables. The shape
+            can be (n_samples, ), (n_samples, 1) or (n_samples, k), with k > 1.
+            In the latter case the k columns will be treated as k separate
+            conditioning variables. Hence if
+
+            c = [c1, c2], with shape(c1) = (1000,1) and shape(c2) = (1000, 2),
+            a 3D surrogate is created based on 1000 data points.
+        r_ip1 : array
+            The reference data that must be resampled, condtioned on c. The
+            shape can be (n_samples, ), (n_samples, 1) or (n_samples, k).
+            In the last case a single r sample consists of k points.
+
+            Note that in this case if c = [c1, c2], for both c1 and c2 we need
+            to have shape(c1) = shape(c2) = n_samples * k.
+        N_bins : int or list of int
+            The number of bins to use per conditioning variable. If an integer
+            is specified, the same number of bins are applied to all
+            conditioning variables.
+        lags : list, optional
+            Apply (time) lags to c.
+            Example: if c = [c_1, c_2] and lags = [[1], [1, 2]], the first
+            conditional vbariable c_1 is lagged by 1 (time) step and the second
+            by 1 and 2 (time) steps. The default is None.
+        min_count : int, optional
+            How many samples a bin must contain to be considered for resampling.
+            The default is 1.
+        init_feats : boolean, optional
+            If time lags are specified, internally store an initial condition
+            for the conditioning variables, based on c and lags.
+            The default is True.
+
+        Returns
+        -------
+        None.
+
+        """
 
         self.name = "Resampler Surrogate"
 
+        if isinstance(c, np.ndarray):
+            c = [c]
+
+        # compute N, the size of 1 r sample
+        r_dim = r_ip1[0].ndim
+        assert r_dim <= 2, "r_ip1 must have shape (n_samples, ) or \
+            (n_samples, N) where N is the (flattened) size of 1 r sample"
+        if r_dim in (0, 1):
+            self.N = 1
+        else:
+            self.N = r_ip1[0].shape[1]
+
+        # flatten r_ip1, and check if all conditioning variables are
+        # of the same size as r_ip1
+        r_ip1 = r_ip1.flatten()
+        test = np.array([c_i.shape[0] == r_ip1.size for c_i in c])
+        assert (test).all(), "conditioning variables must have the same \
+        size as r samples: c.shape[0] == r_ip1.flatten().size for all c"
+
         # create a Feature_Engineering object
         self.feat_eng = es.methods.Feature_Engineering()
-        
-        if lags != None:
+
+        if lags is not None and init_feats:
+            # create an initial condition for the conditioning variables
+            # using the data and the specified lags
             self.feat_eng.empty_feature_history(lags)
             self.feat_eng.initial_condition_feature_history(c, start=0)
+            # set to False, otherwise results will be overwritten by
+            # get_training_data
             init_feats = False
 
-        c, r_ip1, _, _ = self.feat_eng.get_training_data(c, r_ip1, lags=lags, 
+        # prepare training data: create one c array and apply (time) lag if
+        # lags are specified
+        c, r_ip1, _, _ = self.feat_eng.get_training_data(c, r_ip1, lags=lags,
                                                          init_feats=init_feats)
-        r_ip1 = r_ip1.flatten()
 
         # total number of conditional variables including lagged terms
         self.N_c = c.shape[1]
 
-        self.N = N
+        # set the number of bins per conditional variables
+        assert isinstance(N_bins, (int, list)), \
+        "N_bins must be an integer or a list of integers"
+
+        # apply the same number of bins for all variables
+        if isinstance(N_bins, int):
+            self.N_bins = [N_bins for i in range(self.N_c)]
+        # user-specified list
+        else:
+            self.N_bins = N_bins
+            bin_types = np.array([type(_bin) for _bin in self.N_bins])
+            assert (bin_types == int).all(), "N_bins must contain only integers"
+
+        # check that for every conditional variable an N_bins value exists
+        assert len(self.N_bins) == self.N_c, \
+            "len(N_bins) must equal the number of condtional variables"
+
         self.r_ip1 = r_ip1
         self.c = c
-        self.N_bins = N_bins
         self.lags = lags
         self.max_lag = self.feat_eng.max_lag
-        self.covar = {}
 
-        bins = self.get_bins(N_bins)
+        # create the N_c dimensional bins
+        bins = self.get_bins(self.N_bins)
 
+        # flatten r_ip1 for binned_statistic
+        r_ip1 = r_ip1.flatten()
         # count = number of r_ip1 samples in each bin
         # binnumber = bin indices of the r_ip1 samples. A 1D array, no matter N_c
         count, _, binnumber = stats.binned_statistic_dd(
@@ -58,14 +154,7 @@ class Resampler:
         # the unique set of binnumers which have at least one r_ip1 sample
         unique_binnumbers = np.unique(binnumber)
 
-        # some scalars
-        binnumber_max = np.max(unique_binnumbers)
-
         # array containing r_ip1 indices sorted PER BIN
-        # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        # SHOULD BE A 1D ARRAY, AN ARRAY OF SIZE [MAX(BINNUMBER), MAX(COUNT)]
-        # WILL STORE MOSTLY ZEROS IN HIGHER DIMENSIONS, LEADING TO MEMORY FAILURES
-        # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         idx_of_bin = []
 
         # number of samples in each bin
@@ -83,14 +172,17 @@ class Resampler:
         size_of_bin = np.array(size_of_bin)
 
         # the starting offset of each bin in the 1D array idx_of_bin
-        # offset[unique_binnumbers] will give the starting index in idex_of_bin for
+        # offset[unique_binnumbers] will give the starting index in idx_of_bin for
         # each bin. Some entries are zero, which correspond to empty bins (except for
         # the lowest non-empty binnumber)
         offset = np.zeros(unique_binnumbers.size).astype('int')
         offset[1:] = np.cumsum(size_of_bin[0:-1])
-        tmp = np.zeros(binnumber_max + 1).astype('int')
+        tmp = np.zeros(np.max(unique_binnumbers) + 1).astype('int')
         tmp[unique_binnumbers] = offset
         self.offset = tmp
+        # NOTE: offset stores a zero for non empty bins, a dict would be more
+        # efficient, but will not allow to simultaneously select multiple
+        # offsets using an array of unique binnumbers
 
         ####################
         #empty bin handling#
@@ -99,7 +191,11 @@ class Resampler:
         # find indices of empty bins
         # Note: if 'full' is defined as 1 or more sample, binnumbers_nonempty is
         # the same as binnumbers_unique
-        x_idx_nonempty = np.where(count > min_count)
+        assert min_count >= 1, "min_count must satisfy min_count >= 1"
+        assert isinstance(min_count, int), "min_count must be an integer"
+        # N_c dimensional indices of non-empty bins
+        x_idx_nonempty = np.where(count >= min_count)
+        # Find corresponding 1D binnumbers
         x_idx_nonempty_p1 = [x_idx_nonempty[i] + 1 for i in range(self.N_c)]
         binnumbers_nonempty = np.ravel_multi_index(x_idx_nonempty_p1, [len(b) + 1 for b in bins])
         N_nonempty = binnumbers_nonempty.size
@@ -127,9 +223,24 @@ class Resampler:
         # mean r per cell
         self.rmean, _, _ = stats.binned_statistic_dd(c, r_ip1, statistic='mean', bins=bins)
 
-    # check which c_i fall within empty bins and correct binnumbers_i by
-    # projecting to the nearest non-empty bin
-    def check_outliers(self, binnumbers_i, c_i):
+    def check_outliers(self, c_i, binnumbers_i):
+        """
+        Check which conditional variables c_i fall within empty bins
+        and correct their binnumbers_i by projecting to the nearest
+        non-empty bin.
+
+        Parameters
+        ----------
+        c_i : array
+            The values of the conditioning variables.
+        binnumbers_i : array
+            The binnumbers belonging to c_i.
+
+        Returns
+        -------
+        None.
+
+        """
 
         # find out how many BINS with outliers there are
         unique_binnumbers_i = np.unique(binnumbers_i)
@@ -164,9 +275,17 @@ class Resampler:
             binnumbers_closest = self.binnumbers_nonempty[closest_idx]
             binnumbers_i[outliers_idx] = binnumbers_closest
 
-    # create an apriori mapping between every possible bin and the nearest
-    # non-empty bin. Non-empty bins will link to themselves.
     def fill_in_blanks(self):
+        """
+        Create an apriori mapping between every possible bin and the nearest
+        non-empty bin. Non-empty bins will link to themselves.
+
+
+        Returns
+        -------
+        None.
+
+        """
 
         bins_padded = []
 
@@ -184,27 +303,43 @@ class Resampler:
         x_mid_pad = [0.5 * (bins_padded[i][1:] + bins_padded[i][0:-1]) for i in range(self.N_c)]
         self.x_mid_pad_tensor = np.array(list(product(*x_mid_pad)))
 
-        # total number bins
-        self.max_binnumber = self.x_mid_pad_tensor.shape[0]
+        # # total number bins
+        # self.max_binnumber = self.x_mid_pad_tensor.shape[0]
 
-        mapping = np.zeros(self.max_binnumber).astype('int')
+        # # slow implementation using for loop
+        # mapping = np.zeros(self.max_binnumber).astype('int')
+        # for i in tqdm(range(self.max_binnumber)):
 
-        for i in tqdm(range(self.max_binnumber)):
+        #     # bin is nonempty, just use current idx
+        #     if np.in1d(i, self.unique_binnumbers):
+        #         mapping[i] = i
+        #     # bin is empty, find nearest non-empty bin
+        #     else:
+        #         binnumbers_i = np.array([i])
+        #         self.check_outliers(self.x_mid_pad_tensor[i].reshape([1, self.N_c]), binnumbers_i)
+        #         mapping[i] = binnumbers_i[0]
 
-            # bin is nonempty, just use current idx
-            if np.in1d(i, self.unique_binnumbers):
-                mapping[i] = i
-            # bin is empty, find nearest non-empty bin
-            else:
-                binnumbers_i = np.array([i])
-                self.check_outliers(binnumbers_i, self.x_mid_pad_tensor[i].reshape([1, self.N_c]))
-                mapping[i] = binnumbers_i[0]
+        # fast vectorized implementation
+        # all possible bins
+        mapping = np.arange(1, self.max_binnumber + 1)
+        # update mapping using 1 check_outliers call
+        self.check_outliers(self.x_mid_pad_tensor, mapping)
+        # if non empty, link to self
+        mapping[self.unique_binnumbers] = self.unique_binnumbers
 
         self.mapping = mapping
 
-    # visual representation of a 2D binning object. Also shows the mapping
-    # between empty to nearest non-empty bins.
     def plot_2D_binning_object(self):
+        """
+        Plot a visual representation of a 2D binning object. Also shows the mapping
+        between empty to nearest non-empty bins.
+
+
+        Returns
+        -------
+        None.
+
+        """
 
         if self.N_c != 2:
             print('Only works for N_c = 2')
@@ -223,51 +358,36 @@ class Resampler:
 
         # plot the mapping
         for i in range(self.max_binnumber):
-            ax.plot([self.x_mid_pad_tensor[i][0], self.x_mid_pad_tensor[self.mapping[i]][0]], [
-                    self.x_mid_pad_tensor[i][1], self.x_mid_pad_tensor[self.mapping[i]][1]], 'b', alpha=0.6)
+            ax.plot([self.x_mid_pad_tensor[i][0],
+                     self.x_mid_pad_tensor[self.mapping[i]][0]],
+                    [self.x_mid_pad_tensor[i][1],
+                     self.x_mid_pad_tensor[self.mapping[i]][1]], 'b', alpha=0.6)
 
         ax.ticklabel_format(style='sci', axis='x', scilimits=(0, 0))
         ax.ticklabel_format(style='sci', axis='y', scilimits=(0, 0))
         plt.tight_layout()
         plt.show()
 
-    def plot_2D_shadow_manifold(self, X):
-
-        if self.N_c != 2:
-            print('Only works for N_c = 2')
-            return
-
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        ax.plot(X[:, 0], X[:, 1], '+', color='lightgray', alpha=0.3)
-
-        colors = cycle(['--r', '--g', '--b', '--m', '--k'])
-
-        for idx in self.unique_binnumbers:
-
-            idx_i = np.where(self.binnumber == idx)[0]
-
-            if idx_i.size >= 3:
-                marker = next(colors)
-                points = X[idx_i, :]
-                hull = ConvexHull(points)
-                ax.plot(points[hull.vertices, 0], points[hull.vertices, 1], marker)
-                ax.plot([points[hull.vertices[0], 0], points[hull.vertices[-1], 0]],
-                        [points[hull.vertices[0], 1], points[hull.vertices[-1], 1]], marker)
-
-                x_mid = np.mean(points[hull.vertices, :], axis=0)
-                ax.text(x_mid[0], x_mid[1], str(idx))
-            # ax.plot(X[idx_i, 0], X[idx_i, 1], '+')
-            else:
-                x_mid = np.mean(X[idx_i, :], axis=0)
-                ax.text(x_mid[0], x_mid[1], str(idx))
-
-    # the data-driven model for the unresolved scales
-    # Given c_i return r at time i+1 (r_ip1)
     def _feed_forward(self, c_i, n_mc=1):
-        
-        # c_i = c_i.reshape([self.N_c, -1])
-        
+        """
+        The data-driven model to resample data from the conditional
+        density r ~ r | c.
+
+        Parameters
+        ----------
+        c_i : array
+            The conditioning variables.
+        n_mc : int, optional
+            The number of Monte Carlo samples to draw from each bin.
+            The default is 1.
+
+        Returns
+        -------
+        array
+            The mean over the n_mc resampled r values.
+
+        """
+
         # find in which bins the c_i samples fall
         _, _, binnumbers_i = stats.binned_statistic_dd(c_i, np.zeros(self.N), bins=self.bins)
 
@@ -278,7 +398,7 @@ class Resampler:
         x_idx = np.unravel_index(binnumbers_i, [len(b) + 1 for b in self.bins])
         x_idx = [x_idx[i] - 1 for i in range(self.N_c)]
         x_idx = tuple(x_idx)
-        
+
         # random integers between 0 and max bin count for each index in binnumbers_i
         I = np.floor(self.count[x_idx].reshape([self.N, 1]) *
                      np.random.rand(self.N, n_mc)).astype('int')
@@ -287,106 +407,88 @@ class Resampler:
         start = self.offset[binnumbers_i]
 
         # get random r sample from each bin indexed by binnumbers_i
-        r = np.zeros([n_mc, self.N, self.N])
+        r = np.zeros([n_mc, self.N])
 
         for i in range(n_mc):
-            r[i, :, :] = self.r_ip1[self.idx_of_bin[start + I[:, i]]].reshape([self.N, self.N])
+            r[i, :] = self.r_ip1[self.idx_of_bin[start + I[:, i]]].reshape([self.N])
 
         return np.mean(r, 0)
 
-    def predict(self, feat, n_mc=1):
+    def predict(self, c, n_mc=1):
         """
-        Make a prediction f(feat). Here, f is given by Resampler._feed_foward.
+        Make a prediction r(c). Here, r is given by Resampler._feed_foward,
+        and c are the conditional variables at the current (time) step.
+
+        If time lags are specified, c will be stored internally and a time-
+        lagged c array will be passed to Resampler._feed_foward.
 
         Parameters
         ----------
         feat : array of list of arrays
-               The feature array of a list of feature arrays on which to evaluate the surrogate.
+               The feature array of a list of feature arrays on which to
+               evaluate the surrogate.
 
         Returns
         -------
-        array
-            the prediction of the neural net.
+        array, shape (N,)
+            The prediction of the Resampler surrogate.
 
         """
 
-        if not isinstance(feat, list):
-            feat = [feat]
+        if not isinstance(c, list):
+            c = [c]
 
         # make sure all feature vectors have the same ndim.
         # This will raise an error when for instance X1.shape = (10,) and X2.shape = (10, 1)
-        ndims = [X_i.ndim for X_i in feat]
-        assert all([ndim == ndims[0] for ndim in ndims]), "All features must have the same ndim"
+        ndims = [X_i.ndim for X_i in c]
+        assert all([ndim == ndims[0] for ndim in ndims]),\
+            "All features must have the same ndim"
 
         # make sure features are at most two dimensional arrays
         assert ndims[0] <= 2, "Only 1 or 2 dimensional arrays are allowed as features."
-        
+
         # time-lagged surrogate
         if self.lags is not None:
 
             # append the current state X to the feature history
-            self.feat_eng.append_feat(feat)
+            self.feat_eng.append_feat(c)
             feat = self.feat_eng.get_feat_history()
-       
+
         return self._feed_forward(feat.reshape([1, -1]), n_mc)
 
-    # the data-driven model for the unresolved scales
-    # Given c_i return bin averaged r at time i+1
-    def get_mean_sample(self, c_i):
-
-        # find in which bins the c_i samples fall
-        _, _, binnumbers_i = stats.binned_statistic_dd(c_i, np.zeros(self.N), bins=self.bins)
-
-        # dynamically corrects binnumbers_i if outliers are found
-        #self.check_outliers(binnumbers_i, c_i)
-
-        # static correction for outliers, using precomputed mapping array
-        binnumbers_i = self.mapping[binnumbers_i]
-
-        # convert 1D binnumbers_i to equivalent ND indices
-        x_idx = np.unravel_index(binnumbers_i, [len(b) + 1 for b in self.bins])
-        x_idx = [x_idx[i] - 1 for i in range(self.N_c)]
-
-        # , self.rstd[x_idx].reshape([self.N, self.N])
-        return self.rmean[x_idx].reshape([self.N, self.N])
-
-    # # append the covariates supplied to the binning object during simulation
-    # # to self.covars
-    # # Note: use list to dynamically append, array is very slow
-    # def append_covar(self, c_i):
-
-    #     for i in range(self.N_covar):
-    #         self.covar[i].append(c_i[:, i])
-
-    #         # if max number of covariates is reached, remove first item
-    #         if len(self.covar[i]) > self.max_lag:
-    #             self.covar[i].pop(0)
-
-    # # return lagged covariates, assumes constant lag
-    # # Note: typecast to array if spatially varying lag is required
-    # def get_covar(self):
-
-    #     c_i = np.zeros([self.N, self.N_c])
-
-    #     idx = 0
-
-    #     for i in range(self.N_covar):
-    #         for lag in self.lags[i]:
-    #             c_i[:, idx] = self.covar[i][-lag]
-    #             idx += 1
-
-    #     return c_i
-
     def print_bin_info(self):
-        print('-------------------------------')
-        print('Total number of samples= ', self.r_ip1.size)
-        # print('Total number of bins = ', self.N_bins**self.N_c)
-        print('Total number of non-empty bins = ', self.binnumbers_nonempty.size)
-        # print('Percentage filled = ', np.double(self.binnumbers_nonempty.size)/self.N_bins**self.N_c*100., ' %')
-        print('-------------------------------')
+        """
+        Print some information about the Resampler surrogate to screen.
 
-    # compute the uniform bins of the conditional variables in c
+        Returns
+        -------
+        None.
+
+        """
+        n_bins = np.prod(self.N_bins)
+        print('--------------------------------------')
+        print('Total number of samples = %d' % self.r_ip1.size)
+        print('Total number of bins = %d' % n_bins)
+        print('Total number of non-empty bins = %d' % self.binnumbers_nonempty.size)
+        print('Percentage filled = %.1f%%' %
+              (self.binnumbers_nonempty.size / float(n_bins) * 100, ))
+        print('--------------------------------------')
+
     def get_bins(self, N_bins):
+        """
+        Compute the uniform bins of the conditional variables in c
+
+        Parameters
+        ----------
+        N_bins : list of int
+            The number of bins per conditioning variable.
+
+        Returns
+        -------
+        bins : list of arrays
+            A list of 1D uniform bins.
+
+        """
 
         bins = []
 
