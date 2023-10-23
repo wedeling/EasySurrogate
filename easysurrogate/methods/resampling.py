@@ -424,9 +424,9 @@ class Resampler:
 
         Parameters
         ----------
-        feat : array of list of arrays
-               The feature array of a list of feature arrays on which to
-               evaluate the surrogate.
+        c : array of list of arrays
+               The condtional variable array of a list of such arrays on which to
+               condition the resampler.
 
         Returns
         -------
@@ -449,12 +449,13 @@ class Resampler:
 
         # time-lagged surrogate
         if self.lags is not None:
-
             # append the current state X to the feature history
             self.feat_eng.append_feat(c)
-            feat = self.feat_eng.get_feat_history()
+            c = self.feat_eng.get_feat_history()
+        else:
+            c = np.array(list(chain(*c)))
 
-        return self._feed_forward(feat.reshape([1, -1]), n_mc)
+        return self._feed_forward(c.reshape([1, -1]), n_mc)
 
     def print_bin_info(self):
         """

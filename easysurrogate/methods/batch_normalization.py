@@ -148,7 +148,7 @@ class Batch_Normalization:
         """
         Compute the gradient of the loss function with respect to the weight
         of the layer. Propagates the loss through the batch-normalization
-        procedure to compute the loss gradient wrt the unnormalized 
+        procedure to compute the loss gradient wrt the unnormalized
         pre-activation output v. This gradient is used to compute dL/dW.
         The loss gradients wrt beta and gamma are also computed here.
 
