@@ -328,7 +328,6 @@ class Layer:
                     o_i = np.exp(h_i) / np.sum(np.exp(h_i), axis=0)
                     K_i = norm.pdf(y_i[idx], self.kernel_means[idx], self.kernel_stds[idx])
                     p_i = K_i * np.exp(h_i) / np.sum(K_i * np.exp(h_i), axis=0)
-#                    p_i = K_i*o_i/np.sum(K_i*o_i, axis=0)
                     self.L_i = self.L_i - np.log(np.sum(o_i * K_i, axis=0))
 
                     self.o_i.append(o_i)
@@ -338,7 +337,13 @@ class Layer:
 
                 self.o_i = np.concatenate(self.o_i)
                 self.p_i = np.concatenate(self.p_i)
-
+            # user defined loss function
+            elif hasattr(self.loss, '__call__'):
+                # NOTE: in this case, not only the loss value, but also the
+                # loss gradient of the last layer (delta_ho) is compute here
+                # The user defined loss function expects arguments h, y_i,
+                # h the prediction and y_i the data.
+                self.L_i, self.delta_ho = self.loss(h, y_i)
             else:
                 print('Cannot compute loss: unknown loss and/or activation function')
                 sys.exit()
@@ -435,10 +440,12 @@ class Layer:
                     self.delta_ho = np.array([(self.o_i[i] * y_i).sum(axis=0)
                                               for i in range(y_i.shape[0])])
                     self.delta_ho -= y_i
+            # binary cross entropy loss
             elif self.loss == 'binary_cross_entropy':
 
                 self.delta_ho = -1 / (h - (1 - y_i))
 
+            # loss function for kernel mixture method
             elif self.loss == 'kernel_mixture' and self.n_softmax > 0:
 
                 self.delta_ho = self.o_i - self.p_i
