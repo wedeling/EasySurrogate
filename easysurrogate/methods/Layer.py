@@ -298,7 +298,7 @@ class Layer:
             elif self.loss == 'logistic':
                 self.L_i = np.log(1.0 + np.exp(-y_i * h))
             elif self.loss == 'squared':
-                self.L_i = (y_i - h)**2
+                self.L_i = np.sum((y_i - h)**2, axis=0) / self.n_neurons
             elif self.loss == 'cross_entropy':
                 # compute values of the softmax layer
                 # more than 1 (independent) softmax layer can be placed at the output
@@ -424,7 +424,7 @@ class Layer:
 
             elif self.loss == 'squared':  # and self.activation == 'linear':
 
-                self.delta_ho = -2.0 * (y_i - h)
+                self.delta_ho = -2.0 * (y_i - h) / self.n_neurons
                 # grad_loss = elementwise_grad(self.test)
                 # self.delta_ho = grad_loss(self.h, y_i)
 
