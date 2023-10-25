@@ -320,6 +320,15 @@ class GP_analysis(BaseAnalysis):
             raise RuntimeWarning('This surrogate has no recorded history of sequential design')
             return
 
+        #ytr = self.gp_surrogate.y_scaler.inverse_transform(self.gp_surrogate.y_train)
+        ytr = self.gp_surrogate.y_scaler.inverse_transform(self.gp_surrogate.X_train, self.gp_surrogate.y_train) # for custom scaler
+        ytr = ytr.reshape(-1)
+        if y_test is not None:
+            yts = y_test
+            yts = yts.reshape(-1)
+        else:
+            yts = ytr
+
         x_train = self.gp_surrogate.x_scaler.inverse_transform(self.gp_surrogate.X_train)
         x1tr = x_train[:, 0]
         x2tr = x_train[:, 1]
@@ -329,14 +338,6 @@ class GP_analysis(BaseAnalysis):
         else:
             x1ts = x1tr
             x2ts = x1tr
-
-        ytr = self.gp_surrogate.y_scaler.inverse_transform(self.gp_surrogate.y_train)
-        ytr = ytr.reshape(-1)
-        if y_test is not None:
-            yts = y_test
-            yts = yts.reshape(-1)
-        else:
-            yts = ytr
 
         fig, ax = plt.subplots()
 
@@ -489,8 +490,9 @@ class GP_analysis(BaseAnalysis):
         err_rel = np.divide(err_abs, y_test)
 
         # Scale back the features and targets
+        #y_test_scale = self.gp_surrogate.y_scaler.transform(y_test)
+        y_test_scale = self.gp_surrogate.y_scaler.transform(X_test, y_test) # for custom scaler
         X_test_scale = self.gp_surrogate.x_scaler.transform(X_test)
-        y_test_scale = self.gp_surrogate.y_scaler.transform(y_test)
 
         r2_test = self.get_r2_score(X_test_scale, y_test_scale)
         print('R2 score for the test data is : {:.3}'.format(r2_test))

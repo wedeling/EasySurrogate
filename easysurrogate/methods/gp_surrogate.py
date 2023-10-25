@@ -11,8 +11,82 @@ import functools
 from ..campaign import Campaign
 import easysurrogate as es
 
+from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LinearRegression
 
+class GP_Output_Scaler():
+
+    def __init__(self):
+        """
+        Deafault consturctor for GP_Output_Scaler
+        """
+        self.name = 'GP_Output_Scaler'
+        self.with_mean=True
+        self.with_std=True
+        self.with_linear_trend=True
+        
+    def fit(self, X, y):
+        """
+        Fits the GP_Output_Scaler to the data sample of input-output pairs.
+        Consists of:
+            linear trend removal from the output (in non-normalised scale)
+            whintening of the output (removal of mean and scaling by std)
+        """
+        self.y_linear_trend = LinearRegression()
+        self.y_linear_trend.fit(X,y)
+
+        self.y_whitener = StandardScaler(with_mean=self.with_mean, with_std=self.with_std)
+        self.y_whitener.fit(y) 
+    
+    def transform(self, X, y, bool_X_in_original_scale=True, x_scaler=None):
+        """
+        Transforms the output y by:
+             removing the linear trend and
+             whitening it.
+            
+            X - input data in original scale 
+        """
+        # Trend removal and whitening are both linear, so they should be commutative
+
+        if not bool_X_in_original_scale:
+            X = x_scaler.inverse_transform(X)
+
+        if self.with_linear_trend:
+            y_out = y - self.y_linear_trend.predict(X)
+        
+        y_out = self.y_whitener.transform(y_out)
+
+        return y_out
+
+    def inverse_transform(self, X, y, bool_X_in_original_scale=True, x_scaler=None):
+        """
+        Returns y to untransformed version
+        """
+
+        y_out = self.y_whitener.inverse_transform(y)
+
+        if not bool_X_in_original_scale:
+            # should access surrogate class that aggregates this sclaer class
+            X = x_scaler.inverse_transform(X)
+
+        if self.with_linear_trend:
+            y_out = y_out + self.y_linear_trend.predict(X)
+
+        return y_out
+
+    def fit_transform(self, X, y, bool_X_in_original_scale=True, x_scaler=None):
+        """
+        Combines fit and transform methods
+        """
+        # there is a possiblity to reuse sklearn fit_transform methods
+        self.fit(X,y)
+        y_out = self.transform(X,y, bool_X_in_original_scale=bool_X_in_original_scale, x_scaler=x_scaler)
+
+        return y_out
+
+    #TODO: implement methods for STD scaling only
+    #TODO implement overloaded transform and fit transform methods for cases when X is not needed
 
 class GP_Surrogate(Campaign):
 
@@ -25,8 +99,20 @@ class GP_Surrogate(Campaign):
 
         self.name = 'GP Surrogate'
         self.feat_eng = es.methods.Feature_Engineering()
+
+        # Initialise scalers for input and output data
+        # Options for Y-scaling:
+        #  1) StandardScaler: zero mean and unit variance
+        #self.x_scaler = StandardScaler()
+        #self.y_scaler = StandardScaler()
+        #  2) Scikit-Learn pipeline: does not work!
+        # (Next two lines is an attempt to make a preprocessing pipeling to include linear trend removal)
+        #self.x_scaler = Pipeline(steps=[('whitening', StandardScaler())])
+        #self.y_scaler = Pipeline(steps=[('lin_trend_removal', LinearRegression()), ('whitening', StandardScaler())])
+        #  3) Custom class: linear trend removal + zero mean and unit variance
         self.x_scaler = StandardScaler()
-        self.y_scaler = StandardScaler()
+        self.y_scaler = GP_Output_Scaler()
+
         self.backend = backend
 
         #TODO: put all model-related parameters EITHER in constructor OR in .train() method
@@ -117,12 +203,14 @@ class GP_Surrogate(Campaign):
         X_train, y_train, X_test, y_test = self.feat_eng.get_training_data(
             feats, target, local=False, test_frac=test_frac, train_first=False)
 
-        # scale the training data
+        # Scale the training data
+        #y_train = self.y_scaler.fit_transform(y_train)
+        y_train = self.y_scaler.fit_transform(X_train, y_train)
         X_train = self.x_scaler.fit_transform(X_train)
-        y_train = self.y_scaler.fit_transform(y_train)
         if len(X_test) > 0 and len(y_test) > 0:
+            #y_test = self.y_scaler.transform(y_test)
+            y_test = self.y_scaler.transform(X_test, y_test)
             X_test = self.x_scaler.transform(X_test)
-            y_test = self.y_scaler.transform(y_test)
 
         self.X_train = X_train
         self.y_train = y_train
@@ -169,20 +257,28 @@ class GP_Surrogate(Campaign):
         Stochastic prediction of the output y
         """
         # TODO slows down a lot, maybe FeatureEngineering should return training data still as a list
-        x = np.array([x for x in X]).T # TODO: if no transformation needed, then list comprehension not needed
-        x = self.x_scaler.transform(x)
-        x = [np.array(i) for i in x.T.tolist()]
+        X_array = np.array([x for x in X]).T # TODO: if no transformation needed, then list comprehension not needed
+        x = self.x_scaler.transform(X_array) # now x in white scale
+        x_list = [np.array(i) for i in x.T.tolist()]
 
         # TODO unlike ANNs, GPs should provide API for vectorised .predict() and other methods
-        y, std, _ = self.feat_eng._predict(x, feed_forward=lambda t: self.model.predict(t))
+        y, std, _ = self.feat_eng._predict(x_list, feed_forward=lambda t: self.model.predict(t))
 
         print(f"> y in gp_surrogate.predict: {y}") ###DEBUG
 
-        y = self.y_scaler.inverse_transform(y)
+        # Rescaling y means
+        #y = self.y_scaler.inverse_transform(y)
+        #y = self.y_scaler.inverse_transform(x, y, bool_X_in_original_scale=False, x_scaler=self.x_scaler) # using custom sclaling class
+        y = self.y_scaler.inverse_transform(X_array, y) # using custom sclaling class
 
+        # Rescaling STD - does not need mean or trend information
+        self.y_scaler.with_linear_trend = False # only for custom scaler class
         self.y_scaler.with_mean = False
-        std = self.y_scaler.inverse_transform(std * np.ones(y.shape))
+        self.y_scaler.y_whitener.with_mean = False # only for custom scaler class
+        std = self.y_scaler.inverse_transform(X_array, std * np.ones(y.shape)) # does the actual transformation
+        self.y_scaler.y_whitener.with_mean = True # only for custom scaler class
         self.y_scaler.with_mean = True
+        self.y_scaler.with_linear_trend = True # only for custom scaler class
 
         print(f">GP_Surrogate: y={y}") ###DEBUG
         return y, std
@@ -262,7 +358,9 @@ class GP_Surrogate(Campaign):
         self.set_data_stats()
 
         #TODO: in every function specs write in which scaling the passed data are
-        target = self.y_scaler.transform(np.array(target).reshape(1,-1)) 
+        #target = self.y_scaler.transform(np.array(target).reshape(1,-1))
+        target = self.y_scaler.transform(feats, np.array(target).reshape(1,-1)) # using custom sclaling class; TODO: double check if feats are in original scale
+
         #X_test_unscaled = [self.x_scaler.inverse_transform(X_i.reshape(1,-1))[0].tolist() for X_i in self.X_test]
         #TODO: this is horrible and should not exist
 
@@ -402,9 +500,13 @@ class GP_Surrogate(Campaign):
             raise NotImplementedError(
                 "Gaussian Process derivatives w.r.t. inputs are implemented only for MOGP")
 
+        self.y_scaler.with_linear_trend = False # only for custom scaler class
         self.y_scaler.with_mean = False
+        self.y_scaler.y_whitener.with_mean = False # only for custom scaler class
         der = self.y_scaler.inverse_transform(der)
+        self.y_scaler.with_linear_trend = True # only for custom scaler class
         self.y_scaler.with_mean = True
+        self.y_scaler.y_whitener.with_mean = True # only for custom scaler class
 
         self.x_scaler.with_mean = False
         der = self.x_scaler.transform(der)
