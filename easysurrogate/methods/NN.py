@@ -567,7 +567,7 @@ class ANN:
             if not np.in1d(i, self.input_idx):
                 self.layers[i].back_prop(y_i)
 
-        # do compute the loss gardient wrt input values (dL/dh)
+        # do compute the loss gradient wrt input values (dL/dh)
         for i in self.input_idx:
             self.layers[i].compute_delta_ho()
 
