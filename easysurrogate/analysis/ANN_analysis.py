@@ -125,3 +125,79 @@ class ANN_analysis(BaseAnalysis):
             return err_train, err_test
         else:
             return err_train, err_test, train_pred, test_pred
+
+    def finite_difference_gradient_check(self, feats, data, eps=1e-8):
+        """
+        Compare the analytic gradient of the loss function with respect to
+        the inputs neurons with a finite difference approximation. For each
+        input neuron a single random (feats, data) pair is selected for
+        the computations.
+
+        Parameters
+        ----------
+        feats : array, shape (n_samples, n_in)
+            Input features.
+        data : array, shape (n_samples, n_out)
+            Target data.
+        eps : float, optional
+            Small epsilon value used for the finite-difference approximation
+            (loss(x + eps) - loss(x)) / eps. The default is 1e-8.
+
+        Returns
+        -------
+        None, information is printed to screen.
+
+        """
+
+        # standardize the features
+        feats = (feats - self.ann_surrogate.feat_mean) / self.ann_surrogate.feat_std
+        data = (data - self.ann_surrogate.output_mean) / self.ann_surrogate.output_std
+
+        # Set the batch size to 1
+        self.ann_surrogate.neural_net.set_batch_size(1)
+
+        # get the number of input neurons
+        dims = self.ann_surrogate.get_dimensions()
+        n_in = dims['n_in']
+        print('----------------------------------------------------------')         
+
+        # compute a single FD approximation for each input neuron
+        for i in range(n_in):
+
+            # select a single random data pair
+            idx = np.random.randint(0, feats.shape[0])
+            X_i = feats[idx].reshape([1, -1])
+            y_i = data[idx].reshape([-1, 1])
+
+            # run a mini batch, computing the loss gradient
+            self.ann_surrogate.neural_net.batch(X_i, y_i)
+
+            # extract the loss gradient
+            dLdh = self.ann_surrogate.neural_net.layers[0].delta_ho
+
+            # get the loss value
+            h = self.ann_surrogate.neural_net.layers[-1].h
+            self.ann_surrogate.neural_net.layers[-1].compute_loss(h, y_i)
+            loss0 = self.ann_surrogate.neural_net.layers[-1].L_i
+
+            # perturb the i-th input neuron by eps
+            X_i[0][i] += eps
+
+            # recompute the loss
+            self.ann_surrogate.neural_net.feed_forward(X_i)
+            h = self.ann_surrogate.neural_net.layers[-1].h
+            self.ann_surrogate.neural_net.layers[-1].compute_loss(h, y_i)
+            loss1 = self.ann_surrogate.neural_net.layers[-1].L_i
+
+            # finite difference approximation of the loss gradient dLdh
+            dldh_FD = (loss1 - loss0) / eps
+
+            # relative error in percentage
+            rel_err = np.abs((dLdh[i] - dldh_FD) / dLdh[i]) * 100
+
+            # print results to screen
+            print("Input neuron x%d" % i)
+            print("Analytic loss gradient dL/dx%d = %.4e" %(i, dLdh[i]))
+            print("Finite difference approximation of dL/dx%d = %.4e" % (i, dldh_FD))
+            print("Relative error = %.4f%%" % (rel_err,))
+            print('----------------------------------------------------------')
