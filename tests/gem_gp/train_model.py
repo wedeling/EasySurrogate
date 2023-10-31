@@ -13,6 +13,8 @@ if len(sys.argv) < 2 :
 else:
     index = sys.argv[1]
 
+code_name = 'gem0'
+
 np.random.seed(42)
 
 SEQDES = False #True if Sequential Design of Experiments to be used
@@ -58,7 +60,16 @@ campaign = es.Campaign(load_state=False)
 # 7) Case from 8 flux tube GEM UQ campaign (4 parameters, tensor product of grid with 2 points per DoF)
 #                       and 4 outputs -> in total, output vector of dimensionality 32, as well input dimensionalty of 32
 
-data_file_name = f"gem_uq_648_transp_std_{index}.hdf5"
+# data_file_name = f"{code_name}_uq_648_transp_std_{index}.hdf5" #gem/gem0 data
+# #data_file_name = f"gem0_uq_648_transp_std_{index}.hdf5" #gem0 data!
+
+# features_names_selected = features_names
+# target_name_selected = [target_names[0],target_names[1]]
+
+# 8) Case from 8 flux tube GEM0 5000 runs (4 parameters, tensor product of grid with 5 points per DoF)
+
+data_file_name = f"{code_name}_5000_transp_{index}.hdf5" #gem/gem0 data
+
 features_names_selected = features_names
 target_name_selected = [target_names[0],target_names[1]]
 
@@ -69,7 +80,7 @@ target_name_selected = [target_names[0],target_names[1]]
 data_frame = campaign.load_hdf5_data(file_path=data_file_name)
 #print(f">train_model, data_frame={data_frame}") ###DEBUG
 
-# prepare lists of features and array of targets
+# Prepare lists of features and array of targets
 features = [data_frame[k] for k in features_names_selected if k in data_frame]
 target = np.concatenate([data_frame[k] for k in target_name_selected if k in data_frame], axis=1)
 
@@ -85,7 +96,7 @@ gp_param = {
             'nu_stp': 10,
             'bias': 0.,
             'nonstationary': False,
-            'test_frac': 0.0, #0.1,
+            'test_frac': 0.25, #0.25,
             'n_iter': 5,
            }
 
@@ -120,7 +131,7 @@ print('Time to train the surrogate: {:.3} s'.format(t.time() - time_train_start)
 surrogate.model.print_model_info()
 
 date_str = datetime.now().strftime("%Y%m%d")
-save_model_file_name = f"model_val_SkitGaussianRBF_transp_{index}_{date_str}.pickle"
+save_model_file_name = f"model_{code_name}_val_{gp_param['backend']}{gp_param['process_type']}{gp_param['kernel']}_transp_{index}_{date_str}.pickle"
 
 campaign.add_app(name='gp_campaign', surrogate=surrogate)
 campaign.save_state(file_path=save_model_file_name)

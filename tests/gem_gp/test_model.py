@@ -12,6 +12,13 @@ if len(sys.argv) < 2 :
 else:
     index = sys.argv[1]
 
+if len(sys.argv) < 3 :
+    model_date = '20231016'
+else:
+    model_date = sys.argv[2]
+
+code_name = 'gem0'
+
 features_names_selected = features_names
 target_name_selected = target_names
 
@@ -101,11 +108,24 @@ target_name_selected = target_names
 # 7) Case from 8 flux tube GEM UQ campaign (4 parameters, tensor product of grid with 2 points per DoF)
 #                       and 4 outputs -> 8 independent surrogate models
 
+# features_names_selected = features_names
+# target_name_selected = [target_names[0], target_names[1]]
+
+# #saved_model_file_path = f"model_val_SkitGaussianRBF_transp_{index}_20230925.pickle"
+# #saved_model_file_path = f"model_{code_name}_val_SkitGaussianRBF_transp_{index}_{model_date}.pickle"
+# saved_model_file_path = f"model_{code_name}_val_scikit-learngaussianRBF_transp_{index}_{model_date}.pickle"
+
+# #data_file = f"gem_uq_648_transp_std_{index}.hdf5"
+# data_file = f"{code_name}_uq_648_transp_std_{index}.hdf5"
+
+# 8) Case from 8 flux tubes GEM0 UQ campaign (4 parameters, tensor product of grid with 5 points per DoF)
+
 features_names_selected = features_names
 target_name_selected = [target_names[0], target_names[1]]
 
-saved_model_file_path = f"model_val_SkitGaussianRBF_transp_{index}_20230925.pickle"
-data_file = f"gem_uq_648_transp_std_{index}.hdf5"
+saved_model_file_path = f"model_{code_name}_val_scikit-learngaussianRBF_transp_{index}_{model_date}.pickle"
+
+data_file = f"{code_name}_5000_transp_{index}.hdf5"
 
 # Creating campaign
 
@@ -134,7 +154,7 @@ feat_train, targ_train, feat_test, targ_test = campaign.surrogate.feat_eng.\
 features = [data_frame[k] for k in features_names_selected if k in data_frame]
 target = np.concatenate([data_frame[k] for k in target_name_selected if k in data_frame], axis=1)
 
-# create analysis class
+# Create analysis class
 analysis = es.analysis.GP_analysis(campaign.surrogate)
 
 # SEQ DES
