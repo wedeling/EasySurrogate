@@ -144,11 +144,11 @@ class ANN:
         # size of the mini batch used in stochastic gradient descent
         self.batch_size = batch_size
 
-        assert type(batch_norm) is bool or type(batch_norm) is list, \
+        assert isinstance(batch_norm, bool) or isinstance(batch_norm, list), \
             "batch_norm must be a boolean value or a list of boolean values"
 
         # manually specified flags for the use of batch normalization
-        if type(batch_norm) is list:
+        if isinstance(batch_norm, list):
             assert len(batch_norm) == n_layers + 1, \
                 "batch_norm flag must be set for every layer"
             self.batch_norm = batch_norm

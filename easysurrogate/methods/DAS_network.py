@@ -26,7 +26,7 @@ class DAS_network(ANN):
                  param_specific_learn_rate=True, loss='squared',
                  activation='tanh', activation_out='linear', activation_das='linear',
                  n_softmax=0, n_layers=2, n_neurons=16,
-                 bias=True, batch_size=1, batch_norm=False, 
+                 bias=True, batch_size=1, batch_norm=False,
                  save=True, name='DAS', on_gpu=False,
                  standardize_X=True, standardize_y=True, **kwargs):
         """
@@ -105,7 +105,7 @@ class DAS_network(ANN):
 
         # the activation of the DAS layer
         self.activation_das = activation_das
-        
+
         # set all the common parameters via the parent ANN class,
         # but overwrite the init_network subsroutine in this class
         super().__init__(X, y, alpha=alpha, decay_rate=decay_rate,
@@ -138,7 +138,7 @@ class DAS_network(ANN):
         # add the input layer
         self.layers.append(Layer(self.n_in, 0, self.n_layers, 'linear',
                                  self.loss, False, batch_size=self.batch_size,
-                                 batch_norm = False,
+                                 batch_norm=False,
                                  lamb=self.lamb, on_gpu=self.on_gpu))
 
         # by default, the 1st layer does not have a bias neuron. This way
