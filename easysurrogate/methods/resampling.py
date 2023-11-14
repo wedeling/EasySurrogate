@@ -329,10 +329,11 @@ class Resampler:
 
         self.mapping = mapping
 
-    def plot_2D_binning_object(self):
+    def plot_binning_object(self):
         """
-        Plot a visual representation of a 2D binning object. Also shows the mapping
-        between empty to nearest non-empty bins.
+        Plot a visual representation of a 1D or 2D binning object. 
+        Also shows the mapping between empty to nearest non-empty bins in 
+        the 2D plot.
 
 
         Returns
@@ -341,30 +342,39 @@ class Resampler:
 
         """
 
-        if self.N_c != 2:
-            print('Only works for N_c = 2')
-            return
+        assert self.N_c == 1 or self.N_c == 2, "only works for 1D or 2D surrogates"
 
-        fig = plt.figure()
-        ax = fig.add_subplot(111, xlabel=r'conditioning variable 1',
-                             ylabel=r'conditioning variable 2')
+        if self.N_c == 1:
+            fig = plt.figure()
+            ax = fig.add_subplot(111, xlabel=r'conditioning variable 1',
+                                 ylabel=r'output data')
 
-        # plot bins and (c1, c2) which corresponding to a r sample point
-        ax.plot(self.c[:, 0], self.c[:, 1], '+', color='lightgray', alpha=0.3)
-        ax.vlines(self.bins[0], np.min(self.c[:, 1]), np.max(self.c[:, 1]))
-        ax.hlines(self.bins[1], np.min(self.c[:, 0]), np.max(self.c[:, 0]))
+            # plot 1D conditioning variable c vs r_ip1 output data
+            ax.plot(self.c[:, 0], self.r_ip1, '+', color='lightgray', alpha=0.3)
+            # plot the bins
+            ax.vlines(self.bins[0], np.min(self.r_ip1), np.max(self.r_ip1))
 
-        ax.plot(self.x_mid_pad_tensor[:, 0], self.x_mid_pad_tensor[:, 1], 'g+')
+        else:
+            fig = plt.figure()
+            ax = fig.add_subplot(111, xlabel=r'conditioning variable 1',
+                                 ylabel=r'conditioning variable 2')
 
-        # plot the mapping
-        for i in range(self.max_binnumber):
-            ax.plot([self.x_mid_pad_tensor[i][0],
-                     self.x_mid_pad_tensor[self.mapping[i]][0]],
-                    [self.x_mid_pad_tensor[i][1],
-                     self.x_mid_pad_tensor[self.mapping[i]][1]], 'b', alpha=0.6)
+            # plot bins and (c1, c2) which corresponding to a r sample point
+            ax.plot(self.c[:, 0], self.c[:, 1], '+', color='lightgray', alpha=0.3)
+            ax.vlines(self.bins[0], np.min(self.c[:, 1]), np.max(self.c[:, 1]))
+            ax.hlines(self.bins[1], np.min(self.c[:, 0]), np.max(self.c[:, 0]))
 
-        ax.ticklabel_format(style='sci', axis='x', scilimits=(0, 0))
-        ax.ticklabel_format(style='sci', axis='y', scilimits=(0, 0))
+            ax.plot(self.x_mid_pad_tensor[:, 0], self.x_mid_pad_tensor[:, 1], 'g+')
+
+            # plot the mapping
+            for i in range(self.max_binnumber):
+                ax.plot([self.x_mid_pad_tensor[i][0],
+                         self.x_mid_pad_tensor[self.mapping[i]][0]],
+                        [self.x_mid_pad_tensor[i][1],
+                         self.x_mid_pad_tensor[self.mapping[i]][1]], 'b', alpha=0.6)
+
+            ax.ticklabel_format(style='sci', axis='x', scilimits=(0, 0))
+            ax.ticklabel_format(style='sci', axis='y', scilimits=(0, 0))
         plt.tight_layout()
         plt.show()
 
