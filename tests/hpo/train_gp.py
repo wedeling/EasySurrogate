@@ -4,6 +4,7 @@ Varying parameters are the Hyperparameters of the surrogate models.
 """
 
 import os
+import sys
 import pickle
 import time
 
@@ -17,10 +18,17 @@ from pprint import pprint
 from itertools import product
 import csv
 import numpy as np
+import math as m
 
 import easysurrogate as es
 
 #TODO: ADD A RANDOM SEED
+np.random.seed(42)
+
+# Choice of flux tube - TODO make it a parameter / read from CSV
+ft = sys.argv[1]
+
+#TODO write down test fraction expliceitly - now it is 0.5 by default
 
 # List all possible hyperparamters of a surrogate of this type, together with their types and default values
 params = {
@@ -38,7 +46,7 @@ params = {
 # looks like EasyVVUQ checks for a need in a default value after sampler is initialized 
 
 # TODO should be read from CSV
-# TODO force CSVSampler to interpret entries with correct type
+# TODO force CSVSampler to interpret entries with correct type (int-s as int-s!)
 
 # For Grid Search: form carthesian product of variables
 
@@ -55,7 +63,7 @@ param_search_vals = {
     #"testset_fraction": [0.1, 0.5, 0.9], # does not reflect best model
     "n_iter" : [1, 5, 10], # CURRENTLY not used by local implementation
     "process_type" : ['gaussian', 'student_t'], # not used by scikit-learn implementation
-    "backend" : ['local', 'scikit-learn'],
+    "backend" : ['scikit-learn'] # ['local', 'scikit-learn'],
 }
 
 csv_header = [k for k in param_search_vals.keys()]
@@ -69,9 +77,9 @@ def clean_grid_by_rules(header, vals, def_vals):
     vals_new = []
 
     for d in data:
-        if d['backend'] == 'local' and np.abs(d['bias'] - float(def_vals['bias'])) > 1e-10:
+        if d['backend'] == 'local' and not m.isclose(d['bias'], float(def_vals['bias'])):
             continue
-        if d['kernel'] != 'Matern' and np.abs(d['nu_matern'] - float(def_vals['nu_matern'])) > 1e-10:
+        if d['kernel'] != 'Matern' and not m.isclose(d['nu_matern'], float(def_vals['nu_matern'])):
             continue
         if d['process_type'] != 'student_t' and d['nu_stp'] != int(def_vals['nu_stp']):
             continue
@@ -89,12 +97,12 @@ def clean_grid_by_rules(header, vals, def_vals):
 csv_defaults = {k:v['default'] for k,v in params.items()}
 csv_vals_new = clean_grid_by_rules(csv_header, csv_vals, csv_defaults)
 
-with open('hp_values_gp_loc.csv', 'w') as f:
+with open('hp_values_gp_loc_2.csv', 'w') as f:
     writer = csv.writer(f)
     writer.writerow(csv_header)
     writer.writerows(csv_vals)
 
-with open('hp_values_gp_loc_short.csv', 'w') as f:
+with open('hp_values_gp_loc_short_2.csv', 'w') as f:
     writer = csv.writer(f)
     writer.writerow(csv_header)
     writer.writerows(csv_vals_new)
@@ -103,7 +111,7 @@ with open('hp_values_gp_loc_short.csv', 'w') as f:
 # for which an environmental variable HPC_EXECUTION should be specified
 HPC_EXECUTION = os.environ['HPC_EXECUTION']
 
-campaign_name = 'hpo_easysurrogate_'
+campaign_name = f"hpo_easysurrogate_f{ft}_{time.strftime('%Y%m%d_%H%M%S', time.localtime())}"
 work_dir = ''
 #TODO specify flexible paths
 
@@ -134,7 +142,7 @@ campaign = uq.Campaign(name=campaign_name, work_dir=work_dir)
 # w4mixs15 run_28 : Matern l=2. s_n=.001 b=0. tfr=0.5 n_i=10, p=STP be=scikit-learn
 # tp2csdpe run_27 : Matern l=.5 s_n=.001 b=0. nu=1.5 tfr=0.5 n_i=10, p=STP be=scikit-learn
 
-param_file = 'hp_values_gp_loc_short.csv'
+param_file = 'hp_values_gp_loc_short_2.csv'
 
 # Encoder should take a value from the sampler and pass it to EasySurrogate es.methos.*_Surrogate().train(...) as kwargs
 encoder = uq.encoders.GenericEncoder(
@@ -152,7 +160,7 @@ decoder = uq.decoders.JSONDecoder(
 
 # Execute should train a model in EasySurrogate: get the data, initalise object, call .train() and calculate the training/validation error
 execute_train = uq.actions.ExecuteLocal(
-    'python3 ../../../single_model_train_gp.py input.json > train.log'
+    f"python3 ../../../single_model_train_gp.py input.json {ft} > train.log"
 )
 # TODO get rid of hard-coding relative paths
 

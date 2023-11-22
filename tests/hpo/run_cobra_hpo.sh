@@ -8,7 +8,7 @@
 #SBATCH --error=hpo-gpr-err.%j
 
 ## wall time in format (HOURS):MINUTES:SECONDS
-#SBATCH --time=2:00:00
+#SBATCH --time=1:00:00
 
 ## number of nodes and tasks per node
 #SBATCH --nodes=1
@@ -26,7 +26,7 @@
 module load anaconda/3/2021.11 
 
 # Python set-up
-source activate $HOME/conda-envs/python394
+source activate $HOME/conda-envs/python3114
 
 export SYS=COBRA
 export SCRATCH=$SCRATCH
@@ -40,17 +40,27 @@ export HPC_EXECUTION=1
 echo -e '> In this run: use ExecuteLocal only + QCGPJ pool + '$SLURM_NNODES' nodes /n'
 
 ####################################
-
-DATAFILE=gem3.hdf5
+pip install latexplotlib
 
 # Update the package
-
 cd ../..
-pysetup
+#pysetup
+pip install .
 cd tests/hpo
 
-# Run the training code
+# Define the flux tube number
+FT_LEN=8
 
-python3 train_gp.py > hpo-gpr-log.${SLURM_JOBID}
+#DATAFILE=gem3.hdf5
+
+for((FT=0;FT<${FT_LEN};FT++)); do
+
+    DATAFILE=gem04_f${FT}.hdf5
+
+    # Run the training code
+
+    python3 train_gp.py ${FT} > hpo-gpr-log.${SLURM_JOBID}
+
+done;
 
 echo "> Finished a SLURM job for HPO!"
