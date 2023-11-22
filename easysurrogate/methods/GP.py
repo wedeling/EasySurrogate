@@ -232,7 +232,7 @@ class GP:
             raise NotImplementedError('Currently supporting only scikit-learn, mogp, and custom backend')
             #raise NotImplementedError('Non-stationary kernels are not implemented in MOGP')
 
-        print(f"y_avg in GP.predict: {m}") ###DEBUG
+        #print(f"y_avg in GP.predict: {m}") ###DEBUG
 
         return m, v, d
 

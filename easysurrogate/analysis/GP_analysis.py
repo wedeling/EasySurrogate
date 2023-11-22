@@ -59,7 +59,7 @@ class GP_analysis(BaseAnalysis):
 
         #plt.ioff()
 
-        plt.style.use("latex12pt")
+        plt.style.use("latex10pt")
         plt.rcParams.update({"axes.grid": True, "font.family": "serif", "text.usetex": False})
         #lpl_context = [550, 350]
         lpl_context = [347, 549] # LNCS paper size
@@ -124,7 +124,7 @@ class GP_analysis(BaseAnalysis):
         ax.set_ylim(minlim, maxlim)
 
         #Adding a highlight square for the results
-        #TODO: undo hardcode
+        #TODO: undo hardcode - get values from a result of a workflow run, for example
         ref_low = 1.35E+6
         ref_high = 3.9E+6
         ref_high = maxlim_less = max(y_test_orig)*(1.+beta_expplot/2)
@@ -287,6 +287,54 @@ class GP_analysis(BaseAnalysis):
         plt.clf()
         plt.close()
 
+    def plot_scan(self, X_train, input_number=0, output_number=0, file_name_suf='0'):
+        """
+        Saves a .pdf 1D plot of a QoI value predicted by a GP surrogate for a single varied input component
+        """
+
+        xlabels = ['te_value', 'ti_value', 'te_ddrho', 'ti_ddrho']
+        ylabels = ['te_transp_flux', 'ti_transp_flux']
+
+        extend_factor = 0.2
+        fig,ax = plt.subplots(figsize=[7, 7])
+
+        # Take the input component according to input_name
+        # Select a range of values for this component
+        # Make an fine resolved array of values for this component
+        # Make a new array with all components
+        # Predict the QoI for this array
+        # Plot the QoI vs the input component
+        
+        name_dict = {} #TODO?
+        #i_num = name_dict[input_name]
+        i_num = input_number
+
+        x_values = X_train[:, i_num] # check the order of axis
+        #print(x_values) ###DEBUG
+
+        x_values_new = np.linspace(x_values.min() - extend_factor * abs(x_values.min()) , 
+                                   x_values.max() + extend_factor * abs(x_values.max()), 1000)
+        
+        x_remainder = np.delete(X_train, i_num, axis=1)
+        x_remainder_value = x_remainder.mean(axis=0)
+
+        X_new = np.zeros((x_values_new.shape[0], X_train.shape[1]))
+        X_new[:, i_num] = x_values_new
+        for j in range(X_new.shape[0]):
+            X_new[j, np.arange(X_train.shape[1]) != i_num] = x_remainder_value
+        
+        y = [self.gp_surrogate.predict(
+            X_new[i, :].reshape(-1, 1))[0][0][output_number] for i in range(X_new.shape[0])]
+
+        ax.plot(x_values_new, y, label=f"{input_number}->{output_number}")
+
+        ax.set_xlabel(xlabels[input_number])
+        ax.set_ylabel(ylabels[output_number])
+        ax.set_title(f"{xlabels[input_number]}->{ylabels[output_number]}(@{file_name_suf})")
+        fig.savefig('scan_'+'i'+str(input_number)+'o'+str(output_number)+'f'+file_name_suf+'.pdf')
+
+        return 0
+    
     def plot_pdfs(self, y_dom, y_pdf, y_dom_sur, y_pdf_sur,
                   y_dom_tr=None, y_pdf_tr=None, y_dom_tot=None, y_pdf_tot=None,
                   names=['GEM testing', 'GP', 'GEM training', 'GEM', ],
@@ -428,150 +476,174 @@ class GP_analysis(BaseAnalysis):
             only_train_set = True 
             y_t_len = 0
 
+        ### ---
+        # For every component of input and output plot the scan of the GP model predictions for the orthogonal middle cut of training domain
+        print("Scanning the GP model predictions")
+
+        for output_num in range(y_train.shape[1]):
+            for input_num in range(X_train.shape[1]):
+                self.plot_scan(X_train, input_number=input_num, output_number=output_num, file_name_suf=addit_name)
+        ### ---
+
         print("Prediction of new QoI")
         # TODO make predict call work on a (n_samples, n_features) np array
         # TODO: IMPORTANT - it's needed for vector outputs e.g. (Q_e, Q_i) and currently reshaping is a bloody mess
 
-        y_pred = []
-        y_var_pred = []
-        if not only_train_set:
-            y_pred = [self.gp_surrogate.predict(X_test[i, :].reshape(-1, 1))[0]
-                    for i in range(X_test.shape[0])]
-            y_var_pred = [self.gp_surrogate.predict(X_test[i, :].reshape(-1, 1))[1]
-                          for i in range(X_test.shape[0])]
-            y_t_len = len(y_test)
+        n_output = y_train.shape[1]
+        err_abs_list = []
+        err_rel_list = []
+        r2_test_list = []
 
-        y_pred_train = [self.gp_surrogate.predict(
-            X_train[i, :].reshape(-1, 1))[0] for i in range(X_train.shape[0])]
-        y_var_pred_train = [self.gp_surrogate.predict(
-            X_train[i, :].reshape(-1, 1))[1] for i in range(X_train.shape[0])]
+        for n_out in range(n_output):
 
-        # Reshape the resulting arrays
-        if not only_train_set:
-            y_pred = np.squeeze(np.array(y_pred), axis=1)
-            y_var_pred = np.squeeze(np.array(y_var_pred), axis=1)
-        else:
-            y_pred = np.ones((0, len(y_pred_train[0])))
-            y_var_pred = np.ones((0, len(y_pred_train[0])))
-            
-            #print('y_pred shape {}'.format(y_pred.shape)) ###DEBUG
-            
-        y_pred_train = np.squeeze(np.array(y_pred_train), axis=1)
-        y_var_pred_train = np.squeeze(np.array(y_var_pred_train), axis=1)
+            addit_name_new = addit_name + f"_o{n_out}"
 
-        print(f"y_test: \n{y_test}") ###DEBUG
-
-        # Check if we a working with a vector or scalar QoI:
-        #  If it is vector then consider only the first component
-        y_test_plot = y_test
-        y_train_plot = y_train
-
-        if y_pred.shape[1] != 1:
-
-            y_train_plot = y_train[:, [0]]
-            y_pred_train = y_pred_train[:, 0]
-            y_var_pred_train = y_var_pred_train[:, 0]
-
+            y_pred = []
+            y_var_pred = []
             if not only_train_set:
-                y_test_plot = y_test[:, [0]]            
-                y_pred = y_pred[:, 0]
-                y_var_pred = y_var_pred[:, 0]
+                y_pred = [self.gp_surrogate.predict(X_test[i, :].reshape(-1, 1))[0]
+                        for i in range(X_test.shape[0])]
+                y_var_pred = [self.gp_surrogate.predict(X_test[i, :].reshape(-1, 1))[1]
+                            for i in range(X_test.shape[0])]
+                y_t_len = len(y_test)
 
-        if len(y_pred.shape) == 1:
+            y_pred_train = [self.gp_surrogate.predict(
+                X_train[i, :].reshape(-1, 1))[0] for i in range(X_train.shape[0])]
+            y_var_pred_train = [self.gp_surrogate.predict(
+                X_train[i, :].reshape(-1, 1))[1] for i in range(X_train.shape[0])]
 
-            y_pred_train = y_pred_train.reshape(-1, 1)
-
+            # Reshape the resulting arrays
+            # TODO: here squeeze should not mix the output components
             if not only_train_set:
-                y_pred = y_pred.reshape(-1, 1)
-
-        # Calculate the errors
-        # test data appears smaller in length (by 1)
-        err_abs = np.subtract(y_pred[:y_t_len, :], y_test)
-        err_rel = np.divide(err_abs, y_test)
-
-        # Scale back the features and targets
-        #y_test_scale = self.gp_surrogate.y_scaler.transform(y_test)
-        y_test_scale = self.gp_surrogate.y_scaler.transform(X_test, y_test) # for custom scaler
-        X_test_scale = self.gp_surrogate.x_scaler.transform(X_test)
-
-        r2_test = self.get_r2_score(X_test_scale, y_test_scale)
-        print('R2 score for the test data is : {:.3}'.format(r2_test))
-
-        mse_test   = 0.
-        mse_train  = 0.
-        rmse_test  = 0.
-        rmse_train = 0.
-        if not only_train_set:
-            mse_test  = mse(y_pred[:y_t_len, 0], y_test_plot[:, 0])
-            rmse_test = mse(y_pred[:y_t_len, 0], y_test_plot[:, 0], squared=False)
-            print('MSE of the GPR prediction is: MSE={:.3} RMSE={:.3}'.format(mse_test, rmse_test))
-        else:
-            print('MSE of the GPR prediction for training set is: {:.3}'.format(
-                mse(y_pred_train[:, 0], y_train_plot[:, 0])))
-
-        if not only_train_set:
-            print('Mean relative test error is {:.3}'.format(np.abs(err_rel).mean()))
-
-        self.y_pred = y_pred
-        self.err_abs = err_abs
-        self.err_rel = err_rel
-        self.r2_test = r2_test
-
-        # Save the prediction results
-        csv_array = np.concatenate(
-                (y_test_plot[:, 0].reshape(-1,1), 
-                y_pred[:y_t_len, 0].reshape(-1,1), 
-                y_var_pred.reshape(y_pred[:y_t_len, 0].shape).reshape(-1,1)), #TODO ugly
-                axis=1)
-        np.savetxt(f"res_{addit_name}.csv", csv_array, delimiter=",")
-
-        print("Printing and plotting the evaluation results")
-        #TODO: resolve case whe y_groundtruth==0.0
-        #TODO: add color for test case in Err_abs and Err_rel plots
-  
-        if flag_plot and not only_train_set:
-  
-            self.plot_err(error=err_rel[:, 0],
-                          name='rel. err. of prediction mean for test dataset in Ti fluxes',
-                          #original=y_test[:, 0],
-                         )
-            
-            self.plot_predictions_vs_groundtruth(
-                y_test_plot[:, 0], 
-                y_pred[:y_t_len, 0], 
-                y_var_pred.reshape(y_pred[:y_t_len, 0].shape),
-                #y_var_pred_train.reshape(y_pred_train[:,0].shape),
-                addit_label=f"$R^{{2}}={{{r2_test:.3}}}$",
-                addit_name=addit_name,
-                                                )
-
-        train_n = self.gp_surrogate.feat_eng.n_samples - y_t_len
-
-        #print(x_train_inds, y_pred_train, y_train_plot) ###DEBUG
-
-        if flag_plot:
-            
-            if not only_train_set:
-
-                self.plot_res(
-                        x_train_inds, y_pred_train[:, 0], y_train_plot[:, 0],
-                        x_test_inds, y_pred[:y_t_len, 0], y_test_plot[:, 0],
-                        y_var_pred.reshape(y_pred[:y_t_len, 0].shape), y_var_pred_train.reshape(y_pred_train[:, 0].shape),
-                        name=r'$Y_i$', num='1', type_train='rand',
-                        train_n=train_n, out_color='b',
-                        addit_name=addit_name,
-                             )
-            
+                y_pred = np.squeeze(np.array(y_pred), axis=1)
+                y_var_pred = np.squeeze(np.array(y_var_pred), axis=1)
             else:
+                y_pred = np.ones((0, len(y_pred_train[n_out])))
+                y_var_pred = np.ones((0, len(y_pred_train[n_out])))
                 
-                self.plot_res(
-                        x_train_inds, 
-                        y_pred_train[:, 0],
-                        y_train_plot[:, 0],
-                        y_var_pred_train=y_var_pred_train.reshape(y_pred_train[:, 0].shape),
-                        name=r'$Y_i$', num='1', type_train='rand',
-                        train_n=train_n, out_color='b',
-                        addit_name=addit_name,
-                             )
+                #print('y_pred shape {}'.format(y_pred.shape)) ###DEBUG
+                
+            y_pred_train = np.squeeze(np.array(y_pred_train), axis=1)
+            y_var_pred_train = np.squeeze(np.array(y_var_pred_train), axis=1)
 
-        return err_abs, err_rel, r2_test
+            #print(f"y_test: \n{y_test}") ###DEBUG
+
+            # Check if we a working with a vector or scalar QoI:
+            #  If it is vector then consider only the first component
+            y_test_plot = y_test
+            y_train_plot = y_train
+
+            if y_pred.shape[1] != 1:
+
+                y_train_plot = y_train[:, [n_out]]
+                y_pred_train = y_pred_train[:, n_out]
+                y_var_pred_train = y_var_pred_train[:, n_out]
+
+                if not only_train_set:
+                    y_test_plot = y_test[:, [n_out]]            
+                    y_pred = y_pred[:, n_out]
+                    y_var_pred = y_var_pred[:, n_out]
+
+            if len(y_pred.shape) == 1:
+
+                y_pred_train = y_pred_train.reshape(-1, 1)
+
+                if not only_train_set:
+                    y_pred = y_pred.reshape(-1, 1)
+
+            # Calculate the errors
+            # test data appears smaller in length (by 1)
+            err_abs = np.subtract(y_pred[:y_t_len, :], y_test)
+            err_rel = np.divide(err_abs, y_test)
+            
+            err_abs_list.append(err_abs)
+            err_rel_list.append(err_rel)
+
+            # Scale back the features and targets
+            #y_test_scale = self.gp_surrogate.y_scaler.transform(y_test)
+            y_test_scale = self.gp_surrogate.y_scaler.transform(X_test, y_test) # for custom scaler
+            X_test_scale = self.gp_surrogate.x_scaler.transform(X_test)
+
+            r2_test = self.get_r2_score(X_test_scale, y_test_scale)
+            print('R2 score for the test data is : {:.3}'.format(r2_test))
+
+            mse_test   = 0.
+            mse_train  = 0.
+            rmse_test  = 0.
+            rmse_train = 0.
+            if not only_train_set:
+                mse_test  = mse(y_pred[:y_t_len, 0], y_test_plot[:, 0])
+                rmse_test = mse(y_pred[:y_t_len, 0], y_test_plot[:, 0], squared=False)
+                print('MSE of the GPR prediction is: MSE={:.3} RMSE={:.3}'.format(mse_test, rmse_test))
+            else:
+                print('MSE of the GPR prediction for training set is: {:.3}'.format(
+                    mse(y_pred_train[:, 0], y_train_plot[:, 0])))
+
+            if not only_train_set:
+                print('Mean relative test error is {:.3}'.format(np.abs(err_rel).mean()))
+
+            self.y_pred = y_pred
+            self.err_abs = err_abs
+            self.err_rel = err_rel
+            self.r2_test = r2_test
+
+            r2_test_list.append(r2_test)
+
+            # Save the prediction results
+            csv_array = np.concatenate(
+                    (y_test_plot[:, 0].reshape(-1,1), 
+                    y_pred[:y_t_len, 0].reshape(-1,1), 
+                    y_var_pred.reshape(y_pred[:y_t_len, 0].shape).reshape(-1,1)), #TODO ugly
+                    axis=1)
+            np.savetxt(f"res_{addit_name_new}.csv", csv_array, delimiter=",")
+
+            print("Printing and plotting the evaluation results")
+            #TODO: resolve case whe y_groundtruth==0.0
+            #TODO: add color for test case in Err_abs and Err_rel plots
+    
+            if flag_plot and not only_train_set:
+    
+                self.plot_err(error=err_rel[:, n_out],
+                            name=f"rel. err. of prediction mean for test dataset in fluxes nu {n_out}",
+                            #original=y_test[:, 0],
+                            )
+                
+                self.plot_predictions_vs_groundtruth(
+                    y_test_plot[:, 0], 
+                    y_pred[:y_t_len, 0], 
+                    y_var_pred.reshape(y_pred[:y_t_len, 0].shape),
+                    #y_var_pred_train.reshape(y_pred_train[:,0].shape),
+                    addit_label=f"$R^{{2}}={{{r2_test:.3}}}$",
+                    addit_name=addit_name_new,
+                                                    )
+
+            train_n = self.gp_surrogate.feat_eng.n_samples - y_t_len
+
+            #print(x_train_inds, y_pred_train, y_train_plot) ###DEBUG
+
+            if flag_plot:
+                
+                if not only_train_set:
+
+                    self.plot_res(
+                            x_train_inds, y_pred_train[:, 0], y_train_plot[:, 0],
+                            x_test_inds, y_pred[:y_t_len, 0], y_test_plot[:, 0],
+                            y_var_pred.reshape(y_pred[:y_t_len, 0].shape), y_var_pred_train.reshape(y_pred_train[:, 0].shape),
+                            name=r'$Y_i$', num=str(n_out), type_train='rand',
+                            train_n=train_n, out_color='b',
+                            addit_name=addit_name_new,
+                                )
+                
+                else:
+                    
+                    self.plot_res(
+                            x_train_inds, 
+                            y_pred_train[:, 0],
+                            y_train_plot[:, 0],
+                            y_var_pred_train=y_var_pred_train.reshape(y_pred_train[:, 0].shape),
+                            name=r'$Y_i$', num=str(n_out), type_train='rand',
+                            train_n=train_n, out_color='b',
+                            addit_name=addit_name_new,
+                                )
+
+        return err_abs_list, err_rel_list, r2_test_list

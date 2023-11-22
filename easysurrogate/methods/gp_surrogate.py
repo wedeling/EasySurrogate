@@ -264,7 +264,7 @@ class GP_Surrogate(Campaign):
         # TODO unlike ANNs, GPs should provide API for vectorised .predict() and other methods
         y, std, _ = self.feat_eng._predict(x_list, feed_forward=lambda t: self.model.predict(t))
 
-        print(f"> y in gp_surrogate.predict: {y}") ###DEBUG
+        #print(f"> y in gp_surrogate.predict: {y}") ###DEBUG
 
         # Rescaling y means
         #y = self.y_scaler.inverse_transform(y)
@@ -280,7 +280,7 @@ class GP_Surrogate(Campaign):
         self.y_scaler.with_mean = True
         self.y_scaler.with_linear_trend = True # only for custom scaler class
 
-        print(f">GP_Surrogate: y={y}") ###DEBUG
+        #print(f">GP_Surrogate: y={y}") ###DEBUG
         return y, std
 
     def save_state(self, state=None, **kwargs):

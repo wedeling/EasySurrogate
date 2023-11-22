@@ -406,6 +406,7 @@ class GaussianProcessRegressor():
 
         n = len(y)
 
+        #TODO: this has to be calculated only once for a given theta
         K = self.calc_covariance(X, self.kernel, sigma_f=theta['sigma_f'], l=theta['l'], n=n)
         
         #print('K={0}'.format(K)) ###DEBUG

@@ -91,7 +91,7 @@ class Feature_Engineering:
             # no lags and non local, create a single vector of X and feed forward
             if not local:
                 feat = np.concatenate(X)
-                print(f">Feature_Engineering: before feed_forward(feat)") ###DEBUG
+                #print(f">Feature_Engineering: before feed_forward(feat)") ###DEBUG
                 return feed_forward(feat)
             # no lags and local, get feature vector and loop over 2nd dimension
             else:
@@ -101,7 +101,7 @@ class Feature_Engineering:
                 y = []
                 for p in range(n_points):
                     y.append(feed_forward(X[p]))  # GP case: for single sample should be one point
-                    print(f">Feature_Engineering: before np.array(.).flatten() y={y}") ###DEBUG
+                    #print(f">Feature_Engineering: before np.array(.).flatten() y={y}") ###DEBUG
                 return np.array(y).flatten()
 
     def filter_values(self, feats, interval):
