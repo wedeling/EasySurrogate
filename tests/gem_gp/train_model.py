@@ -96,7 +96,7 @@ gp_param = {
             'nu_stp': 10,
             'bias': 0.,
             'nonstationary': False,
-            'test_frac': 0.25, #0.25,
+            'test_frac': 0.2, #0.,
             'n_iter': 5,
            }
 

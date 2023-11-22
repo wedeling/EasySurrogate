@@ -8,6 +8,18 @@ import easysurrogate as es
 features_names = ['te_value', 'ti_value', 'te_ddrho', 'ti_ddrho']
 target_names = ['te_transp_flux', 'ti_transp_flux', 'te_transp_flux_std', 'ti_transp_flux_std']
 
+def load_csv_to_dict(input_file='gem_data_625.txt', n_runs=625, input_dim=4, output_dim=2, std=False):
+    """
+    Loads a CSV file with GEM/GEM0 data contatining columns for input and ouputs into a dictionary
+    """
+
+    data = pd.read_csv(input_file, sep=',')
+    data = data[[*features_names, *target_names[:output_dim]]]
+    data = data.to_dict(orient='list')
+    data = {k:np.array(v).reshape(-1,1) for k,v in data.items()}
+
+    return data
+
 def load_csv_file(input_file='gem_data_625.txt', n_runs=625, input_dim=4, output_dim=2, std=False, startcol=2):
 
     input_samples = np.zeros((n_runs, input_dim))
@@ -15,13 +27,15 @@ def load_csv_file(input_file='gem_data_625.txt', n_runs=625, input_dim=4, output
 
     with open(input_file, 'r') as inputfile:
         datareader = csv.reader(inputfile, delimiter=',')
-        next(datareader) #DEBUG
-        j_startcol = startcol #DEBUG
-        i = 0
-        for row in datareader:
+        next(datareader) #skip header - ...
+        j_startcol = startcol # redundant variable #DEBUG
+        #i = 0
+        for i,row in enumerate(datareader):
+            row = np.array(row)
+            row[row=='']='0.0'
             input_samples[i] = row[j_startcol:j_startcol+input_dim]
             output_samples[i] = row[j_startcol+input_dim:j_startcol+input_dim + output_dim*2]
-            i = i + 1
+            #i = i + 1
 
     data = {}
 
@@ -217,23 +231,27 @@ campaign = es.Campaign(load_state=False)
 # 7) Case from 8 flux tube GEM UQ campaign (4 parameters, tensor product of grid with 2 points per DoF)
 #                       and 4 outputs -> in total, output vector of dimensionality 32
 
-# Saving ti_transp_flux 
-data = load_csv_file(input_file='resuq_main_te_transp_flux_all_csldvnei_23.csv',
-                     n_runs=648,
-                     output_dim=4,
-                     std=True,
-                     startcol=3,
-                     )
+# # Saving both te_transp_flux and ti_transp_flux 
 
-data_ft = split_flux_tubes(data, ft_len=81)
-#print(data_ft)
+# datafile = 'resuq_main_te_transp_flux_all_csldvnei_37.csv' # this file with TE has both ti and te data
+# #datafile = 'resuq_main_te_transp_flux_new_abcd1234_1.csv'
 
-campaign.store_data_to_hdf5(data, file_path="gem_uq_648_transp_std_tot.hdf5")
-for i in range(len(data_ft)):
-    campaign.store_data_to_hdf5(data_ft[i], file_path=f"gem_uq_648_transp_std_{i}.hdf5")
+# data = load_csv_file(input_file=datafile, # this file has both ti and te data
+#                      n_runs=648,
+#                      output_dim=4,
+#                      std=True,
+#                      startcol=3,
+#                      )
+
+# data_ft = split_flux_tubes(data, ft_len=81)
+# #print(data_ft)
+
+# campaign.store_data_to_hdf5(data, file_path="gem_uq_648_transp_std_tot.hdf5")
+# for i in range(len(data_ft)):
+#     campaign.store_data_to_hdf5(data_ft[i], file_path=f"gem_uq_648_transp_std_{i}.hdf5")
 
 """
-# Saving te_transp_flux 
+# Saving ti_transp_flux 
 data = load_csv_file(input_file='resuq_main_ti_transp_flux_all_csldvnei_23.csv',
                      n_runs=648,
                      output_dim=2,
@@ -248,3 +266,18 @@ campaign.store_data_to_hdf5(data, file_path="gem_uq_648_ti_transp_std_tot.hdf5")
 for i in range(len(data_ft)):
     campaign.store_data_to_hdf5(data_ft[i], file_path=f"gem_uq_648_ti_transp_std_{i}.hdf5")
 """
+
+# 8) Case from 8 flux tube GEM0 run, having same number of points for every input dimension
+
+#datafile = "gem0_new_data_20231101.csv"
+datafile = "gem0_new_data_20231120.csv"
+runs_per_ft = 5**4
+
+data = load_csv_to_dict(input_file=datafile,)
+
+data_ft = split_flux_tubes(data, ft_len=runs_per_ft)
+
+campaign.store_data_to_hdf5(data, file_path="gem0_5000_transp_tot.hdf5")
+for i in range(len(data_ft)):
+    campaign.store_data_to_hdf5(data_ft[i], file_path=f"gem0_5000_transp_{i}.hdf5")
+
