@@ -53,14 +53,16 @@ FT_LEN=8
 
 #DATAFILE=gem3.hdf5
 
-for((FT=0;FT<${FT_LEN};FT++)); do
+for((i=0;i<${FT_LEN};i++)); do
 
-    DATAFILE=gem04_f${FT}.hdf5
+    DATAFILE=gem04_f${i}.hdf5
 
     # Run the training code
+    echo '> Running the training code for flux tube #'${i}' and datafile '${DATAFILE}
 
-    python3 train_gp.py ${FT} > hpo-gpr-log.${SLURM_JOBID}
+    python3 train_gp.py ${i} >> hpo-gpr-log.${SLURM_JOBID}
 
 done;
 
+echo '...'
 echo "> Finished a SLURM job for HPO!"

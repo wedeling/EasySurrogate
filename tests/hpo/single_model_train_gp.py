@@ -92,6 +92,6 @@ with open('output.json', 'w') as of:
     json_string = json.dumps(output)
     of.write(json_string)
 
-print('Outputs: {0}'.format(output))
+print(f"Outputs: {output}")
 
-print('> Exiting the training script')
+print(f"> Exiting the training script")

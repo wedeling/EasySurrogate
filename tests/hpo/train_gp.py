@@ -23,10 +23,13 @@ import math as m
 import easysurrogate as es
 
 #TODO: ADD A RANDOM SEED
-np.random.seed(42)
+rs = 42
+np.random.seed(rs)
 
 # Choice of flux tube - TODO make it a parameter / read from CSV
 ft = sys.argv[1]
+
+print(f"> Starting a hyperparameter optimisation for flux tube {ft}, random_seed={rs}")
 
 #TODO write down test fraction expliceitly - now it is 0.5 by default
 
@@ -38,7 +41,7 @@ params = {
     "nu_matern": {"type": "string", "min": 1e-6, "max": 1e+6, "default": "2.5"},
     "nu_stp": {"type": "string", "min": 2, "max": 1e+16, "default": "5"},
     "kernel": {"type": "string", "default": "Matern"},
-    "testset_fraction": {"type": "string", "min": 0.0, "max": 1.0, "default": "0.5"},
+    "testset_fraction": {"type": "string", "min": 0.0, "max": 1.0, "default": "0.8"},
     "n_iter" : {"type": "string", "min": 1, "default": "10"},
     "process_type" : {"type": "string", "default": "gaussian"},
     "backend" : {"type": "string", "default": "local"},
@@ -111,7 +114,7 @@ with open('hp_values_gp_loc_short_2.csv', 'w') as f:
 # for which an environmental variable HPC_EXECUTION should be specified
 HPC_EXECUTION = os.environ['HPC_EXECUTION']
 
-campaign_name = f"hpo_easysurrogate_f{ft}_{time.strftime('%Y%m%d_%H%M%S', time.localtime())}"
+campaign_name = f"hpo_easysurrogate_f{ft}_{time.strftime('%Y%m%d_%H%M%S', time.localtime())}_"
 work_dir = ''
 #TODO specify flexible paths
 
@@ -183,7 +186,7 @@ sampler = uq.sampling.CSVSampler(filename=param_file)
 campaign.set_sampler(sampler)
 
 # Execute: train a number of ML models
-print('> Starting to train the models')
+print(f"> Starting to train the models")
 start_time = time.time()
 
 if HPC_EXECUTION:
@@ -196,14 +199,14 @@ if HPC_EXECUTION:
             }
         ) as qcgpj:
         
-        print('>> Executing on a HPC machine')
+        print(f">> Executing on a HPC machine")
         campaign.execute(pool=qcgpj).collate()
 else:
 
     campaign.execute().collate()
 
 train_time=time.time() - start_time
-print('> Finished training the models, time={} s'.format(train_time))
+print(f"> Finished training the models, time={train_time} s")
 
 # Collate the results of all training runs
 collation_results = campaign.get_collation_result()
@@ -214,7 +217,7 @@ analysis = uq.analysis.BasicStats(qoi_cols=qoi)
 campaign.apply_analysis(analysis)
 results = campaign.get_last_analysis()
 
-res_file = os.path.join(work_dir, "hpo_res.pickle")
+res_file = os.path.join(work_dir, f"hpo_res_{ft}.pickle")
 with open(res_file, "bw") as rf:
     pickle.dump(results, rf)
 
@@ -224,7 +227,9 @@ analysis.analyse(collation_results)
 analysis.analyse(results)
 
 minrowidx = collation_results['loss'].idxmin()
-print("Best model so far: {0}".format(collation_results.iloc[minrowidx,:]))
+print(f"Best model (for ft#{ft}) so far: {collation_results.iloc[minrowidx,:]}")
+
+#TODO: get folder name of the current campaign and copy the right model file out
 
 #loss = results.describe('loss')
 #print(loss)
