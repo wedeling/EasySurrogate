@@ -3,5 +3,7 @@ tests/gray_scott_reduced/samples
 tests/lorenz96_kmn/kvm.gif
 tests/gray_scott_reduced_muscle3/*.log
 easysurrogate.egg-info
+tests/vorticity_online/restart
+__pycache__/
 build/
 dist/

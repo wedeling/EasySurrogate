@@ -20,7 +20,7 @@ lags = [[1, 10]]
 N_bins = [10, 10]
 
 # train the CCM
-surrogate.train(feats, target, N_bins, lags, test_frac=0.1)
+surrogate.train(feats, target, N_bins, lags)
 
 # add the app + save ccm campaign
 campaign.add_app(name='CCM_test', surrogate=surrogate)

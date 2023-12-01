@@ -1,4 +1,4 @@
-#from .resampling import Resampler
+from .resampling import Resampler
 from .NN import ANN
 from .SimpleBin import SimpleBin
 from .Feature_Engineering import Feature_Engineering
@@ -14,3 +14,4 @@ from .CumSum_Layer import CumSum_Layer
 from .das_surrogate import DAS_Surrogate
 from .gp_surrogate import GP_Surrogate
 from .GP import GP
+from .batch_normalization import Batch_Normalization

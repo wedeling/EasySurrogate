@@ -2,11 +2,17 @@
 EasySurrogate campaign class
 """
 
-from tkinter import filedialog
-import tkinter as tk
 import pickle
 import h5py
 import numpy as np
+
+try:
+    import tkinter as tk
+    from tkinter import filedialog
+except ImportError:
+    print("WARNING: tkinter not imported")
+    print("save_ANN and load_ANN have no graphical support, \
+          use these by specifying file_path=")
 
 
 class Campaign:

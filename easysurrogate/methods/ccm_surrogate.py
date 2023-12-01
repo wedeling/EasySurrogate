@@ -32,7 +32,7 @@ class CCM_Surrogate:
         # number of training samples
         self.n_samples = feats[0].shape[0]
         # compute the size of the training set based on value of test_frac
-        self.n_train = np.int(self.n_samples * (1.0 - test_frac))
+        self.n_train = int(self.n_samples * (1.0 - test_frac))
         print('Using first', self.n_train, 'of', self.n_samples, 'samples to train QSN')
 
         # list of features
@@ -43,8 +43,8 @@ class CCM_Surrogate:
         print('Creating time-lagged training data...')
         # X_lagged, _ = self.feat_eng.lag_training_data(X, np.zeros(self.n_train), lags)
         # Y_lagged, _ = self.feat_eng.lag_training_data(y, np.zeros(self.n_train), lags)
-        X_lagged, _ = self.feat_eng.get_training_data(X, np.zeros(self.n_train), lags=lags)
-        Y_lagged, _ = self.feat_eng.get_training_data(y, np.zeros(self.n_train), lags=lags)
+        X_lagged, _, _, _ = self.feat_eng.get_training_data(X, np.zeros(self.n_train), lags=lags)
+        Y_lagged, _, _, _ = self.feat_eng.get_training_data(y, np.zeros(self.n_train), lags=lags)
         print('done')
 
         # total number of conditional variables including lagged terms
