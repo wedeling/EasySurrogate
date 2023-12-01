@@ -41,7 +41,7 @@ params = {
     "nu_matern": {"type": "string", "min": 1e-6, "max": 1e+6, "default": "2.5"},
     "nu_stp": {"type": "string", "min": 2, "max": 1e+16, "default": "5"},
     "kernel": {"type": "string", "default": "Matern"},
-    "testset_fraction": {"type": "string", "min": 0.0, "max": 1.0, "default": "0.8"},
+    "testset_fraction": {"type": "string", "min": 0.0, "max": 1.0, "default": "0.2"},
     "n_iter" : {"type": "string", "min": 1, "default": "10"},
     "process_type" : {"type": "string", "default": "gaussian"},
     "backend" : {"type": "string", "default": "local"},
