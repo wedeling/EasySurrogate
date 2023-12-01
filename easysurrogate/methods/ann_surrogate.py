@@ -30,8 +30,11 @@ class ANN_Surrogate(Campaign):
               n_layers=2, n_neurons=100,
               loss='squared',
               activation='tanh',
-              batch_size=64, lamb=0.0,
-              standardize_X=True, standardize_y=True, **kwargs):
+              learning_rate=0.001, decay_rate=0.9, beta1=0.9,
+              batch_size=64, batch_norm=False,
+              lamb=0.0,
+              standardize_X=True, standardize_y=True,
+              dropout=False, **kwargs):
         """
         Perform back propagation to train the ANN
 
@@ -49,8 +52,19 @@ class ANN_Surrogate(Campaign):
         loss : string, optional
             The name of the loss function. The default is 'squared'.
         activation : Type of activation function. The default is 'tanh'.
+        learing_rate : the baseline learning rate. Is made parameter specific
+                       via RMSProp. Th edefault is 0.001.
+        decay_rate : float, optional
+                     Factor multiplying the decay rate every decay_step
+                     iterations. Default is 0.9.
+        beta1 : float, optional
+                Momentum parameter controlling the moving average of the loss gradient.
+                Used for the parameter-specific learning rate. The default is 0.9.
         batch_size : Mini batch size. The default is 64.
+        batch_norm : boolean, optional
+            Use batch normalization. The default is False.
         lamb : L2 regularization parameter. The default is 0.0.
+        dropout : Boolean flag for use of dropout regularization.
 
         Returns
         -------
@@ -73,8 +87,6 @@ class ANN_Surrogate(Campaign):
         # prepare the training data
         X_train, y_train, _, _ = self.feat_eng.get_training_data(
             feats, target, lags=lags, local=local, test_frac=test_frac, train_first=True)
-        # get the maximum lag that was specified
-        # TODO for 20 grid points returns (n_samples x n_features) as training dataset
         self.max_lag = self.feat_eng.max_lag
 
         # number of output neurons
@@ -85,22 +97,35 @@ class ANN_Surrogate(Campaign):
                                          n_layers=n_layers, n_neurons=n_neurons,
                                          n_out=n_out,
                                          loss=loss,
-                                         activation=activation, batch_size=batch_size,
-                                         lamb=lamb, decay_step=10**4, decay_rate=0.9,
+                                         activation=activation,
+                                         batch_size=batch_size,
+                                         batch_norm=batch_norm,
+                                         alpha=learning_rate,
+                                         lamb=lamb, decay_step=10**4,
+                                         decay_rate=decay_rate, beta1=beta1,
                                          standardize_X=standardize_X,
                                          standardize_y=standardize_y,
-                                         save=False, **kwargs)
+                                         save=False,
+                                         **kwargs)
 
         print('===============================')
         print('Training Artificial Neural Network...')
 
+        # set the training flag to True in any layer that uses batch normalization
+        self.neural_net.set_batch_norm_training_flag(True)
+
         # train network for n_iter mini batches
-        self.neural_net.train(n_iter, store_loss=True)
+        self.neural_net.train(n_iter, store_loss=True, dropout=dropout,
+                              **kwargs)
+
+        # set the training flag to False in any layer that uses batch normalization
+        self.neural_net.set_batch_norm_training_flag(False)
+
         self.set_data_stats()
         if lags is not None:
             self.feat_eng.initial_condition_feature_history(feats)
 
-    def derivative(self, x, norm=True):
+    def derivative(self, x, norm=True, layer_idx=0):
         """
         Compute a derivative of the network output f(x) with respect to the inputs x.
 
@@ -113,6 +138,8 @@ class ANN_Surrogate(Campaign):
             Compute the gradient of ||f||_2. If False it computes the gradient of
             f, if f is a scalar. If False and f is a vector, the resulting gradient is of the
             column sum of the full Jacobian matrix.
+        layer_idx : int, optional, default is 0.
+            Index for the layer of which to return the derivative. Default is 0, the input layer.
 
         Returns
         -------
@@ -122,7 +149,7 @@ class ANN_Surrogate(Campaign):
         """
         # check that x is of shape (n_in, ) or (n_in, 1)
         assert x.shape[0] == self.neural_net.n_in, \
-        "x must be of shape (n_in,): %d != %d" % (x.shape[0], self.neural_net.n_in)
+            "x must be of shape (n_in,): %d != %d" % (x.shape[0], self.neural_net.n_in)
 
         if x.ndim > 1:
             assert x.shape[1] == 1, "Only pass 1 feature vector at a time"
@@ -135,7 +162,8 @@ class ANN_Surrogate(Campaign):
         x = (x - self.feat_mean) / self.feat_std
 
         # feed forward and compute and the derivatives
-        df_dx = self.neural_net.d_norm_y_dX(x.reshape([1, -1]), feed_forward=True, norm=norm)
+        df_dx = self.neural_net.d_norm_y_dX(x.reshape([1, -1]), feed_forward=True, norm=norm,
+                                            layer_idx=layer_idx)
 
         return df_dx
 

@@ -205,7 +205,7 @@ class Feature_Engineering:
             test_frac=0.0,
             valid_frac=0.0,
             train_first=True,
-            index=None):
+            index=None, **kwargs):
         """
         Generate training data. Training data can be made (time) lagged and/or local.
 
@@ -272,7 +272,7 @@ class Feature_Engineering:
         # compute the size of the training set based on value of test_frac
         self.n_train = round(self.n_samples * (1.0 - test_frac))
         # number of testing points, as what is left after excluding training set
-        self.n_test = int(self.n_samples - self.n_train) #TODO is np.int() depricated
+        self.n_test = int(self.n_samples - self.n_train)
         # get indices of samples  to be used for training
         # 1) train_first True: choose first (1-test_frac) fraction of the data set points, if points arranged in time
         # 2) train_first False: choose (1-test_frac) fraction of data set at
@@ -334,7 +334,7 @@ class Feature_Engineering:
             print('Creating time-lagged training data...')
             # lag every training set in X and y
             for i in range(len(X)):
-                X_train_i, y_train_i = self.lag_training_data(X[i], y[i], lags=lags)
+                X_train_i, y_train_i = self.lag_training_data(X[i], y[i], lags=lags, **kwargs)
                 X_train.append(X_train_i)
                 y_train.append(y_train_i)
             if self.n_test > 0:
@@ -385,8 +385,8 @@ class Feature_Engineering:
             y_test = np.concatenate(y_test)
             print('done preparing data')
         else:
-            X_test = np.empty((0, X_train.shape[1]))
-            y_test = np.empty((0, y_train.shape[1]))
+            X_test = None  # np.empty((0, X_train.shape[1]))
+            y_test = None  # np.empty((0, y_train.shape[1]))
 
         #print(f"> y_train in Feature_Engineering.get_training_data: \n{y_train}") ###DEBUG
 
@@ -683,12 +683,12 @@ class Feature_Engineering:
         for l in lags:
             self.lags.append(np.sort(l)[::-1])
 
-        # self.max_lag = np.max(list(chain(*lags)))
+        self.max_lag = np.max(list(chain(*lags)))
 
         self.feat_history = {}
 
         # the number of feature arrays that make up the total input feature vector
-        # self.n_feat_arrays = len(lags)
+        self.n_feat_arrays = len(lags)
 
         for i in range(self.n_feat_arrays):
             self.feat_history[i] = []

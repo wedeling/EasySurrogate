@@ -35,8 +35,8 @@ class DAS_Surrogate(Campaign):
 
     def train(self, feats, target, d, n_iter, test_frac=0.0,
               n_layers=2, n_neurons=100,
-              activation='tanh', activation_das='linear', loss = 'squared',
-              batch_size=64, lamb=0.0,
+              activation='tanh', activation_das='linear', loss='squared',
+              batch_size=64, batch_norm=False, lamb=0.0,
               standardize_X=True, standardize_y=True, **kwargs):
         """
         Perform backpropagation to train the DAS network
@@ -67,6 +67,9 @@ class DAS_Surrogate(Campaign):
             and 'logistic'.
         batch_size : integer, optional
             The minibatch size. The default is 64.
+        batch_norm : boolean or list of booleans, optional
+            Use batch normalization in hidden layers. Not used in the DAS layer.
+            The default is False.
         lamb : float, optional
             L2 weight regularization parameter. The default is 0.0.
         standardize_X : Boolean, optional
@@ -95,30 +98,50 @@ class DAS_Surrogate(Campaign):
 
         n_out = y_train.shape[1]
 
-        if loss == 'cross_entropy': 
+        if loss == 'cross_entropy':
             n_softmax = 1
         else:
             n_softmax = 0
 
+        self.batch_norm = [False, False]   # no batch norm in input and DAS layer
+        for i in range(n_layers - 2):
+            self.batch_norm.append(batch_norm)
+        self.batch_norm.append(False)
+
         # create the feed-forward ANN
-        self.neural_net = es.methods.DAS_network(X_train, y_train, d,
-                                                 n_layers=n_layers, n_neurons=n_neurons,
-                                                 n_out=n_out,
-                                                 loss=loss,
-                                                 n_softmax=n_softmax,
-                                                 activation=activation, activation_das=activation_das,
-                                                 batch_size=batch_size,
-                                                 lamb=lamb, decay_step=10**4, decay_rate=0.9,
-                                                 standardize_X=standardize_X,
-                                                 standardize_y=standardize_y,
-                                                 save=False, **kwargs)
+        self.neural_net = es.methods.DAS_network(
+            X_train,
+            y_train,
+            d,
+            n_layers=n_layers,
+            n_neurons=n_neurons,
+            n_out=n_out,
+            loss=loss,
+            n_softmax=n_softmax,
+            activation=activation,
+            activation_das=activation_das,
+            batch_size=batch_size,
+            batch_norm=self.batch_norm,
+            lamb=lamb,
+            decay_step=10**4,
+            decay_rate=0.9,
+            standardize_X=standardize_X,
+            standardize_y=standardize_y,
+            save=False,
+            **kwargs)
 
         print('===============================')
         print('Training Deep Active Subspace Neural Network...')
 
+        # set the training flag to True in any layer that uses batch normalization
+        self.neural_net.set_batch_norm_training_flag(True)
+
         # train network for n_iter mini batches
         self.neural_net.train(n_iter, store_loss=True)
         self.set_data_stats()
+
+        # set the training flag to False in any layer that uses batch normalization
+        self.neural_net.set_batch_norm_training_flag(False)
 
     def derivative(self, x, norm=True):
         """
@@ -142,7 +165,7 @@ class DAS_Surrogate(Campaign):
         """
         # check that x is of shape (n_in, ) or (n_in, 1)
         assert x.shape[0] == self.neural_net.n_in, \
-        "x must be of shape (n_in,): %d != %d" % (x.shape[0], self.neural_net.n_in)
+            "x must be of shape (n_in,): %d != %d" % (x.shape[0], self.neural_net.n_in)
 
         if x.ndim > 1:
             assert x.shape[1] == 1, "Only pass 1 feature vector at a time"

@@ -3,7 +3,9 @@ Class for a neural network Layer.
 """
 import sys
 import numpy as np
-from scipy.stats import norm
+from scipy.stats import norm, bernoulli
+
+from.batch_normalization import Batch_Normalization
 
 
 class Layer:
@@ -16,7 +18,7 @@ class Layer:
     """
 
     def __init__(self, n_neurons, r, n_layers, activation, loss, bias=False,
-                 batch_size=1, lamb=0.0, on_gpu=False,
+                 batch_size=1, batch_norm=False, lamb=0.0, on_gpu=False,
                  n_softmax=0, **kwargs):
         """
         Create a Layer object.
@@ -32,12 +34,14 @@ class Layer:
         activation : string, optional
             The name of the activation function of the hidden layers.
             The default is 'tanh'.
-        loss : string, optional
-            The name of the loss function. The default is 'squared'.
+        loss : string
+            The name of the loss function.
         bias : boolean, optional
             Use a bias neuron. The default is False.
         batch_size : int, optional
             The size of the mini batch. The default is 1.
+        batch_norm : boolean, optional
+            Use batch normalization. The default is False.
         lamb : float, optional
             L2 weight regularization parameter. The default is 0.0.
         on_gpu : boolean, optional
@@ -59,6 +63,7 @@ class Layer:
         self.loss = loss
         self.bias = bias
         self.batch_size = batch_size
+        self.batch_norm = batch_norm
         self.lamb = lamb
         self.n_softmax = n_softmax
 
@@ -94,6 +99,9 @@ class Layer:
         # if parametric relu activation is used, set the value of a (x if x>0; a*x otherwise)
         if activation == 'parametric_relu':
             self.relu_a = kwargs['relu_a']
+
+        if batch_norm:
+            self.bn = Batch_Normalization(self)
 
     def meet_the_neighbors(self, layer_rm1, layer_rp1):
         """
@@ -154,7 +162,7 @@ class Layer:
         if self.bias:
             self.Lamb[-1, :] = 0.0
 
-    def compute_output(self, batch_size):
+    def compute_output(self, batch_size, dropout=False, **kwargs):
         """
         Compute the output of the current layer in one shot using matrix -
         vector/matrix multiplication.
@@ -171,12 +179,15 @@ class Layer:
         """
 
         a = np.dot(self.W.T, self.layer_rm1.h)
+        if self.batch_norm:
+            # overwrite a with normalized value
+            a = self.bn.normalize(a)
 
         # apply activation to a
         if self.activation == 'linear':
             self.h = a
         elif self.activation == 'sigmoid':
-            self.h = 1.0 / (1.0 - np.exp(-a))
+            self.h = 1.0 / (1.0 + np.exp(-a))
         elif self.activation == 'relu':
             self.h = np.maximum(np.zeros([a.shape[0], a.shape[1]]), a)
         elif self.activation == 'leaky_relu':
@@ -206,6 +217,10 @@ class Layer:
         else:
             print('Unknown activation type')
             sys.exit()
+
+        if dropout:
+            r = bernoulli.rvs(kwargs['dropout_prob'], size=self.h.shape)
+            self.h *= r
 
         # add bias neuron output
         if self.bias:
@@ -292,6 +307,8 @@ class Layer:
                     # if a neuron does not fire, e.g. in the case of RelU activation,
                     # we get a RuntimeWarning. Just add a small constant in this case.
                     self.L_i = -np.sum(y_i * np.log(self.o_i + 1e-20))
+            elif self.loss == 'binary_cross_entropy':
+                self.L_i = - y_i * np.log(h) - (1 - y_i) * np.log(1 - h)
             elif self.loss == 'kernel_mixture' and self.n_softmax > 0:
 
                 if y_i.ndim == 1:
@@ -402,17 +419,30 @@ class Layer:
 
             # for multinomial classification
             elif self.loss == 'cross_entropy':
+                # one-hot encoded data (y_i contains only 0's and 1's)
+                if np.array_equal(y_i, y_i.astype(bool)):
+                    # (see eq. 3.22 of Aggarwal book)
+                    self.delta_ho = self.o_i - y_i
+                # y_i is a more general probability mass function
+                # delta_ho_i = sum_j(y_j * o_i) - y_i
+                else:
+                    self.delta_ho = np.array([(self.o_i[i] * y_i).sum(axis=0)
+                                              for i in range(y_i.shape[0])])
+                    self.delta_ho -= y_i
+            elif self.loss == 'binary_cross_entropy':
 
-                # (see eq. 3.22 of Aggarwal book)
-                self.delta_ho = self.o_i - y_i
+                self.delta_ho = -1 / (h - (1 - y_i))
 
             elif self.loss == 'kernel_mixture' and self.n_softmax > 0:
 
                 self.delta_ho = self.o_i - self.p_i
 
         else:
-            print('Can only initialize delta_oo in output layer')
-            sys.exit()
+            # if the output layer is connected to another layer AFTER
+            # it's own index r (at r + 1), take the gradient from that
+            # layer. Allows to back propagate loss from one network to
+            # the next as in GANs.
+            self.delta_ho = self.layer_rp1.delta_ho
 
     def compute_delta_ho(self):
         """
@@ -431,9 +461,13 @@ class Layer:
         grad_Phi_rp1 = self.layer_rp1.grad_Phi
 
         # the weight matrix of the next layer
-        W_rp1 = self.layer_rp1.W
+        W_rp1 = self.get_weights_next_layer()
 
         self.delta_ho = np.dot(W_rp1, delta_ho_rp1 * grad_Phi_rp1)[0:self.n_neurons, :]
+
+    def get_weights_next_layer(self):
+
+        return self.layer_rp1.W
 
     def compute_y_grad_W(self):
         """
@@ -446,7 +480,7 @@ class Layer:
         """
         h_rm1 = self.layer_rm1.h
         delta_hy_grad_Phi = self.delta_hy * self.grad_Phi
-        self.y_grad_W = np.dot(h_rm1, delta_hy_grad_Phi.T)
+        self.y_grad_W = np.dot(h_rm1, delta_hy_grad_Phi.T) / self.batch_size
 
     def compute_L_grad_W(self):
         """
@@ -457,9 +491,13 @@ class Layer:
         None.
 
         """
-        h_rm1 = self.layer_rm1.h
-        delta_ho_grad_Phi = self.delta_ho * self.grad_Phi
-        self.L_grad_W = np.dot(h_rm1, delta_ho_grad_Phi.T)
+
+        if not self.batch_norm:
+            h_rm1 = self.layer_rm1.h
+            delta_ho_grad_Phi = self.delta_ho * self.grad_Phi
+            self.L_grad_W = np.dot(h_rm1, delta_ho_grad_Phi.T) / self.batch_size
+        else:
+            self.L_grad_W = self.bn.compute_L_grad_W()
 
     def back_prop(self, y_i):
         """

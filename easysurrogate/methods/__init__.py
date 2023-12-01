@@ -1,4 +1,4 @@
-#from .resampling import Resampler
+from .resampling import Resampler
 from .NN import ANN
 from .SimpleBin import SimpleBin
 from .Feature_Engineering import Feature_Engineering
@@ -15,3 +15,4 @@ from .das_surrogate import DAS_Surrogate
 from .gp_surrogate import GP_Surrogate
 from .GP import GP
 from .gaussian_process_regressor import GaussianProcessRegressor
+from .batch_normalization import Batch_Normalization
