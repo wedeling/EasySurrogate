@@ -4,6 +4,7 @@ CLASS TO PERFORM ANALYSIS ON RESULTS FROM AN ARTIFICIAL NEURAL NETWORK.
 import numpy as np
 from .base import BaseAnalysis
 
+from matplotlib import pyplot as plt
 
 class ANN_analysis(BaseAnalysis):
     """
@@ -125,3 +126,52 @@ class ANN_analysis(BaseAnalysis):
             return err_train, err_test
         else:
             return err_train, err_test, train_pred, test_pred
+
+    def plot_scan(self, X_train, input_number=0, output_number=0, file_name_suf='0'):
+        """
+        Saves a .pdf 1D plot of a QoI value predicted by a GP surrogate for a single varied input component
+        """
+
+        xlabels = ['te_value', 'ti_value', 'te_ddrho', 'ti_ddrho']
+        ylabels = ['te_transp_flux', 'ti_transp_flux']
+
+        extend_factor = 0.2
+        fig,ax = plt.subplots(figsize=[7, 7])
+
+        # Take the input component according to input_name
+        # Select a range of values for this component
+        # Make an fine resolved array of values for this component
+        # Make a new array with all components
+        # Predict the QoI for this array
+        # Plot the QoI vs the input component
+        
+        i_num = input_number
+
+        x_values = X_train[:, i_num] # check the order of axis
+        #print(x_values) ###DEBUG
+
+        x_values_new = np.linspace(x_values.min() - extend_factor * abs(x_values.min()) , 
+                                   x_values.max() + extend_factor * abs(x_values.max()), 1000)
+        
+        x_remainder = np.delete(X_train, i_num, axis=1)
+        x_remainder_value = x_remainder.mean(axis=0)
+
+        X_new = np.zeros((x_values_new.shape[0], X_train.shape[1]))
+        X_new[:, i_num] = x_values_new
+        for j in range(X_new.shape[0]):
+            X_new[j, np.arange(X_train.shape[1]) != i_num] = x_remainder_value
+        
+        #print(f"X_new = {X_new}") ###DEBUG
+        #print(f"y_new = {self.ann_surrogate.predict(X_new[0,:])}") ###DEBUG
+
+        y = [self.ann_surrogate.predict(
+            X_new[i, :])[output_number] for i in range(X_new.shape[0])]
+
+        ax.plot(x_values_new, y, label=f"{input_number}->{output_number}")
+
+        ax.set_xlabel(xlabels[input_number])
+        ax.set_ylabel(ylabels[output_number])
+        ax.set_title(f"{xlabels[input_number]}->{ylabels[output_number]}(@ft#{file_name_suf})")
+        fig.savefig('scan_'+'i'+str(input_number)+'o'+str(output_number)+'f'+file_name_suf+'.pdf')
+
+        return 0

@@ -330,7 +330,7 @@ class GP_analysis(BaseAnalysis):
 
         ax.set_xlabel(xlabels[input_number])
         ax.set_ylabel(ylabels[output_number])
-        ax.set_title(f"{xlabels[input_number]}->{ylabels[output_number]}(@{file_name_suf})")
+        ax.set_title(f"{xlabels[input_number]}->{ylabels[output_number]}(@ft#{file_name_suf})")
         fig.savefig('scan_'+'i'+str(input_number)+'o'+str(output_number)+'f'+file_name_suf+'.pdf')
 
         return 0
