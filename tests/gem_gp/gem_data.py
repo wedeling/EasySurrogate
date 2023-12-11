@@ -14,9 +14,11 @@ def load_csv_to_dict(input_file='gem_data_625.txt', n_runs=625, input_dim=4, out
     """
 
     data = pd.read_csv(input_file, sep=',')
-    data = data[[*features_names, *target_names[:output_dim]]]
+    data = data[[*features_names, *target_names[:output_dim], 'ft']]
     data = data.to_dict(orient='list')
     data = {k:np.array(v).reshape(-1,1) for k,v in data.items()}
+
+    data['ft'] = data['ft'].reshape(-1)
 
     return data
 
@@ -75,11 +77,16 @@ def split_flux_tubes(data_dict, ft_len):
     n_tot = data['ti_value'].size # unhardcode key
     n_ft = n_tot // ft_len
 
+    print(data_dict)###DEBUG
+
     # Option 1: make a dictionary with keys being differetn flux tube strings and values being dictionaries 
     #    - current storing function does not support tree-like dictionaries
     data_dict_ft = {}    
     for i in range(n_ft):
-        data_dict_ft['ft'+str(i+1)] = {k:np.array(v[i*ft_len:(i+1)*ft_len]) for (k,v) in data_dict.items()}
+        #data_dict_ft['ft'+str(i+1)] = {k:np.array(v[i*ft_len:(i+1)*ft_len]) for (k,v) in data_dict.items()}
+        mask = [data_dict['ft']==i][0][:][:]
+        print(mask) ###DEBUG
+        data_dict_ft['ft'+str(i+1)] = {k:v[mask, :] for (k,v) in data_dict.items() if k!='ft'}
 
     # Option 2: 
     #   a. multiple files for flux tubes
@@ -88,7 +95,9 @@ def split_flux_tubes(data_dict, ft_len):
     #   d. each field with an array for different location, pad with None
     data_dict_list = []
     for i in range(n_ft):
-        data_dict_list.append({k:np.array(v[i*ft_len:(i+1)*ft_len]) for (k,v) in data_dict.items()})
+        mask = [data_dict['ft']==i][0][:][:]
+        #data_dict_list.append({k:np.array(v[i*ft_len:(i+1)*ft_len]) for (k,v) in data_dict.items()})
+        data_dict_list.append({k:np.array(v[mask]) for (k,v) in data_dict.items() if k!='ft'})
 
     #print(f"dimensions of original arrays: {data_dict['ti_transp_flux_std'].shape} ; and new arrays: {data_dict_list[0]['ti_transp_flux_std'].shape}") ###DEBUG
 
@@ -270,14 +279,14 @@ for i in range(len(data_ft)):
 # 8) Case from 8 flux tube GEM0 run, having same number of points for every input dimension
 
 #datafile = "gem0_new_data_20231101.csv"
-datafile = "gem0_new_data_20231120.csv"
+datafile = "gem0_new_data_20231208.csv"
 runs_per_ft = 5**4
 
 data = load_csv_to_dict(input_file=datafile,)
 
 data_ft = split_flux_tubes(data, ft_len=runs_per_ft)
 
-campaign.store_data_to_hdf5(data, file_path="gem0_5000_transp_tot.hdf5")
+campaign.store_data_to_hdf5(data, file_path="gem0_5000_transp_tot_20231208.hdf5")
 for i in range(len(data_ft)):
-    campaign.store_data_to_hdf5(data_ft[i], file_path=f"gem0_5000_transp_{i}.hdf5")
+    campaign.store_data_to_hdf5(data_ft[i], file_path=f"gem0_5000_transp_{i}_20231208.hdf5")
 
