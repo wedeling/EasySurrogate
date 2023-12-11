@@ -1,5 +1,6 @@
 import time as t
 import numpy as np
+import pandas as pd
 import sys
 
 import easysurrogate as es
@@ -127,7 +128,7 @@ target_name_selected = target_names
 features_names_selected = features_names
 target_name_selected = [target_names[0], target_names[1]]
 
-saved_model_file_path = f"model_{code_name}_5000_4i2o_ft{index}_ann{n_layers}x{n_neurons}x{batch_size}_{model_date}.pickle"
+saved_model_file_path = f"model_{code_name}_5000_tf0.0_4i2o_ft{index}_ann{n_layers}x{n_neurons}x{batch_size}_{model_date}.pickle"
 
 data_file = f"{code_name}_5000_transp_{index}.hdf5"
 
@@ -174,9 +175,17 @@ analysis.get_regression_error(feat_test, targ_test, feat_train, targ_train,
                              )
 """
 
+# Plotting the scans / cuts in surrogate response
+scan_dict = {}
 for output_num in range(targ_train.shape[1]):
         for input_num in range(feat_train.shape[1]):
-            analysis.plot_scan(feat_train, input_number=input_num, output_number=output_num, file_name_suf=str(index))
+            scan_data = analysis.plot_scan(feat_train, input_number=input_num, output_number=output_num, file_name_suf=str(index))
+            scan_dict[f"{features_names_selected[input_num]}_{target_name_selected[output_num]}"] = scan_data
+scan_dataframe = pd.DataFrame.from_dict({(i,j): scan_dict[i][j] for i in scan_dict.keys() for j in scan_dict[i].keys()})
+scan_dataframe.to_csv(f"scan_{index}.csv")
+
+# Plotting the training loss history
+analysis.plot_loss(name=str(index))
 
 # Cross-correlation functions
 """

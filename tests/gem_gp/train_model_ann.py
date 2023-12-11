@@ -52,7 +52,7 @@ campaign = es.Campaign(load_state=False)
 # ... 
 # 8) Case from 8 flux tube GEM0 5000 runs (4 parameters, tensor product of grid with 5 points per DoF)
 
-data_file_name = f"{code_name}_5000_transp_{index}.hdf5"
+data_file_name = f"{code_name}_5000_transp_{index}_20231208.hdf5"
 
 features_names_selected = features_names
 target_name_selected = [target_names[0], target_names[1]]
@@ -78,8 +78,8 @@ ann_param = {
             #'nu_stp': 10,
             #'bias': 0.,
             #'nonstationary': False,
-            'test_frac': 0.3,
-            'n_iter': 5,
+            'test_frac': 0.0,
+            'n_iter': 20000,
             'n_layers': 2,
             'n_neurons': 16,
             'batch_size': 8,
@@ -115,7 +115,7 @@ print('Time to train the surrogate: {:.3} s'.format(t.time() - time_train_start)
 surrogate.neural_net.print_network_info()
 
 date_str = datetime.now().strftime("%Y%m%d")
-save_model_file_name = f"model_{code_name}_5000_4i2o_ft{index}_ann{ann_param['n_layers']}x{ann_param['n_neurons']}x{ann_param['batch_size']}_{date_str}.pickle"
+save_model_file_name = f"model_{code_name}_5000_tf{ann_param['test_frac']}_4i2o_ft{index}_ann{ann_param['n_layers']}x{ann_param['n_neurons']}x{ann_param['batch_size']}_{date_str}.pickle"
 
 campaign.add_app(name='ann_campaign', surrogate=surrogate)
 campaign.save_state(file_path=save_model_file_name)
