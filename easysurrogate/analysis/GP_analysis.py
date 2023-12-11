@@ -323,10 +323,26 @@ class GP_analysis(BaseAnalysis):
         for j in range(X_new.shape[0]):
             X_new[j, np.arange(X_train.shape[1]) != i_num] = x_remainder_value
         
-        y = [self.gp_surrogate.predict(
-            X_new[i, :].reshape(-1, 1))[0][0][output_number] for i in range(X_new.shape[0])]
+        #print(f"y_pred={self.gp_surrogate.predict(X_new[0,:].reshape(-1,1))}") ###DEBUG
+        #print(f"{self.gp_surrogate.predict(X_new[0,:].reshape(-1,1))[1][0][0]}") ###DEBUG
+        #print(f"{self.gp_surrogate.predict(X_new[0,:].reshape(-1,1))[0][0][0]}") ###DEBUG
 
-        ax.plot(x_values_new, y, label=f"{input_number}->{output_number}")
+        # resulting y is [(array(n_outputs), array(n_outputs))] : element of list dimensionality is (2 x 1 x n_outputs)
+        y_avg = np.array([self.gp_surrogate.predict(
+            X_new[i, :].reshape(-1, 1))[0][0][output_number] for i in range(X_new.shape[0])])
+        
+        y_std = np.array([self.gp_surrogate.predict(
+            X_new[i, :].reshape(-1, 1))[1][0][output_number] for i in range(X_new.shape[0])])
+        
+        #print(y) ###DEBUG
+
+        #Sax.plot(x_values_new, y, label=f"{input_number}->{output_number}")
+        ax.errorbar(x_values_new, 
+                    y_avg, 
+                    yerr=1.96 * y_std, 
+                    label=f"{input_number}->{output_number}",
+                    alpha=0.25,
+                    )
 
         ax.set_xlabel(xlabels[input_number])
         ax.set_ylabel(ylabels[output_number])

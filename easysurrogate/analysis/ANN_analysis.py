@@ -2,6 +2,7 @@
 CLASS TO PERFORM ANALYSIS ON RESULTS FROM AN ARTIFICIAL NEURAL NETWORK.
 """
 import numpy as np
+import pandas as pd
 from .base import BaseAnalysis
 
 from matplotlib import pyplot as plt
@@ -128,6 +129,7 @@ class ANN_analysis(BaseAnalysis):
             return err_train, err_test, train_pred, test_pred
 
     def plot_scan(self, X_train, input_number=0, output_number=0, file_name_suf='0'):
+        
         """
         Saves a .pdf 1D plot of a QoI value predicted by a GP surrogate for a single varied input component
         """
@@ -173,5 +175,23 @@ class ANN_analysis(BaseAnalysis):
         ax.set_ylabel(ylabels[output_number])
         ax.set_title(f"{xlabels[input_number]}->{ylabels[output_number]}(@ft#{file_name_suf})")
         fig.savefig('scan_'+'i'+str(input_number)+'o'+str(output_number)+'f'+file_name_suf+'.pdf')
+
+        data = pd.DataFrame({'x': x_values_new, 'y': y})
+        
+        return data
+
+    def plot_loss(self, name_sufix=''):
+
+        fig,ax = plt.subplots(figsize=[7, 7])
+
+        y = self.ann_surrogate.neural_net.loss_vals
+        x = np.arange(len(y))
+
+        ax.plot(x, y, label='loss')
+
+        ax.set_xlabel('optimisation step')
+        ax.set_ylabel(self.ann_surrogate.loss)        
+
+        fig.savefig(f"loss_{name_sufix}.pdf")
 
         return 0
