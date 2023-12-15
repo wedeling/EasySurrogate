@@ -137,7 +137,8 @@ class ANN_analysis(BaseAnalysis):
         xlabels = ['te_value', 'ti_value', 'te_ddrho', 'ti_ddrho']
         ylabels = ['te_transp_flux', 'ti_transp_flux']
 
-        extend_factor = 0.2
+        extend_factor = 0.5
+        n_points_new = 1000
         fig,ax = plt.subplots(figsize=[7, 7])
 
         # Take the input component according to input_name
@@ -153,7 +154,7 @@ class ANN_analysis(BaseAnalysis):
         #print(x_values) ###DEBUG
 
         x_values_new = np.linspace(x_values.min() - extend_factor * abs(x_values.min()) , 
-                                   x_values.max() + extend_factor * abs(x_values.max()), 1000)
+                                   x_values.max() + extend_factor * abs(x_values.max()), n_points_new)
         
         x_remainder = np.delete(X_train, i_num, axis=1)
         x_remainder_value = x_remainder.mean(axis=0)
@@ -187,7 +188,7 @@ class ANN_analysis(BaseAnalysis):
         y = self.ann_surrogate.neural_net.loss_vals
         x = np.arange(len(y))
 
-        ax.plot(x, y, label='loss')
+        ax.semilogy(x, y, label='loss')
 
         ax.set_xlabel('optimisation step')
         ax.set_ylabel(self.ann_surrogate.loss)        

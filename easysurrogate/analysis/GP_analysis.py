@@ -295,7 +295,7 @@ class GP_analysis(BaseAnalysis):
         xlabels = ['te_value', 'ti_value', 'te_ddrho', 'ti_ddrho']
         ylabels = ['te_transp_flux', 'ti_transp_flux']
 
-        extend_factor = 0.2
+        extend_factor = 0.5
         fig,ax = plt.subplots(figsize=[7, 7])
 
         # Take the input component according to input_name
