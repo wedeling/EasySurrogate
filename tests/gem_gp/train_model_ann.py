@@ -74,15 +74,14 @@ ann_param = {
             #'kernel': 'Matern', #'RBF'
             #'length_scale': 1.0,  #[1.]*len(features),
             #'noize': 0.1,
-            #'nu_matern': 1.5,
-            #'nu_stp': 10,
             #'bias': 0.,
             #'nonstationary': False,
             'test_frac': 0.0,
-            'n_iter': 20000,
+            'n_iter': 30000,
             'n_layers': 2,
             'n_neurons': 16,
-            'batch_size': 8,
+            'batch_size': 128,
+            'activation': 'relu',
            }
 
 surrogate = es.methods.ANN_Surrogate(
@@ -98,17 +97,10 @@ surrogate.train(features,
                 target, 
                 test_frac=ann_param['test_frac'],
                 n_iter=ann_param['n_iter'],
-                #bias=gp_param['bias'],
-                #length_scale=gp_param['length_scale'],
-                #noize=gp_param['noize'],
-                #nu_matern=gp_param['nu_matern'],
-                #nu_stp=gp_param['nu_stp'],
-                #nonstationary=gp_param['nonstationary'],
-                #process_type=gp_param['process_type'],
-                #kernel=gp_param['kernel'],
                 n_layers=ann_param['n_layers'],
                 n_neurons=ann_param['n_neurons'],
                 batch_size=ann_param['batch_size'],
+                #activation=ann_param['activation'],
                )
 
 print('Time to train the surrogate: {:.3} s'.format(t.time() - time_train_start))

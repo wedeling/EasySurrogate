@@ -66,11 +66,23 @@ campaign.save_state(file_path='model.pickle')
 feat_train, targ_train, feat_test, targ_test = campaign.surrogate.feat_eng.\
     get_training_data(features, target, index=campaign.surrogate.feat_eng.train_indices)
 
+# ANN analysis get_errors() accpets a single array of features, first samples from training set, then from test set 
+print(feat_test) ###DEBUG
+
+features_new = np.concatenate([feat_train, feat_test], axis=0) #TODO is size of the list is number of samples???
+target_new = np.concatenate([targ_train, targ_test], axis=0)
+
+#features_new = [np.concatenate([x,y]) for x,y in zip(feat_train, feat_test)]
+#target_new   = [np.concatenate([x,y]) for x,y in zip(targ_train, targ_test)]
+
 analysis = es.analysis.ANN_analysis(ann_surrogate=campaign.surrogate)
 
+#TODO use training/test/index saved in surrogate to split data
 err_train, err_test = analysis.get_errors(
-    feat_test,
-    targ_test,
+    features_new,
+    target_new,
+    #feat_test,
+    #targ_test,
     #feat_train,
     #targ_train,
     #flag_plot=True,
