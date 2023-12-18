@@ -279,14 +279,16 @@ for i in range(len(data_ft)):
 # 8) Case from 8 flux tube GEM0 run, having same number of points for every input dimension
 
 #datafile = "gem0_new_data_20231101.csv"
-datafile = "gem0_new_data_20231208.csv"
+#datafile = "gem0_new_data_20231208.csv"
+datafile = 'gem0_new_data_20231215.csv'
+
 runs_per_ft = 5**4
 
 data = load_csv_to_dict(input_file=datafile,)
 
 data_ft = split_flux_tubes(data, ft_len=runs_per_ft)
 
-campaign.store_data_to_hdf5(data, file_path="gem0_5000_transp_tot_20231208.hdf5")
+campaign.store_data_to_hdf5(data, file_path="gem0_5000_transp_tot_20231216.hdf5")
 for i in range(len(data_ft)):
-    campaign.store_data_to_hdf5(data_ft[i], file_path=f"gem0_5000_transp_{i}_20231208.hdf5")
+    campaign.store_data_to_hdf5(data_ft[i], file_path=f"gem0_5000_transp_{i}_20231216.hdf5")
 

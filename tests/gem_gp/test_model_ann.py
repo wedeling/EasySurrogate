@@ -129,7 +129,7 @@ features_names_selected = features_names
 target_name_selected = [target_names[0], target_names[1]]
 
 saved_model_file_path = f"model_{code_name}_5000_tf0.2_4i2o_ft{index}_ann{n_layers}x{n_neurons}x{batch_size}_{model_date}.pickle"
-saved_model_file_path = f"{code_name}_es_ann_{index}_{model_date}.pickle"
+#saved_model_file_path = f"{code_name}_es_ann_{index}_{model_date}.pickle"
 
 data_file = f"{code_name}_5000_transp_{index}.hdf5"
 

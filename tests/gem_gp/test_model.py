@@ -124,7 +124,7 @@ features_names_selected = features_names
 target_name_selected = [target_names[0], target_names[1]]
 
 saved_model_file_path = f"model_{code_name}_val_scikit-learngaussianRBF_transp_{index}_{model_date}.pickle"
-saved_model_file_path = f"gem0_es_model_{index}.pickle" ###DEBUG, files copied from HPO
+#saved_model_file_path = f"gem0_es_model_{index}.pickle" ###DEBUG, files copied from HPO
 
 data_file = f"{code_name}_5000_transp_{index}.hdf5"
 

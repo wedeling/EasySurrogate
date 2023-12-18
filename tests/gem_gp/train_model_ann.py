@@ -52,7 +52,7 @@ campaign = es.Campaign(load_state=False)
 # ... 
 # 8) Case from 8 flux tube GEM0 5000 runs (4 parameters, tensor product of grid with 5 points per DoF)
 
-data_file_name = f"{code_name}_5000_transp_{index}_20231208.hdf5"
+data_file_name = f"{code_name}_5000_transp_{index}_20231216.hdf5"
 
 features_names_selected = features_names
 target_name_selected = [target_names[0], target_names[1]]
@@ -76,12 +76,12 @@ ann_param = {
             #'noize': 0.1,
             #'bias': 0.,
             #'nonstationary': False,
-            'test_frac': 0.0,
+            'test_frac': 0.2,
             'n_iter': 30000,
-            'n_layers': 2,
-            'n_neurons': 16,
-            'batch_size': 128,
-            'activation': 'relu',
+            'n_layers': 5,
+            'n_neurons': 128,
+            'batch_size': 32,
+            'activation': 'sigmoid',
            }
 
 surrogate = es.methods.ANN_Surrogate(
@@ -100,7 +100,7 @@ surrogate.train(features,
                 n_layers=ann_param['n_layers'],
                 n_neurons=ann_param['n_neurons'],
                 batch_size=ann_param['batch_size'],
-                #activation=ann_param['activation'],
+                activation=ann_param['activation'],
                )
 
 print('Time to train the surrogate: {:.3} s'.format(t.time() - time_train_start))
