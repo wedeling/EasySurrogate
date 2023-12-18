@@ -40,7 +40,7 @@ params = {
     #"bias": {"type": "string", "min": -1e+6, "max": 1e+6, "default": "0.0"},
     #"backend" : {"type": "string", "default": "local"},
     "testset_fraction": {"type": "string", "min": 0.0, "max": 1.0, "default": "0.2"},
-    "n_iter" : {"type": "string", "min": 1, "default": "10"},
+    "n_iter" : {"type": "string", "min": 1, "default": "1000"},
     "n_layers" : {"type": "string", "min": 1, "default": "2"},
     "n_neurons" : {"type": "string", "min": 1, "default": "16"},
     "batch_size" : {"type": "string", "min": 1, "default": "32"},
@@ -61,11 +61,11 @@ param_search_vals = {
     #"noize": [1e-4, 1e-2, 1e-1], # not used
     #"bias": [0., 1.0], # not used
     #"backend" : ['local'] # ['local', 'scikit-learn'], # not used
-    "n_iter" : [1000, 2500, 5000, 10000, 20000, 30000],
+    "n_iter" : [1000, 2500, 5000, 10000, 20000, 30000, 40000],
     "n_layers" : [2, 3, 4, 5],
     "n_neurons" : [8, 16, 32, 64, 128],
     "batch_size" : [8, 16, 32, 64, 128],
-    "activation" : ['relu', 'tanh', 'sigmoid'],
+    "activation" : ['relu', 'leaky_relu', 'tanh', 'sigmoid'],
 }
 
 csv_header = [k for k in param_search_vals.keys()]
@@ -89,7 +89,7 @@ def clean_grid_by_rules(header, vals, def_vals):
 csv_defaults = {k:v['default'] for k,v in params.items()}
 #csv_vals_new = clean_grid_by_rules(csv_header, csv_vals, csv_defaults)
 
-with open('hp_values_ann_loc_1.csv', 'w') as f:
+with open('hp_values_ann_loc_2.csv', 'w') as f:
     writer = csv.writer(f)
     writer.writerow(csv_header)
     writer.writerows(csv_vals)
@@ -115,7 +115,7 @@ campaign = uq.Campaign(name=campaign_name, work_dir=work_dir)
 # A file specifying a table of hyperparameter values (or their ranges/distributions) to pass for a number of ML models
 # Mind: delimeter is ',' w/o spaces
 
-param_file = 'hp_values_ann_loc_1.csv'
+param_file = 'hp_values_ann_loc_2.csv'
 
 # Encoder should take a value from the sampler and pass it to EasySurrogate es.methos.*_Surrogate().train(...) as kwargs
 encoder = uq.encoders.GenericEncoder(

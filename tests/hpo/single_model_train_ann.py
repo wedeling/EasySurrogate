@@ -30,7 +30,7 @@ target_name_selected = [target_names[0], target_names[1]]
 campaign = es.Campaign()
 
 # Load HDF5 data frame
-data_file_name = f"gem04_f{ft}.hdf5"
+data_file_name = f"gem05_f{ft}.hdf5"
 data_frame = campaign.load_hdf5_data(file_path='../../../'+data_file_name)
 # TODO: get rid of hardcoding relative path
 
