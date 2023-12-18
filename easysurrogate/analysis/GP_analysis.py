@@ -159,7 +159,7 @@ class GP_analysis(BaseAnalysis):
     def plot_res(self,
                  x_train, y_train_pred, y_train_orig,
                  x_test=None, y_test_pred=None, y_test_orig=None,
-                 y_var_pred_test=None, y_var_pred_train=None,
+                 y_std_pred_test=None, y_std_pred_train=None,
                  name='', num='1', type_train='rand', train_n=10, out_color='b', 
                  output_folder='', addit_name=''):
 
@@ -195,21 +195,21 @@ class GP_analysis(BaseAnalysis):
         if y_test_orig is not None:
             plt.plot(x_test, y_test_orig, '.', label='Simulation, test', color='red')
 
-        if y_var_pred_train is not None:
+        if y_std_pred_train is not None:
             
-            if y_var_pred_test is not None:
-                y_var_pred = np.concatenate([y_var_pred_test, y_var_pred_train])
+            if y_std_pred_test is not None:
+                y_std_pred = np.concatenate([y_std_pred_test, y_std_pred_train])
             else:
-                y_var_pred = y_var_pred_train
+                y_std_pred = y_std_pred_train
 
-            plot_ticks = np.logspace(np.log10((y_pred-2*y_var_pred).min()), np.log10((y_pred+2*y_var_pred).max()), num=8)
+            plot_ticks = np.logspace(np.log10((y_pred-2*y_std_pred).min()), np.log10((y_pred+2*y_std_pred).max()), num=8)
             
             #print("ticks with errors are : {0}".format(plot_ticks)) ###DEBUG
 
-            if (y_pred-2*y_var_pred).min() <= 0:
+            if (y_pred-2*y_std_pred).min() <= 0:
                 plot_ticks = np.hstack([
-                    -np.logspace(1., np.log10(-(y_pred-2*y_var_pred).min()), num=4)[::-1], 
-                     np.logspace(1., np.log10( (y_pred+2*y_var_pred).max()), num=4)
+                    -np.logspace(1., np.log10(-(y_pred-2*y_std_pred).min()), num=4)[::-1], 
+                     np.logspace(1., np.log10( (y_pred+2*y_std_pred).max()), num=4)
                 ])
 
             #print("ticks with errors now are : {0}".format(plot_ticks)) ###DEBUG
@@ -218,7 +218,7 @@ class GP_analysis(BaseAnalysis):
                 x=x_train,
                 y=y_train_pred,
                 yerr=1.96 *
-                y_var_pred_train,
+                y_std_pred_train,
                 label='GP metamodel, train',
                 fmt='+')
 
@@ -227,7 +227,7 @@ class GP_analysis(BaseAnalysis):
                     x=x_test,
                     y=y_test_pred,
                     yerr=1.96 *
-                    y_var_pred_test,
+                    y_std_pred_test,
                     label='GP metamodel, test',
                     fmt='+')
 
@@ -341,7 +341,7 @@ class GP_analysis(BaseAnalysis):
                     y_avg, 
                     yerr=1.96 * y_std, 
                     label=f"{input_number}->{output_number}",
-                    alpha=0.25,
+                    alpha=0.2,
                     )
 
         ax.set_xlabel(xlabels[input_number])
@@ -515,32 +515,32 @@ class GP_analysis(BaseAnalysis):
             addit_name_new = addit_name + f"_o{n_out}"
 
             y_pred = []
-            y_var_pred = []
+            y_std_pred = []
             if not only_train_set:
                 y_pred = [self.gp_surrogate.predict(X_test[i, :].reshape(-1, 1))[0]
                         for i in range(X_test.shape[0])]
-                y_var_pred = [self.gp_surrogate.predict(X_test[i, :].reshape(-1, 1))[1]
+                y_std_pred = [self.gp_surrogate.predict(X_test[i, :].reshape(-1, 1))[1]
                             for i in range(X_test.shape[0])]
                 y_t_len = len(y_test)
 
             y_pred_train = [self.gp_surrogate.predict(
                 X_train[i, :].reshape(-1, 1))[0] for i in range(X_train.shape[0])]
-            y_var_pred_train = [self.gp_surrogate.predict(
+            y_std_pred_train = [self.gp_surrogate.predict(
                 X_train[i, :].reshape(-1, 1))[1] for i in range(X_train.shape[0])]
 
             # Reshape the resulting arrays
             # TODO: here squeeze should not mix the output components
             if not only_train_set:
                 y_pred = np.squeeze(np.array(y_pred), axis=1)
-                y_var_pred = np.squeeze(np.array(y_var_pred), axis=1)
+                y_std_pred = np.squeeze(np.array(y_std_pred), axis=1)
             else:
                 y_pred = np.ones((0, len(y_pred_train[n_out])))
-                y_var_pred = np.ones((0, len(y_pred_train[n_out])))
+                y_std_pred = np.ones((0, len(y_pred_train[n_out])))
                 
                 #print('y_pred shape {}'.format(y_pred.shape)) ###DEBUG
                 
             y_pred_train = np.squeeze(np.array(y_pred_train), axis=1)
-            y_var_pred_train = np.squeeze(np.array(y_var_pred_train), axis=1)
+            y_std_pred_train = np.squeeze(np.array(y_std_pred_train), axis=1)
 
             #print(f"y_test: \n{y_test}") ###DEBUG
 
@@ -553,12 +553,12 @@ class GP_analysis(BaseAnalysis):
 
                 y_train_plot = y_train[:, [n_out]]
                 y_pred_train = y_pred_train[:, n_out]
-                y_var_pred_train = y_var_pred_train[:, n_out]
+                y_std_pred_train = y_std_pred_train[:, n_out]
 
                 if not only_train_set:
                     y_test_plot = y_test[:, [n_out]]            
                     y_pred = y_pred[:, n_out]
-                    y_var_pred = y_var_pred[:, n_out]
+                    y_std_pred = y_std_pred[:, n_out]
 
             if len(y_pred.shape) == 1:
 
@@ -609,7 +609,7 @@ class GP_analysis(BaseAnalysis):
             csv_array = np.concatenate(
                     (y_test_plot[:, 0].reshape(-1,1), 
                     y_pred[:y_t_len, 0].reshape(-1,1), 
-                    y_var_pred.reshape(y_pred[:y_t_len, 0].shape).reshape(-1,1)), #TODO ugly
+                    y_std_pred.reshape(y_pred[:y_t_len, 0].shape).reshape(-1,1)), #TODO ugly
                     axis=1)
             np.savetxt(f"res_{addit_name_new}.csv", csv_array, delimiter=",")
 
@@ -627,8 +627,8 @@ class GP_analysis(BaseAnalysis):
                 self.plot_predictions_vs_groundtruth(
                     y_test_plot[:, 0], 
                     y_pred[:y_t_len, 0], 
-                    y_var_pred.reshape(y_pred[:y_t_len, 0].shape),
-                    #y_var_pred_train.reshape(y_pred_train[:,0].shape),
+                    y_std_pred.reshape(y_pred[:y_t_len, 0].shape),
+                    #y_std_pred_train.reshape(y_pred_train[:,0].shape),
                     addit_label=f"$R^{{2}}={{{r2_test:.3}}}$",
                     addit_name=addit_name_new,
                                                     )
@@ -644,7 +644,7 @@ class GP_analysis(BaseAnalysis):
                     self.plot_res(
                             x_train_inds, y_pred_train[:, 0], y_train_plot[:, 0],
                             x_test_inds, y_pred[:y_t_len, 0], y_test_plot[:, 0],
-                            y_var_pred.reshape(y_pred[:y_t_len, 0].shape), y_var_pred_train.reshape(y_pred_train[:, 0].shape),
+                            y_std_pred.reshape(y_pred[:y_t_len, 0].shape), y_std_pred_train.reshape(y_pred_train[:, 0].shape),
                             name=r'$Y_i$', num=str(n_out), type_train='rand',
                             train_n=train_n, out_color='b',
                             addit_name=addit_name_new,
@@ -656,7 +656,7 @@ class GP_analysis(BaseAnalysis):
                             x_train_inds, 
                             y_pred_train[:, 0],
                             y_train_plot[:, 0],
-                            y_var_pred_train=y_var_pred_train.reshape(y_pred_train[:, 0].shape),
+                            y_std_pred_train=y_std_pred_train.reshape(y_pred_train[:, 0].shape),
                             name=r'$Y_i$', num=str(n_out), type_train='rand',
                             train_n=train_n, out_color='b',
                             addit_name=addit_name_new,

@@ -310,7 +310,7 @@ class GaussianProcessRegressor():
 
         if return_std:
             y_var = self.predict_var(X)
-            return y_mean, y_var
+            return y_mean, math.sqrt(y_var)
 
         return y_mean
 

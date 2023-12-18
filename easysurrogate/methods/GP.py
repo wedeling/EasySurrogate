@@ -218,14 +218,14 @@ class GP:
 
         if self.backend == 'scikit-learn':
             # for single sample X_i should be nparray(1, n_feat)
-            m, v = self.instance.predict(X_i.reshape(1, -1), return_std=True)
+            m, s = self.instance.predict(X_i.reshape(1, -1), return_std=True)
             d = np.zeros(m.shape) # a stub
         
         elif self.backend == 'mogp':
-            m, v, d = self.instance.predict(X_i, unc=True, deriv=True)
+            m, s, d = self.instance.predict(X_i, unc=True, deriv=True)
         
         elif self.backend == 'local':
-            m, v = self.instance.predict(X_i, return_std=True)
+            m, s = self.instance.predict(X_i, return_std=True)
             d = np.zeros(m.shape) # a stub
 
         else:
@@ -234,10 +234,10 @@ class GP:
 
         #print(f"y_avg in GP.predict: {m}") ###DEBUG
 
-        return m, v, d
+        return m, s, d
 
     def forward(self, X_i):  # no cases when required different from .predict() for GP case
-        m, v = self.instance.predict(X_i)
+        m, s = self.instance.predict(X_i)
         return m  # for single sample should be nparray(1,n_feat)
 
     def print_model_info(self):
