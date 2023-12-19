@@ -67,9 +67,9 @@ feat_train, targ_train, feat_test, targ_test = campaign.surrogate.feat_eng.\
     get_training_data(features, target, index=campaign.surrogate.feat_eng.train_indices)
 
 # ANN analysis get_errors() accpets a single array of features, first samples from training set, then from test set 
-print(feat_test) ###DEBUG
+#print(feat_test) ###DEBUG
 
-features_new = np.concatenate([feat_train, feat_test], axis=0) #TODO is size of the list is number of samples???
+features_new = np.concatenate([feat_train, feat_test], axis=0)
 target_new = np.concatenate([targ_train, targ_test], axis=0)
 
 #features_new = [np.concatenate([x,y]) for x,y in zip(feat_train, feat_test)]

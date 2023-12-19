@@ -79,7 +79,7 @@ def split_flux_tubes(data_dict, ft_len):
 
     print(data_dict)###DEBUG
 
-    # Option 1: make a dictionary with keys being differetn flux tube strings and values being dictionaries 
+    # Option 1: make a dictionary with keys being differeny flux tube strings and values being dictionaries 
     #    - current storing function does not support tree-like dictionaries
     data_dict_ft = {}    
     for i in range(n_ft):
@@ -96,7 +96,7 @@ def split_flux_tubes(data_dict, ft_len):
     data_dict_list = []
     for i in range(n_ft):
         mask = [data_dict['ft']==i][0][:][:]
-        #data_dict_list.append({k:np.array(v[i*ft_len:(i+1)*ft_len]) for (k,v) in data_dict.items()})
+        #data_dict_list.append({k:np.array(v[i*ft_len:(i+1)*ft_len]) for (k,v) in data_dict.items()}) #assume that entries are ordered by flux tube number and there is the same number of rows per flux tube
         data_dict_list.append({k:np.array(v[mask]) for (k,v) in data_dict.items() if k!='ft'})
 
     #print(f"dimensions of original arrays: {data_dict['ti_transp_flux_std'].shape} ; and new arrays: {data_dict_list[0]['ti_transp_flux_std'].shape}") ###DEBUG

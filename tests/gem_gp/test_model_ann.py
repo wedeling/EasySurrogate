@@ -128,8 +128,8 @@ target_name_selected = target_names
 features_names_selected = features_names
 target_name_selected = [target_names[0], target_names[1]]
 
-saved_model_file_path = f"model_{code_name}_5000_tf0.2_4i2o_ft{index}_ann{n_layers}x{n_neurons}x{batch_size}_{model_date}.pickle"
-#saved_model_file_path = f"{code_name}_es_ann_{index}_{model_date}.pickle"
+#saved_model_file_path = f"model_{code_name}_5000_tf0.2_4i2o_ft{index}_ann{n_layers}x{n_neurons}x{batch_size}_{model_date}.pickle"
+saved_model_file_path = f"{code_name}_es_ann_{index}_{model_date}.pickle"
 
 data_file = f"{code_name}_5000_transp_{index}.hdf5"
 
@@ -177,14 +177,18 @@ analysis.get_regression_error(feat_test, targ_test, feat_train, targ_train,
 """
 
 # Plotting the scans / cuts in surrogate response
+
+features_new = np.concatenate([feat_train, feat_test], axis=0)
+target_new = np.concatenate([targ_train, targ_test], axis=0)
+
 scan_dict = {}
 
-for output_num in range(targ_train.shape[1]):
+for output_num in range(target_new.shape[1]):
         
-        for input_num in range(feat_train.shape[1]):
+        for input_num in range(features_new.shape[1]):
 
             # plotting functions works for scalar vs scalar dependence only
-            scan_data = analysis.plot_scan(feat_train, input_number=input_num, output_number=output_num, file_name_suf=str(index))
+            scan_data = analysis.plot_scan(features_new, input_number=input_num, output_number=output_num, file_name_suf=str(index))
             # filling in the dictionary with values
             scan_dict[f"{features_names_selected[input_num]}_{target_name_selected[output_num]}"] = scan_data
 
