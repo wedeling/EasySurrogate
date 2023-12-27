@@ -1,0 +1,18 @@
+# input file
+---
+sim_settings:
+        SIM_ID: "tutorial"
+        STATE_STORE: false
+        RESTART: true
+        STORE_DATA: false
+        STORE_PATH: '~/'
+        PLOT: true
+        COMPUTE_REF: true
+        EDDY_FORCING_TYPE: "exact"
+N_Q: 2
+Q1:
+        name: "E"
+        V_i: "-psi_hat_n_LR"
+Q2:
+        name: "Z"
+        V_i: "w_hat_n_LR"
