@@ -130,7 +130,7 @@ class ANN_analysis(BaseAnalysis):
         else:
             return err_train, err_test, train_pred, test_pred
 
-    def plot_scan(self, X_train, input_number=0, output_number=0, file_name_suf='0'):
+    def plot_scan(self, X_train, input_number=0, output_number=0, file_name_suf='0', **kwargs):
         
         """
         Saves a .pdf 1D plot of a QoI value predicted by a GP surrogate for a single varied input component
@@ -145,6 +145,7 @@ class ANN_analysis(BaseAnalysis):
 
         # Take the input component according to input_name
         # Select a range of values for this component
+        # Select values for fixed components
         # Make an fine resolved array of values for this component
         # Make a new array with all components
         # Predict the QoI for this array
@@ -163,7 +164,14 @@ class ANN_analysis(BaseAnalysis):
         # Option 1: Mean of every other dimension / center of existing sample
         #x_remainder_value = x_remainder.mean(axis=0) # for a data that is not on a full tensor product and/or with each vector not having odd number of components, mean would not coincide with exsisting points
         # Option 2: Mode of values among existing sample closest to the median for every other dimension
-        x_remainder_value = np.median(x_remainder, axis=0) # Should work for partial data on a fully tensor product grid
+        #x_remainder_value = np.median(x_remainder, axis=0) # Should work for partial data on a fully tensor product grid
+        # Option 3: read from a file
+        if 'remainder_values' and 'nft' in kwargs:
+            file_remainder_values = kwargs['remainder_values']
+            nft = kwargs['nft']
+            df_remainder_values = pd.read_csv(file_remainder_values, header=[0, 1], index_col=0,) # tupleize_cols=True)
+            x_remainder_value = df_remainder_values[(f"ft{nft}", xlabels[i_num])]
+            x_remainder_value = np.array(x_remainder_value)
         
         print(f"for {xlabels[input_number]} remainder values are: {x_remainder_value}") ###DEBUG
 

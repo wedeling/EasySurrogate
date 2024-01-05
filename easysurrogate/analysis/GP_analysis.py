@@ -6,6 +6,7 @@ from shutil import which
 from .base import BaseAnalysis
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 from scipy import stats
 from sklearn.metrics import mean_squared_error as mse
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -30,6 +31,15 @@ class GP_analysis(BaseAnalysis):
 
         self.gp_surrogate = gp_surrogate
 
+        if 'target_name_selected' in kwargs:
+            self.target_name_selected = kwargs['target_name_selected']
+        
+        if 'features_names_selected' in kwargs:
+            self.features_names_selected = kwargs['features_names_selected']
+
+        if 'nft' in kwargs:
+            self.nft = kwargs['nft']
+        
     def plot_err(self, error, name, original=None, addit_name=''):
         plt.ioff()
         plt.title(name)
@@ -287,7 +297,7 @@ class GP_analysis(BaseAnalysis):
         plt.clf()
         plt.close()
 
-    def plot_scan(self, X_train, input_number=0, output_number=0, file_name_suf='0'):
+    def plot_scan(self, X_train, input_number=0, output_number=0, file_name_suf='0', **kwargs):
         """
         Saves a .pdf 1D plot of a QoI value predicted by a GP surrogate for a single varied input component
         """
@@ -315,8 +325,19 @@ class GP_analysis(BaseAnalysis):
         x_values_new = np.linspace(x_values.min() - extend_factor * abs(x_values.min()) , 
                                    x_values.max() + extend_factor * abs(x_values.max()), 1000)
         
+        # Choose place to cut
         x_remainder = np.delete(X_train, i_num, axis=1)
-        x_remainder_value = x_remainder.mean(axis=0)
+        # Option 1: Mean of every other dimension / center of existing sample
+        #x_remainder_value = x_remainder.mean(axis=0)
+        # Option 2: Mode of values among existing sample closest to the median for every other dimension
+        #x_remainder_value = np.median(x_remainder, axis=0) # Should work for partial data on a fully tensor product grid
+        # Option 3: read from a file
+        if 'remainder_values' and 'nft' in kwargs:
+            file_remainder_values = kwargs['remainder_values']
+            nft = kwargs['nft']
+            df_remainder_values = pd.read_csv(file_remainder_values, header=[0, 1], index_col=0,) # tupleize_cols=True)
+            x_remainder_value = df_remainder_values[(f"ft{nft}", xlabels[i_num])]
+            x_remainder_value = np.array(x_remainder_value)
 
         X_new = np.zeros((x_values_new.shape[0], X_train.shape[1]))
         X_new[:, i_num] = x_values_new
@@ -349,7 +370,9 @@ class GP_analysis(BaseAnalysis):
         ax.set_title(f"{xlabels[input_number]}->{ylabels[output_number]}(@ft#{file_name_suf})")
         fig.savefig('scan_'+'i'+str(input_number)+'o'+str(output_number)+'f'+file_name_suf+'.pdf')
 
-        return 0
+        data = pd.DataFrame({'x': x_values_new, 'y': y_avg})
+
+        return data
     
     def plot_pdfs(self, y_dom, y_pdf, y_dom_sur, y_pdf_sur,
                   y_dom_tr=None, y_pdf_tr=None, y_dom_tot=None, y_pdf_tot=None,
@@ -495,10 +518,15 @@ class GP_analysis(BaseAnalysis):
         ### ---
         # For every component of input and output plot the scan of the GP model predictions for the orthogonal middle cut of training domain
         print("Scanning the GP model predictions")
-
+        scan_dict = {}
         for output_num in range(y_train.shape[1]):
             for input_num in range(X_train.shape[1]):
-                self.plot_scan(X_train, input_number=input_num, output_number=output_num, file_name_suf=addit_name)
+                scan_data = self.plot_scan(X_train, input_number=input_num, output_number=output_num, file_name_suf=addit_name,
+                                           nft=self.nft, remainder_values=f"scan_gem0_remainder_{self.features_names_selected[input_num]}.csv",
+                                           )
+                scan_dict[f"{self.features_names_selected[input_num]}_{self.target_name_selected[output_num]}"] = scan_data
+        scan_dataframe = pd.DataFrame.from_dict({(i,j): scan_dict[i][j] for i in scan_dict.keys() for j in scan_dict[i].keys()})
+        scan_dataframe.to_csv(f"scan_{self.nft}.csv")
         ### ---
 
         print("Prediction of new QoI")
