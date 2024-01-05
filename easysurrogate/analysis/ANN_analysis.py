@@ -3,6 +3,8 @@ CLASS TO PERFORM ANALYSIS ON RESULTS FROM AN ARTIFICIAL NEURAL NETWORK.
 """
 import numpy as np
 import pandas as pd
+from scipy.stats import mode
+
 from .base import BaseAnalysis
 
 from matplotlib import pyplot as plt
@@ -156,8 +158,14 @@ class ANN_analysis(BaseAnalysis):
         x_values_new = np.linspace(x_values.min() - extend_factor * abs(x_values.min()) , 
                                    x_values.max() + extend_factor * abs(x_values.max()), n_points_new)
         
+        # Choose the place of the cut
         x_remainder = np.delete(X_train, i_num, axis=1)
-        x_remainder_value = x_remainder.mean(axis=0)
+        # Option 1: Mean of every other dimension / center of existing sample
+        #x_remainder_value = x_remainder.mean(axis=0) # for a data that is not on a full tensor product and/or with each vector not having odd number of components, mean would not coincide with exsisting points
+        # Option 2: Mode of values among existing sample closest to the median for every other dimension
+        x_remainder_value = np.median(x_remainder, axis=0) # Should work for partial data on a fully tensor product grid
+        
+        print(f"for {xlabels[input_number]} remainder values are: {x_remainder_value}") ###DEBUG
 
         X_new = np.zeros((x_values_new.shape[0], X_train.shape[1]))
         X_new[:, i_num] = x_values_new

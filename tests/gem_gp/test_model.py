@@ -156,7 +156,11 @@ features = [data_frame[k] for k in features_names_selected if k in data_frame]
 target = np.concatenate([data_frame[k] for k in target_name_selected if k in data_frame], axis=1)
 
 # Create analysis class
-analysis = es.analysis.GP_analysis(campaign.surrogate)
+analysis = es.analysis.GP_analysis(campaign.surrogate,
+                                   target_name_selected=target_name_selected,
+                                   features_names_selected=features_names_selected,
+                                   nft=index,
+                                  )
 
 # SEQ DES
 if SEQDES:

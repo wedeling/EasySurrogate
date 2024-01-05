@@ -188,7 +188,9 @@ for output_num in range(target_new.shape[1]):
         for input_num in range(features_new.shape[1]):
 
             # plotting functions works for scalar vs scalar dependence only
-            scan_data = analysis.plot_scan(features_new, input_number=input_num, output_number=output_num, file_name_suf=str(index))
+            scan_data = analysis.plot_scan(features_new, input_number=input_num, output_number=output_num, file_name_suf=str(index),
+                                           nft=index, remainder_values=f"scan_gem0_remainder_{features_names[input_num]}.csv",
+                                           )
             # filling in the dictionary with values
             scan_dict[f"{features_names_selected[input_num]}_{target_name_selected[output_num]}"] = scan_data
 
