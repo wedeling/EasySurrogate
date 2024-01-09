@@ -13,6 +13,11 @@ if len(sys.argv) < 2 :
 else:
     index = sys.argv[1]
 
+if len(sys.argv) < 3 :
+    date_gen = "20231216"
+else:  
+    date_gen = sys.argv[2]
+
 code_name = 'gem0'
 
 np.random.seed(42)
@@ -66,13 +71,16 @@ campaign = es.Campaign(load_state=False)
 # features_names_selected = features_names
 # target_name_selected = [target_names[0],target_names[1]]
 
-# 8) Case from 8 flux tube GEM0 5000 runs (4 parameters, tensor product of grid with 5 points per DoF)
+# # 8) Case from 8 flux tube GEM0 5000 runs (4 parameters, tensor product of grid with 5 points per DoF)
 
-data_file_name = f"{code_name}_5000_transp_{index}.hdf5" #gem/gem0 data
+# data_file_name = f"{code_name}_5000_transp_{index}.hdf5" #gem/gem0 data
+
+# 9) Case from 8 flux tube GEM0 8000 runs (4 parameters, 8 flux tubes, 10**3 LHC samples per flux tube)
+
+data_file_name = f"{code_name}_8000_transp_{index}_{date_gen}.hdf5"
 
 features_names_selected = features_names
 target_name_selected = [target_names[0],target_names[1]]
-
 
 # === Create a surrogate and its model; train and save it
 

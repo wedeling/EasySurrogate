@@ -17,6 +17,8 @@ if len(sys.argv) < 3 :
 else:
     model_date = sys.argv[2]
 
+data_date = model_date
+
 code_name = 'gem0'
 
 features_names_selected = features_names
@@ -120,13 +122,24 @@ target_name_selected = target_names
 
 # 8) Case from 8 flux tubes GEM0 UQ campaign (4 parameters, tensor product of grid with 5 points per DoF)
 
-features_names_selected = features_names
-target_name_selected = [target_names[0], target_names[1]]
+# features_names_selected = features_names
+# target_name_selected = [target_names[0], target_names[1]]
+
+# saved_model_file_path = f"model_{code_name}_val_scikit-learngaussianRBF_transp_{index}_{model_date}.pickle"
+# #saved_model_file_path = f"gem0_es_model_{index}.pickle" ###DEBUG, files copied from HPO
+
+# data_file = f"{code_name}_5000_transp_{index}.hdf5"
+
+# 9) Case from 8 flux tube GEM0 8000 runs (4 parameters, 8 flux tubes, 10**3 LHC samples per flux tube)
 
 saved_model_file_path = f"model_{code_name}_val_scikit-learngaussianRBF_transp_{index}_{model_date}.pickle"
 #saved_model_file_path = f"gem0_es_model_{index}.pickle" ###DEBUG, files copied from HPO
 
-data_file = f"{code_name}_5000_transp_{index}.hdf5"
+data_file = f"{code_name}_8000_transp_{index}_{data_date}.hdf5"
+
+###
+features_names_selected = features_names
+target_name_selected = [target_names[0], target_names[1]]
 
 # Creating campaign
 
@@ -171,6 +184,7 @@ if SEQDES:
 analysis.get_regression_error(feat_test, targ_test, feat_train, targ_train, 
                               #index=[i for i in range(16)] #DEBUG
                               addit_name=str(index),
+                              remainder_file_date=data_date,
                              )
 
 # Cross-correlation functions

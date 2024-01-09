@@ -20,6 +20,11 @@ if len(sys.argv) < 2 :
 else:  
     index = sys.argv[1]
 
+if len(sys.argv) < 3 :
+    date_gen = "20231216"
+else:  
+    date_gen = sys.argv[2]
+
 campaign = es.Campaign(load_state=False)
 
 # 1) Case for data from single flux tube GEM UQ campaign
@@ -50,13 +55,21 @@ campaign = es.Campaign(load_state=False)
 # target_name_selected = [target_names[1]] # model for [1 - means ; 3- std] of data
 
 # ... 
-# 8) Case from 8 flux tube GEM0 5000 runs (4 parameters, tensor product of grid with 5 points per DoF)
+# # 8) Case from 8 flux tube GEM0 5000 runs (4 parameters, tensor product of grid with 5 points per DoF)
 
-data_file_name = f"{code_name}_5000_transp_{index}_20231216.hdf5"
+# data_file_name = f"{code_name}_5000_transp_{index}_20231216.hdf5"
+
+# features_names_selected = features_names
+# target_name_selected = [target_names[0], target_names[1]]
+
+# 9) Case from 8 flux tube GEM0 8000 runs (4 parameters, 8 flux tubes, 10**3 LHC samples per flux tube)
+
+data_file_name = f"{code_name}_5000_transp_{index}_{date_gen}.hdf5"
 
 features_names_selected = features_names
 target_name_selected = [target_names[0], target_names[1]]
 
+###
 # Create a surrogate and its model; train and save it
 
 # Create a campaign object
@@ -81,7 +94,7 @@ ann_param = {
             'n_layers': 5,
             'n_neurons': 128,
             'batch_size': 32,
-            'activation': 'sigmoid',
+            'activation': 'relu', #'sigmoid', #sigmoid usually gives better RMSE but might be a reason for misfit around constant dependences
            }
 
 surrogate = es.methods.ANN_Surrogate(
@@ -107,7 +120,7 @@ print('Time to train the surrogate: {:.3} s'.format(t.time() - time_train_start)
 surrogate.neural_net.print_network_info()
 
 date_str = datetime.now().strftime("%Y%m%d")
-save_model_file_name = f"model_{code_name}_5000_tf{ann_param['test_frac']}_4i2o_ft{index}_ann{ann_param['n_layers']}x{ann_param['n_neurons']}x{ann_param['batch_size']}_{date_str}.pickle"
+save_model_file_name = f"model_{code_name}_5000_tf{ann_param['test_frac']}_{len(features_names_selected)}i{len(target_name_selected)}o_ft{index}_ann{ann_param['n_layers']}x{ann_param['n_neurons']}x{ann_param['batch_size']}_{date_str}.pickle"
 
 campaign.add_app(name='ann_campaign', surrogate=surrogate)
 campaign.save_state(file_path=save_model_file_name)
