@@ -518,11 +518,13 @@ class GP_analysis(BaseAnalysis):
         ### ---
         # For every component of input and output plot the scan of the GP model predictions for the orthogonal middle cut of training domain
         print("Scanning the GP model predictions")
+        if "remainder_file_date" in kwargs:
+            remainder_file_date = kwargs["remainder_file_date"]
         scan_dict = {}
         for output_num in range(y_train.shape[1]):
             for input_num in range(X_train.shape[1]):
                 scan_data = self.plot_scan(X_train, input_number=input_num, output_number=output_num, file_name_suf=addit_name,
-                                           nft=self.nft, remainder_values=f"scan_gem0_remainder_{self.features_names_selected[input_num]}.csv",
+                                           nft=self.nft, remainder_values=f"scan_gem0_remainder_{self.features_names_selected[input_num]}_{remainder_file_date}.csv",
                                            )
                 scan_dict[f"{self.features_names_selected[input_num]}_{self.target_name_selected[output_num]}"] = scan_data
         scan_dataframe = pd.DataFrame.from_dict({(i,j): scan_dict[i][j] for i in scan_dict.keys() for j in scan_dict[i].keys()})
