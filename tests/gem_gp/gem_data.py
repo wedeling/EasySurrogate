@@ -304,17 +304,20 @@ for i in range(len(data_ft)):
 
 # 9) Case from 8 flux tube GEM0 run, genrated as LHC sample
 
-date_sav = "20240109"
-date_gen = "20240109"
+code = 'gem0'
+
+date_sav = "20240110"
+date_gen = "20240110"
 datafile = f"gem0py_lhc_{date_gen}_all.csv"
 
-#runs_per_ft = 10**3
+runs_per_ft = 10**3
 n_ft = 8
+n_samples = n_ft * runs_per_ft
 
 data = load_csv_to_dict(input_file=datafile,)
 
 data_ft = split_flux_tubes(data, n_ft=n_ft)
 
-campaign.store_data_to_hdf5(data, file_path=f"gem0_8000_transp_tot_{date_sav}.hdf5")
+campaign.store_data_to_hdf5(data, file_path=f"{code}_{n_samples}_transp_tot_{date_sav}.hdf5")
 for i in range(len(data_ft)):
-    campaign.store_data_to_hdf5(data_ft[i], file_path=f"gem0_8000_transp_{i}_{date_sav}.hdf5")
+    campaign.store_data_to_hdf5(data_ft[i], file_path=f"{code}_{n_samples}_transp_{i}_{date_sav}.hdf5")

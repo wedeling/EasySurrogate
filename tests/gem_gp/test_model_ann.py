@@ -19,6 +19,7 @@ else:
     model_date = sys.argv[2]
 
 data_date = "20240109"
+scan_date = "20240110"
 
 code_name = 'gem0'
 
@@ -146,12 +147,14 @@ target_name_selected = target_names
 
 # 9) Case from 8 flux tube GEM0 8000 runs (4 parameters, 8 flux tubes, 10**3 LHC samples per flux tube)
 
+n_samples = 8000
+
 features_names_selected = features_names
 target_name_selected = [target_names[0], target_names[1]]
 
-saved_model_file_path = f"model_{code_name}_8000_tf0.2_{len(features_names_selected)}i{len(target_name_selected)}o_ft{index}_ann{n_layers}x{n_neurons}x{batch_size}_{model_date}.pickle"
+saved_model_file_path = f"model_{code_name}_{n_samples}_tf0.2_{len(features_names_selected)}i{len(target_name_selected)}o_ft{index}_ann{n_layers}x{n_neurons}x{batch_size}_{model_date}.pickle"
 
-data_file = f"{code_name}_8000_transp_{index}_{data_date}.hdf5"
+data_file = f"{code_name}_{n_samples}_transp_{index}_{data_date}.hdf5"
 
 ###
 # Creating campaign
@@ -210,7 +213,7 @@ for output_num in range(target_new.shape[1]):
 
             # plotting functions works for scalar vs scalar dependence only
             scan_data = analysis.plot_scan(features_new, input_number=input_num, output_number=output_num, file_name_suf=str(index),
-                                           nft=index, remainder_values=f"scan_gem0_remainder_{features_names[input_num]}_{data_date}.csv",
+                                           nft=index, remainder_values=f"scan_gem0_remainder_{features_names[input_num]}_{scan_date}.csv",
                                            )
             # filling in the dictionary with values
             scan_dict[f"{features_names_selected[input_num]}_{target_name_selected[output_num]}"] = scan_data

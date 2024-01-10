@@ -77,7 +77,9 @@ campaign = es.Campaign(load_state=False)
 
 # 9) Case from 8 flux tube GEM0 8000 runs (4 parameters, 8 flux tubes, 10**3 LHC samples per flux tube)
 
-data_file_name = f"{code_name}_8000_transp_{index}_{date_gen}.hdf5"
+n_samples = 8000
+
+data_file_name = f"{code_name}_{n_samples}_transp_{index}_{date_gen}.hdf5"
 
 features_names_selected = features_names
 target_name_selected = [target_names[0],target_names[1]]

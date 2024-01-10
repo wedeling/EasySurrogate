@@ -64,7 +64,9 @@ campaign = es.Campaign(load_state=False)
 
 # 9) Case from 8 flux tube GEM0 8000 runs (4 parameters, 8 flux tubes, 10**3 LHC samples per flux tube)
 
-data_file_name = f"{code_name}_5000_transp_{index}_{date_gen}.hdf5"
+n_samples = 8000
+
+data_file_name = f"{code_name}_{n_samples}_transp_{index}_{date_gen}.hdf5"
 
 features_names_selected = features_names
 target_name_selected = [target_names[0], target_names[1]]
@@ -120,7 +122,7 @@ print('Time to train the surrogate: {:.3} s'.format(t.time() - time_train_start)
 surrogate.neural_net.print_network_info()
 
 date_str = datetime.now().strftime("%Y%m%d")
-save_model_file_name = f"model_{code_name}_5000_tf{ann_param['test_frac']}_{len(features_names_selected)}i{len(target_name_selected)}o_ft{index}_ann{ann_param['n_layers']}x{ann_param['n_neurons']}x{ann_param['batch_size']}_{date_str}.pickle"
+save_model_file_name = f"model_{code_name}_{n_samples}_tf{ann_param['test_frac']}_{len(features_names_selected)}i{len(target_name_selected)}o_ft{index}_ann{ann_param['n_layers']}x{ann_param['n_neurons']}x{ann_param['batch_size']}_{date_str}.pickle"
 
 campaign.add_app(name='ann_campaign', surrogate=surrogate)
 campaign.save_state(file_path=save_model_file_name)
