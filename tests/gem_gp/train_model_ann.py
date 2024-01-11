@@ -25,6 +25,8 @@ if len(sys.argv) < 3 :
 else:  
     date_gen = sys.argv[2]
 
+date_data = "20240110"
+
 campaign = es.Campaign(load_state=False)
 
 # 1) Case for data from single flux tube GEM UQ campaign
@@ -66,7 +68,7 @@ campaign = es.Campaign(load_state=False)
 
 n_samples = 8000
 
-data_file_name = f"{code_name}_{n_samples}_transp_{index}_{date_gen}.hdf5"
+data_file_name = f"{code_name}_{n_samples}_transp_{index}_{date_data}.hdf5"
 
 features_names_selected = features_names
 target_name_selected = [target_names[0], target_names[1]]

@@ -17,7 +17,8 @@ if len(sys.argv) < 3 :
 else:
     model_date = sys.argv[2]
 
-data_date = model_date
+data_date = '20240110'
+scan_date = '20240110'
 
 code_name = 'gem0'
 
@@ -186,7 +187,7 @@ if SEQDES:
 analysis.get_regression_error(feat_test, targ_test, feat_train, targ_train, 
                               #index=[i for i in range(16)] #DEBUG
                               addit_name=str(index),
-                              remainder_file_date=data_date,
+                              remainder_file_date=scan_date,
                              )
 
 # Cross-correlation functions

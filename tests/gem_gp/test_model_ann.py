@@ -18,7 +18,7 @@ if len(sys.argv) < 3 :
 else:
     model_date = sys.argv[2]
 
-data_date = "20240109"
+data_date = "20240110"
 scan_date = "20240110"
 
 code_name = 'gem0'
@@ -204,6 +204,7 @@ analysis.get_regression_error(feat_test, targ_test, feat_train, targ_train,
 
 features_new = np.concatenate([feat_train, feat_test], axis=0)
 target_new = np.concatenate([targ_train, targ_test], axis=0)
+remainder_file_prefix = "scan_gem0_remainder_"
 
 scan_dict = {}
 
@@ -213,7 +214,7 @@ for output_num in range(target_new.shape[1]):
 
             # plotting functions works for scalar vs scalar dependence only
             scan_data = analysis.plot_scan(features_new, input_number=input_num, output_number=output_num, file_name_suf=str(index),
-                                           nft=index, remainder_values=f"scan_gem0_remainder_{features_names[input_num]}_{scan_date}.csv",
+                                           nft=index, remainder_values=f"{remainder_file_prefix}{features_names[input_num]}_{scan_date}.csv",
                                            )
             # filling in the dictionary with values
             scan_dict[f"{features_names_selected[input_num]}_{target_name_selected[output_num]}"] = scan_data
