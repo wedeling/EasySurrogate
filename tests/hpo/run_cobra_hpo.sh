@@ -55,7 +55,7 @@ FT_LEN=8
 
 for((i=0;i<${FT_LEN};i++)); do
 
-    DATAFILE=gem04_f${i}.hdf5
+    DATAFILE=gem06_f${i}.hdf5
 
     # Run the training code
     echo '> Running the training code for flux tube #'${i}' and datafile '${DATAFILE}

@@ -40,6 +40,7 @@ export HPC_EXECUTION=1
 echo -e '> In this run: use ExecuteLocal only + QCGPJ pool + '$SLURM_NNODES' nodes /n'
 
 ####################################
+# latest latexplotlib may contain a bug!
 pip install latexplotlib
 
 # Update the package
@@ -52,9 +53,9 @@ FT_LEN=8
 
 
 #for((i=0;i<${FT_LEN};i++)); do
-for((i=7;i<${FT_LEN};i++)); do
+for((i=6;i<${FT_LEN};i++)); do
 
-    DATAFILE=gem05_f${i}.hdf5
+    DATAFILE=gem06_f${i}.hdf5
 
     # Run the training code
     echo '> Running the training code for flux tube #'${i}' and datafile '${DATAFILE}

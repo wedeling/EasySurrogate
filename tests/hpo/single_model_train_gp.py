@@ -5,7 +5,8 @@ import json
 import numpy as np
 
 print('> Entering the training script')
-np.random.seed(42)
+rs = 42 # TODO should be passed
+np.random.seed(rs)
 
 # Read the current hyperparameter values
 json_input = sys.argv[1]
@@ -30,7 +31,7 @@ target_name_selected = [target_names[0], target_names[1]]
 campaign = es.Campaign()
 
 # Load HDF5 data frame
-data_file_name = f"gem04_f{ft}.hdf5"
+data_file_name = f"gem06_f{ft}.hdf5"
 data_frame = campaign.load_hdf5_data(file_path='../../../'+data_file_name)
 # TODO: get rid of hardcoding relative path
 
@@ -69,13 +70,22 @@ campaign.save_state(file_path='model.pickle')
 feat_train, targ_train, feat_test, targ_test = campaign.surrogate.feat_eng.\
     get_training_data(features, target, index=campaign.surrogate.feat_eng.train_indices)
 
-analysis = es.analysis.GP_analysis(gp_surrogate=campaign.surrogate)
+analysis = es.analysis.GP_analysis(
+                        gp_surrogate=campaign.surrogate,
+                        target_name_selected=target_name_selected,
+                        features_names_selected=features_names_selected,
+                        nft=ft,
+                                  )
+
 err_test_abs, err_test, r2_test = analysis.get_regression_error(
     feat_test,
     targ_test,
     feat_train,
     targ_train,
     flag_plot=True,
+    addit_name=str(ft),
+    remainder_file_path='../../../scan_gem0_remainder_',
+    remainder_file_date='20240110',
     )
 
 # TODO return analysis for 2 QoIs and procude a compound loss
