@@ -305,6 +305,8 @@ class GP_analysis(BaseAnalysis):
         xlabels = ['te_value', 'ti_value', 'te_ddrho', 'ti_ddrho']
         ylabels = ['te_transp_flux', 'ti_transp_flux']
 
+        nft = kwargs['nft'] if 'nft' in kwargs else 0
+
         extend_factor = 0.5
         fig,ax = plt.subplots(figsize=[7, 7])
 
@@ -325,20 +327,60 @@ class GP_analysis(BaseAnalysis):
         x_values_new = np.linspace(x_values.min() - extend_factor * abs(x_values.min()) , 
                                    x_values.max() + extend_factor * abs(x_values.max()), 1000)
         
+        data_remainder = {}
         # Choose place to cut
+        cut_option = kwargs['cut_option'] if 'cut_option' in kwargs else 'median'
         x_remainder = np.delete(X_train, i_num, axis=1)
-        # Option 1: Mean of every other dimension / center of existing sample
-        #x_remainder_value = x_remainder.mean(axis=0)
-        # Option 2: Mode of values among existing sample closest to the median for every other dimension
-        #x_remainder_value = np.median(x_remainder, axis=0) # Should work for partial data on a fully tensor product grid
-        # Option 3: read from a file
-        if 'remainder_values' and 'nft' in kwargs:
-            file_remainder_values = kwargs['remainder_values']
-            nft = kwargs['nft']
-            df_remainder_values = pd.read_csv(file_remainder_values, header=[0, 1], index_col=0,) # tupleize_cols=True)
-            x_remainder_value = df_remainder_values[(f"ft{nft}", xlabels[i_num])]
-            x_remainder_value = np.array(x_remainder_value)
 
+        # Option 1: Mean of every other dimension / center of existing sample
+        if cut_option == 'mean':
+            x_remainder_value = x_remainder.mean(axis=0)
+        # Option 2: Mode of values among existing sample closest to the median for every other dimension
+        elif cut_option == 'median':
+            x_remainder_value = np.median(x_remainder, axis=0) # Should work for partial data on a fully tensor product grid
+        # Option 3: read from a file
+        elif cut_option == 'file':
+            if 'remainder_values' in kwargs:
+                file_remainder_values = kwargs['remainder_values']
+                df_remainder_values = pd.read_csv(f"{file_remainder_values}", header=[0, 1], index_col=0,) # tupleize_cols=True)
+                x_remainder_value = df_remainder_values[(f"ft{nft}", xlabels[i_num])]
+                x_remainder_value = np.array(x_remainder_value)
+        # Option 4: if data is on a tensor product grid, then use the center of the grid
+        elif cut_option == 'center': # should work for 100% data on a fully tensor product grid
+            X_train_unique_vals = []
+            indices = []
+            X_train_mid_vals = np.zeros((X_train.shape[1]))
+            for i in range(X_train.shape[1]):
+                #print(f"X_train col={X_train[:,i]}") ###DEBUG
+                X_train_unique_vals.append(np.unique(X_train[:,i]))
+                #print(f"X_train_unique_vals last={X_train_unique_vals[-1]}") ###DEBUG
+                indices.append(int(X_train_unique_vals[-1].shape[0]/2))
+                #print(f"indices last={indices[-1]}")
+                X_train_mid_vals[i] = X_train_unique_vals[-1][indices[-1]]
+            #print(f"X_train_unique_vals={X_train_unique_vals}") ###DEBUG
+            #print(f"X_train_mid_vals={X_train_mid_vals}") ###DEBUG
+            x_remainder_value = np.delete(X_train_mid_vals, i_num)
+            mid_indices = [ np.isclose(X_train[:,1], X_train_mid_vals[1]) & np.isclose(X_train[:,2], X_train_mid_vals[2]) & np.isclose(X_train[:,3], X_train_mid_vals[3]),
+                            np.isclose(X_train[:,0], X_train_mid_vals[0]) & np.isclose(X_train[:,2], X_train_mid_vals[2]) & np.isclose(X_train[:,3], X_train_mid_vals[3]),
+                            np.isclose(X_train[:,0], X_train_mid_vals[0]) & np.isclose(X_train[:,1], X_train_mid_vals[1]) & np.isclose(X_train[:,3], X_train_mid_vals[3]),
+                            np.isclose(X_train[:,0], X_train_mid_vals[0]) & np.isclose(X_train[:,1], X_train_mid_vals[1]) & np.isclose(X_train[:,2], X_train_mid_vals[2]) ]
+            mid_indices_loc = mid_indices[i_num]
+
+        # Fall back option - error
+        else:
+            raise ValueError(f"Unknown cut_option: {cut_option}")
+        
+        # Write (and display) remiander values of the cut location
+        print(f"for {xlabels[i_num]} @ft#{nft} remainder values are: {x_remainder_value}") ###DEBUG
+        data_remainder[(f"ft{nft}", xlabels[i_num])] = x_remainder_value
+        
+        # Training points to be displayed
+        if 'y_train' in kwargs:
+            #print(f"mid_indices_loc={mid_indices_loc}") ###DEBUG
+            y_train = kwargs['y_train']
+            y_train_plot = y_train[mid_indices_loc, output_number]
+            X_train_plot = x_values[mid_indices_loc]
+        
         X_new = np.zeros((x_values_new.shape[0], X_train.shape[1]))
         X_new[:, i_num] = x_values_new
         for j in range(X_new.shape[0]):
@@ -364,11 +406,20 @@ class GP_analysis(BaseAnalysis):
                     label=f"{input_number}->{output_number}",
                     alpha=0.2,
                     )
+        
+        # Plot training points
+        if 'y_train' in kwargs:
+            #print(f"Plotting training points for {input_number}->{output_number}") ###DEBUG
+            ax.plot(X_train_plot, y_train_plot, 'ko', label='training points')
 
         ax.set_xlabel(xlabels[input_number])
         ax.set_ylabel(ylabels[output_number])
         ax.set_title(f"{xlabels[input_number]}->{ylabels[output_number]}(@ft#{file_name_suf})")
         fig.savefig('scan_'+'i'+str(input_number)+'o'+str(output_number)+'f'+file_name_suf+'.pdf')
+
+        # Store and save the remainder input values i.e. the coordinates of the cut
+        data_remainder = pd.DataFrame(data_remainder)
+        data_remainder.to_csv(f"scan_gem0gpr_remainder_{xlabels[input_number]}_ft{file_name_suf}.csv")
 
         data = pd.DataFrame({'x': x_values_new, 'y': y_avg})
 
@@ -523,9 +574,15 @@ class GP_analysis(BaseAnalysis):
         scan_dict = {}
         for output_num in range(y_train.shape[1]):
             for input_num in range(X_train.shape[1]):
+                # Option 1: pick the scan file with the remainder values for the cut
+                # scan_data = self.plot_scan(X_train, input_number=input_num, output_number=output_num, file_name_suf=addit_name,
+                #                            nft=self.nft, remainder_values=f"{remainder_file_path}{self.features_names_selected[input_num]}_{remainder_file_date}.csv",
+                #                            )
+                # Option 2: scan for the middle values of the fulll grid
                 scan_data = self.plot_scan(X_train, input_number=input_num, output_number=output_num, file_name_suf=addit_name,
-                                           nft=self.nft, remainder_values=f"{remainder_file_path}{self.features_names_selected[input_num]}_{remainder_file_date}.csv",
+                                           nft=self.nft, cut_option='center', y_train=y_train,
                                            )
+
                 scan_dict[f"{self.features_names_selected[input_num]}_{self.target_name_selected[output_num]}"] = scan_data
         scan_dataframe = pd.DataFrame.from_dict({(i,j): scan_dict[i][j] for i in scan_dict.keys() for j in scan_dict[i].keys()})
         scan_dataframe.to_csv(f"scan_{self.nft}.csv")
@@ -606,11 +663,15 @@ class GP_analysis(BaseAnalysis):
             err_rel_list.append(err_rel)
 
             # Scale back the features and targets
-            #y_test_scale = self.gp_surrogate.y_scaler.transform(y_test)
-            y_test_scale = self.gp_surrogate.y_scaler.transform(X_test, y_test) # for custom scaler
-            X_test_scale = self.gp_surrogate.x_scaler.transform(X_test)
+            if not only_train_set:
+                #y_test_scale = self.gp_surrogate.y_scaler.transform(y_test)
+                y_test_scale = self.gp_surrogate.y_scaler.transform(X_test, y_test) # for custom scaler
+                X_test_scale = self.gp_surrogate.x_scaler.transform(X_test)
 
-            r2_test = self.get_r2_score(X_test_scale, y_test_scale)
+                r2_test = self.get_r2_score(X_test_scale, y_test_scale) # commenting out *_*_scale to check if original scale data work
+            else:
+                r2_test = 1.0
+            
             print('R2 score for the test data is : {:.3}'.format(r2_test))
 
             mse_test   = 0.
@@ -636,12 +697,13 @@ class GP_analysis(BaseAnalysis):
             r2_test_list.append(r2_test)
 
             # Save the prediction results
-            csv_array = np.concatenate(
-                    (y_test_plot[:, 0].reshape(-1,1), 
-                    y_pred[:y_t_len, 0].reshape(-1,1), 
-                    y_std_pred.reshape(y_pred[:y_t_len, 0].shape).reshape(-1,1)), #TODO ugly
-                    axis=1)
-            np.savetxt(f"res_{addit_name_new}.csv", csv_array, delimiter=",")
+            if not only_train_set:
+                csv_array = np.concatenate(
+                        (y_test_plot[:, 0].reshape(-1,1), 
+                        y_pred[:y_t_len, 0].reshape(-1,1), 
+                        y_std_pred.reshape(y_pred[:y_t_len, 0].shape).reshape(-1,1)), #TODO ugly
+                        axis=1)
+                np.savetxt(f"res_{addit_name_new}.csv", csv_array, delimiter=",")
 
             print("Printing and plotting the evaluation results")
             #TODO: resolve case whe y_groundtruth==0.0
@@ -666,6 +728,8 @@ class GP_analysis(BaseAnalysis):
             train_n = self.gp_surrogate.feat_eng.n_samples - y_t_len
 
             #print(x_train_inds, y_pred_train, y_train_plot) ###DEBUG
+
+            #TODO: y_test_plot now have 2 columns, so simple reshaping would not work
 
             if flag_plot:
                 
