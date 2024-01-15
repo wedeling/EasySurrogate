@@ -17,7 +17,12 @@ if len(sys.argv) < 3 :
 else:
     model_date = sys.argv[2]
 
-data_date = '20240110'
+if len(sys.argv) < 4 :
+    #data_date = '20240110'
+    data_date = '20231216'
+else:
+    data_date = sys.argv[3]
+
 scan_date = '20240110'
 
 code_name = 'gem0'
@@ -123,22 +128,21 @@ target_name_selected = target_names
 
 # 8) Case from 8 flux tubes GEM0 UQ campaign (4 parameters, tensor product of grid with 5 points per DoF)
 
-# features_names_selected = features_names
-# target_name_selected = [target_names[0], target_names[1]]
-
-# saved_model_file_path = f"model_{code_name}_val_scikit-learngaussianRBF_transp_{index}_{model_date}.pickle"
-# #saved_model_file_path = f"gem0_es_model_{index}.pickle" ###DEBUG, files copied from HPO
-
-# data_file = f"{code_name}_5000_transp_{index}.hdf5"
-
-# 9) Case from 8 flux tube GEM0 8000 runs (4 parameters, 8 flux tubes, 10**3 LHC samples per flux tube)
-
-n_samples = 8000
+n_samples = 5000
 
 saved_model_file_path = f"model_{code_name}_val_scikit-learngaussianRBF_transp_{index}_{model_date}.pickle"
 #saved_model_file_path = f"gem0_es_model_{index}.pickle" ###DEBUG, files copied from HPO
 
 data_file = f"{code_name}_{n_samples}_transp_{index}_{data_date}.hdf5"
+
+# # 9) Case from 8 flux tube GEM0 8000 runs (4 parameters, 8 flux tubes, 10**3 LHC samples per flux tube)
+
+# n_samples = 8000
+
+# saved_model_file_path = f"model_{code_name}_val_scikit-learngaussianRBF_transp_{index}_{model_date}.pickle"
+# #saved_model_file_path = f"gem0_es_model_{index}.pickle" ###DEBUG, files copied from HPO
+
+# data_file = f"{code_name}_{n_samples}_transp_{index}_{data_date}.hdf5"
 
 ###
 features_names_selected = features_names

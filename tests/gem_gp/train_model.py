@@ -73,14 +73,17 @@ campaign = es.Campaign(load_state=False)
 
 # # 8) Case from 8 flux tube GEM0 5000 runs (4 parameters, tensor product of grid with 5 points per DoF)
 
-# data_file_name = f"{code_name}_5000_transp_{index}.hdf5" #gem/gem0 data
+n_samples = 5000
+#data_file_name = f"{code_name}_{n_samples}_transp_{index}.hdf5" #gem/gem0 data
+data_file_name = f"{code_name}_{n_samples}_transp_{index}_{date_gen}.hdf5" #gem/gem0 data
 
-# 9) Case from 8 flux tube GEM0 8000 runs (4 parameters, 8 flux tubes, 10**3 LHC samples per flux tube)
+# # 9) Case from 8 flux tube GEM0 8000 runs (4 parameters, 8 flux tubes, 10**3 LHC samples per flux tube)
 
-n_samples = 8000
+# n_samples = 8000
 
-data_file_name = f"{code_name}_{n_samples}_transp_{index}_{date_gen}.hdf5"
+# data_file_name = f"{code_name}_{n_samples}_transp_{index}_{date_gen}.hdf5"
 
+###
 features_names_selected = features_names
 target_name_selected = [target_names[0],target_names[1]]
 
@@ -106,7 +109,7 @@ gp_param = {
             'nu_stp': 10,
             'bias': 0.,
             'nonstationary': False,
-            'test_frac': 0.2, #0.,
+            'test_frac': 0., #0.2,
             'n_iter': 5,
            }
 
