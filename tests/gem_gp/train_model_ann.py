@@ -25,7 +25,10 @@ if len(sys.argv) < 3 :
 else:  
     date_gen = sys.argv[2]
 
-date_data = "20240110"
+if len(sys.argv) < 4 :
+    date_data = "20240110"
+else:
+    date_data = sys.argv[3]
 
 campaign = es.Campaign(load_state=False)
 
@@ -57,18 +60,18 @@ campaign = es.Campaign(load_state=False)
 # target_name_selected = [target_names[1]] # model for [1 - means ; 3- std] of data
 
 # ... 
-# # 8) Case from 8 flux tube GEM0 5000 runs (4 parameters, tensor product of grid with 5 points per DoF)
+# 8) Case from 8 flux tube GEM0 5000 runs (4 parameters, tensor product of grid with 5 points per DoF)
 
-# data_file_name = f"{code_name}_5000_transp_{index}_20231216.hdf5"
+n_samples = 5000
 
-# features_names_selected = features_names
-# target_name_selected = [target_names[0], target_names[1]]
+data_file_name = f"{code_name}_{n_samples}_transp_{index}_{date_data}.hdf5"
 
 # 9) Case from 8 flux tube GEM0 8000 runs (4 parameters, 8 flux tubes, 10**3 LHC samples per flux tube)
 
-n_samples = 8000
+# n_samples = 8000
 
-data_file_name = f"{code_name}_{n_samples}_transp_{index}_{date_data}.hdf5"
+# data_file_name = f"{code_name}_{n_samples}_transp_{index}_{date_data}.hdf5"
+
 
 features_names_selected = features_names
 target_name_selected = [target_names[0], target_names[1]]
@@ -87,17 +90,15 @@ time_init_start = t.time()
 
 ann_param = {
             'backend': 'local', #'scikit-learn'
-            #'process_type': 'student_t', #'gaussian'
-            #'kernel': 'Matern', #'RBF'
             #'length_scale': 1.0,  #[1.]*len(features),
             #'noize': 0.1,
             #'bias': 0.,
             #'nonstationary': False,
-            'test_frac': 0.2,
-            'n_iter': 30000,
-            'n_layers': 5,
-            'n_neurons': 128,
-            'batch_size': 32,
+            'test_frac': 0.0, #0.2,
+            'n_iter': 20000,
+            'n_layers': 2,
+            'n_neurons': 16,
+            'batch_size': 16,
             'activation': 'relu', #'sigmoid', #sigmoid usually gives better RMSE but might be a reason for misfit around constant dependences
            }
 

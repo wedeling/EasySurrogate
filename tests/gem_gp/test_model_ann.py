@@ -18,14 +18,20 @@ if len(sys.argv) < 3 :
 else:
     model_date = sys.argv[2]
 
-data_date = "20240110"
+if len(sys.argv) < 4 :
+    data_date = "20231208" #"20240110"
+else:
+    data_date = sys.argv[3]
+
+
 scan_date = "20240110"
+now_date  = t.strftime("%Y%m%d")
 
 code_name = 'gem0'
 
-n_layers = 5
-n_neurons = 128
-batch_size = 32
+n_layers = 2
+n_neurons = 16
+batch_size = 16
 
 features_names_selected = features_names
 target_name_selected = target_names
@@ -136,25 +142,28 @@ target_name_selected = target_names
 
 # data_file = f"{code_name}_5000_transp_{index}.hdf5"
 
-# # 8) Case from 8 flux tube GEM0 8000 runs (4 parameters, 8 flux tubes, 10**3 LHC samples per flux tube)
+# 8*) Case from 8 flux tube GEM0 8000 runs (4 parameters, 8 flux tubes, 10**3 LHC samples per flux tube)
 
-# features_names_selected = features_names
-# target_name_selected = [target_names[0], target_names[1]]
-
-# saved_model_file_path = f"model_{code_name}_5000_tf0.2_{len(features_names_selected)}i{len(target_name_selected)}o_ft{index}_ann{n_layers}x{n_neurons}x{batch_size}_{model_date}.pickle"
-
-# data_file = f"{code_name}_5000_transp_{index}_{data_date}.hdf5"
-
-# 9) Case from 8 flux tube GEM0 8000 runs (4 parameters, 8 flux tubes, 10**3 LHC samples per flux tube)
-
-n_samples = 8000
+n_samples = 5000
+test_frac = str(0.0)
 
 features_names_selected = features_names
 target_name_selected = [target_names[0], target_names[1]]
 
-saved_model_file_path = f"model_{code_name}_{n_samples}_tf0.2_{len(features_names_selected)}i{len(target_name_selected)}o_ft{index}_ann{n_layers}x{n_neurons}x{batch_size}_{model_date}.pickle"
+saved_model_file_path = f"model_{code_name}_{n_samples}_tf{test_frac}_{len(features_names_selected)}i{len(target_name_selected)}o_ft{index}_ann{n_layers}x{n_neurons}x{batch_size}_{model_date}.pickle"
 
 data_file = f"{code_name}_{n_samples}_transp_{index}_{data_date}.hdf5"
+
+# # 9) Case from 8 flux tube GEM0 8000 runs (4 parameters, 8 flux tubes, 10**3 LHC samples per flux tube)
+
+# n_samples = 8000
+
+# features_names_selected = features_names
+# target_name_selected = [target_names[0], target_names[1]]
+
+# saved_model_file_path = f"model_{code_name}_{n_samples}_tf0.2_{len(features_names_selected)}i{len(target_name_selected)}o_ft{index}_ann{n_layers}x{n_neurons}x{batch_size}_{model_date}.pickle"
+
+# data_file = f"{code_name}_{n_samples}_transp_{index}_{data_date}.hdf5"
 
 ###
 # Creating campaign
@@ -202,8 +211,22 @@ analysis.get_regression_error(feat_test, targ_test, feat_train, targ_train,
 
 # Plotting the scans / cuts in surrogate response
 
-features_new = np.concatenate([feat_train, feat_test], axis=0)
-target_new = np.concatenate([targ_train, targ_test], axis=0)
+if feat_test is not None:
+    if len(feat_test) > 0:
+        features_new = np.concatenate([feat_train, feat_test], axis=0)
+    else:
+        features_new = feat_train
+else:
+    features_new = feat_train
+
+if targ_test is not None:
+    if len(targ_test) > 0:
+        target_new = np.concatenate([targ_train, targ_test], axis=0)
+    else:
+        target_new = targ_train
+else:  
+    target_new = targ_train
+
 remainder_file_prefix = "scan_gem0_remainder_"
 
 scan_dict = {}
@@ -213,9 +236,17 @@ for output_num in range(target_new.shape[1]):
         for input_num in range(features_new.shape[1]):
 
             # plotting functions works for scalar vs scalar dependence only
-            scan_data = analysis.plot_scan(features_new, input_number=input_num, output_number=output_num, file_name_suf=str(index),
-                                           nft=index, remainder_values=f"{remainder_file_prefix}{features_names[input_num]}_{scan_date}.csv",
-                                           )
+
+            # Option 1: read from file
+            # scan_data = analysis.plot_scan(features_new, input_number=input_num, output_number=output_num, file_name_suf=str(index),
+            #                                nft=index, remainder_values=f"{remainder_file_prefix}{features_names[input_num]}_{scan_date}.csv",
+            #                                )
+            # Option 2: cut at centre
+            scan_data = analysis.plot_scan(features_new, input_number=input_num, output_number=output_num, file_name_suf=now_date,
+                                           nft=index, remainder_values=f"{remainder_file_prefix}{features_names[input_num]}_{now_date}.csv",
+                                           cut_option='center', y_train=targ_train,
+                                          )
+
             # filling in the dictionary with values
             scan_dict[f"{features_names_selected[input_num]}_{target_name_selected[output_num]}"] = scan_data
 
