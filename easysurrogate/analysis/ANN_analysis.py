@@ -5,6 +5,8 @@ import numpy as np
 import pandas as pd
 from scipy.stats import mode
 
+from itertools import combinations
+
 from .base import BaseAnalysis
 
 from matplotlib import pyplot as plt
@@ -135,9 +137,14 @@ class ANN_analysis(BaseAnalysis):
         """
         Saves a .pdf 1D plot of a QoI value predicted by a GP surrogate for a single varied input component
         """
+        #TODO ideally, this can be inherited from a supercalss, but it is not clear how to do it :)
 
         xlabels = ['te_value', 'ti_value', 'te_ddrho', 'ti_ddrho']
         ylabels = ['te_transp_flux', 'ti_transp_flux']
+
+        nft = kwargs['nft'] if 'nft' in kwargs else 0
+
+        n_in_comps = len(xlabels)
 
         extend_factor = 0.5
         n_points_new = 1000
@@ -159,21 +166,54 @@ class ANN_analysis(BaseAnalysis):
         x_values_new = np.linspace(x_values.min() - extend_factor * abs(x_values.min()) , 
                                    x_values.max() + extend_factor * abs(x_values.max()), n_points_new)
         
+        data_remainder = {}
         # Choose the place of the cut
+        cut_option = kwargs['cut_option'] if 'cut_option' in kwargs else 'median'
         x_remainder = np.delete(X_train, i_num, axis=1)
+
         # Option 1: Mean of every other dimension / center of existing sample
-        #x_remainder_value = x_remainder.mean(axis=0) # for a data that is not on a full tensor product and/or with each vector not having odd number of components, mean would not coincide with exsisting points
+        if cut_option == 'mean':
+            x_remainder_value = x_remainder.mean(axis=0) # for a data that is not on a full tensor product and/or with each vector not having odd number of components, mean would not coincide with exsisting points
         # Option 2: Mode of values among existing sample closest to the median for every other dimension
-        #x_remainder_value = np.median(x_remainder, axis=0) # Should work for partial data on a fully tensor product grid
+        elif cut_option == 'median':
+            x_remainder_value = np.median(x_remainder, axis=0) # Should work for partial data on a fully tensor product grid
         # Option 3: read from a file
-        if 'remainder_values' and 'nft' in kwargs:
-            file_remainder_values = kwargs['remainder_values']
-            nft = kwargs['nft']
-            df_remainder_values = pd.read_csv(file_remainder_values, header=[0, 1], index_col=0,) # tupleize_cols=True)
-            x_remainder_value = df_remainder_values[(f"ft{nft}", xlabels[i_num])]
-            x_remainder_value = np.array(x_remainder_value)
+        elif cut_option == 'file':
+            if 'remainder_values' in kwargs:
+                file_remainder_values = kwargs['remainder_values']
+                df_remainder_values = pd.read_csv(file_remainder_values, header=[0, 1], index_col=0,) # tupleize_cols=True)
+                x_remainder_value = df_remainder_values[(f"ft{nft}", xlabels[i_num])]
+                x_remainder_value = np.array(x_remainder_value)
+        # Option 4: if on a full tensor product grid, use the mode (center) of the values for every other dimension
+        elif cut_option == 'center': # should work for 100% data on a fully tensor product grid
+            X_train_unique_vals = []
+            indices = []
+            X_train_mid_vals = np.zeros((X_train.shape[1]))
+            for i in range(X_train.shape[1]):
+                X_train_unique_vals.append(np.unique(X_train[:,i]))
+                indices.append(int(X_train_unique_vals[-1].shape[0]/2))
+                X_train_mid_vals[i] = X_train_unique_vals[-1][indices[-1]]
+            x_remainder_value = np.delete(X_train_mid_vals, i_num)
+            mid_indices = [ np.isclose(X_train[:,1], X_train_mid_vals[1]) & np.isclose(X_train[:,2], X_train_mid_vals[2]) & np.isclose(X_train[:,3], X_train_mid_vals[3]),
+                            np.isclose(X_train[:,0], X_train_mid_vals[0]) & np.isclose(X_train[:,2], X_train_mid_vals[2]) & np.isclose(X_train[:,3], X_train_mid_vals[3]),
+                            np.isclose(X_train[:,0], X_train_mid_vals[0]) & np.isclose(X_train[:,1], X_train_mid_vals[1]) & np.isclose(X_train[:,3], X_train_mid_vals[3]),
+                            np.isclose(X_train[:,0], X_train_mid_vals[0]) & np.isclose(X_train[:,1], X_train_mid_vals[1]) & np.isclose(X_train[:,2], X_train_mid_vals[2]) ]
+            
+            #mid_indices = [all([np.isclose(X_train[:,z], X_train_mid_vals[z]) for z in y]) for y in combinations([x for x in range(n_in_comps)], n_in_comps-1)].reverse()
+            mid_indices_loc = mid_indices[i_num]
+
+        # Fall back option - error
+        else:
+            raise ValueError(f"Unknown cut_option: {cut_option}")
         
-        print(f"for {xlabels[input_number]} remainder values are: {x_remainder_value}") ###DEBUG
+        #print(f"for {xlabels[input_number]} remainder values are: {x_remainder_value}") ###DEBUG
+        data_remainder[(f"ft{nft}", xlabels[i_num])] = x_remainder_value
+
+        # Training points to be displayed
+        if 'y_train' in kwargs:
+            y_train = kwargs['y_train']
+            y_train_plot = y_train[mid_indices_loc, output_number]
+            X_train_plot = x_values[mid_indices_loc]
 
         X_new = np.zeros((x_values_new.shape[0], X_train.shape[1]))
         X_new[:, i_num] = x_values_new
@@ -187,11 +227,19 @@ class ANN_analysis(BaseAnalysis):
             X_new[i, :])[output_number] for i in range(X_new.shape[0])]
 
         ax.plot(x_values_new, y, label=f"{input_number}->{output_number}")
+           
+        # Plot training points
+        if 'y_train' in kwargs:
+            ax.plot(X_train_plot, y_train_plot, 'ko', label='training points')
 
         ax.set_xlabel(xlabels[input_number])
         ax.set_ylabel(ylabels[output_number])
-        ax.set_title(f"{xlabels[input_number]}->{ylabels[output_number]}(@ft#{file_name_suf})")
-        fig.savefig('scan_'+'i'+str(input_number)+'o'+str(output_number)+'f'+file_name_suf+'.pdf')
+        ax.set_title(f"{xlabels[input_number]}->{ylabels[output_number]}(@ft#{nft})")
+        fig.savefig('scan_'+'i'+str(input_number)+'o'+str(output_number)+'f'+str(nft)+'.pdf')
+
+        # Store and save the remainder input values i.e. the coordinates of the cut
+        data_remainder = pd.DataFrame(data_remainder)
+        data_remainder.to_csv(f"scan_gem0ann_remainder_{xlabels[input_number]}_{file_name_suf}_ft{nft}.csv")
 
         data = pd.DataFrame({'x': x_values_new, 'y': y})
         
