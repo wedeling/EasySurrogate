@@ -378,7 +378,7 @@ class GP_analysis(BaseAnalysis):
         if 'y_train' in kwargs:
             #print(f"mid_indices_loc={mid_indices_loc}") ###DEBUG
             y_train = kwargs['y_train']
-            y_train_plot = y_train[mid_indices_loc, output_number]
+            y_train_plot = y_train[mid_indices_loc]
             X_train_plot = x_values[mid_indices_loc]
         
         X_new = np.zeros((x_values_new.shape[0], X_train.shape[1]))
@@ -580,7 +580,7 @@ class GP_analysis(BaseAnalysis):
                 #                            )
                 # Option 2: scan for the middle values of the fulll grid
                 scan_data = self.plot_scan(X_train, input_number=input_num, output_number=output_num, file_name_suf=addit_name,
-                                           nft=self.nft, cut_option='center', y_train=y_train,
+                                           nft=self.nft, cut_option='center', y_train=y_train[:,output_num],
                                            )
 
                 scan_dict[f"{self.features_names_selected[input_num]}_{self.target_name_selected[output_num]}"] = scan_data
