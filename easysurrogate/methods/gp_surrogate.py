@@ -155,6 +155,8 @@ class GP_Surrogate(Campaign):
             n_iter: number of hyperoptimisation restarts
             test_frac: Fraction of the data used for training
 
+            bounds are in inits relative to the dafault value of hyperparameter
+
         Returns:
         -------
         None.
@@ -170,6 +172,8 @@ class GP_Surrogate(Campaign):
         else:
             self.length_scale = kwargs['length_scale']
 
+        self.length_scale_bounds = kwargs['length_scale_bounds'] if 'length_scale_bounds' in kwargs else (1e-4, 1e+4)
+
         if 'nu_matern' not in kwargs:
             self.nu_matern = 1.0
         else:
@@ -184,6 +188,8 @@ class GP_Surrogate(Campaign):
             self.noize = 'True'
         else:
             self.noize = kwargs['noize']
+
+        self.noize_bounds = kwargs['noize_bounds'] if 'noize_bounds' in kwargs else (1e-3, 1e+3)
 
         if 'bias' not in kwargs:
             self.bias = False
@@ -207,10 +213,11 @@ class GP_Surrogate(Campaign):
         #y_train = self.y_scaler.fit_transform(y_train)
         y_train = self.y_scaler.fit_transform(X_train, y_train)
         X_train = self.x_scaler.fit_transform(X_train)
-        if len(X_test) > 0 and len(y_test) > 0:
-            #y_test = self.y_scaler.transform(y_test)
-            y_test = self.y_scaler.transform(X_test, y_test)
-            X_test = self.x_scaler.transform(X_test)
+        if X_test is not None and y_test is not None:
+            if len(X_test) > 0 and len(y_test) > 0:
+                #y_test = self.y_scaler.transform(y_test)
+                y_test = self.y_scaler.transform(X_test, y_test)
+                X_test = self.x_scaler.transform(X_test)
 
         self.X_train = X_train
         self.y_train = y_train
@@ -228,7 +235,9 @@ class GP_Surrogate(Campaign):
             bias=self.bias, # BIAS should not matter and yield factor parameter close to zero if data is whitened
             nonstationary=self.nonstationary,
             noize=self.noize,
+            noize_rel_bounds=self.noize_bounds,
             length_scale=self.length_scale,
+            length_scale_rel_bounds=self.length_scale_bounds,
             backend=self.backend,
             process_type=self.process_type,
             nu_matern=self.nu_matern,

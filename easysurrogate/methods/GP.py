@@ -54,6 +54,10 @@ class GP:
         else:
             self.nu_stp = kwargs['nu_stp']
 
+        length_scale_rel_bounds = kwargs['length_scale_rel_bounds'] if 'length_scale_rel_bounds' in kwargs else (1e-4, 1e+4)
+
+        noize_rel_bounds = kwargs['noize_rel_bounds'] if 'noize_rel_bounds' in kwargs else (1e-3, 1e+3)
+
         # sciki-learn specific part
         if self.backend == 'scikit-learn':
 
@@ -62,13 +66,13 @@ class GP:
 
             if kernel == 'Matern':
                 self.kernel *= Matern(length_scale=[length_scale] *
-                                      self.n_in, length_scale_bounds=[length_scale *
-                                                                      1e-4, length_scale *
-                                                                      1e+4], nu=self.nu_matern)
+                                      self.n_in, length_scale_bounds=[length_scale * length_scale_rel_bounds[0], 
+                                                                      length_scale * length_scale_rel_bounds[1]], 
+                                                                  nu=self.nu_matern)
 
             elif kernel == 'RBF':
                 self.kernel *= RBF(length_scale=[length_scale] * self.n_in,
-                                   length_scale_bounds=[length_scale * 1e-4, length_scale * 1e+4])
+                                   length_scale_bounds=[length_scale * length_scale_rel_bounds[0], length_scale * length_scale_rel_bounds[1]])
 
             if bias:
                 bias_value = 1.0
@@ -78,13 +82,13 @@ class GP:
                                               constant_value_bounds=(1e-5, 1e+5))
 
             noize_val = 1e-8
-            bounds_val = (noize_val * 1e-3, noize_val * 1e+3)
+            bounds_val = (noize_val * noize_rel_bounds[0], noize_val * noize_rel_bounds[1])
             if noize == 'adaptive':
                 noize_val = 1e-12
                 bounds_val = 'fixed'
             elif isinstance(noize, float):
                 noize_val = noize
-                bounds_val = (noize_val * 1e-3, noize_val * 1e+3)
+                bounds_val = (noize_val * noize_rel_bounds[0], noize_val * noize_rel_bounds[1])
 
             if noize != False:
                 self.kernel += WhiteKernel(noise_level=noize_val,
@@ -101,7 +105,7 @@ class GP:
         elif self.backend == 'mogp':
 
             if kernel == 'Matern':
-                self.kernel_argument += 'Matern52'
+                self.kernel_argument += 'Matern32'
             elif kernel == 'RBF':
                 self.kernel_argument += 'SquaredExponential'
 
