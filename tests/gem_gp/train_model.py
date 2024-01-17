@@ -71,7 +71,7 @@ campaign = es.Campaign(load_state=False)
 # features_names_selected = features_names
 # target_name_selected = [target_names[0],target_names[1]]
 
-# # 8) Case from 8 flux tube GEM0 5000 runs (4 parameters, tensor product of grid with 5 points per DoF)
+# 8) Case from 8 flux tube GEM0 5000 runs (4 parameters, tensor product of grid with 5 points per DoF)
 
 n_samples = 5000
 #data_file_name = f"{code_name}_{n_samples}_transp_{index}.hdf5" #gem/gem0 data
@@ -104,13 +104,15 @@ gp_param = {
             'process_type': 'gaussian', #'student_t'
             'kernel': 'RBF', #'Matern'
             'length_scale': 1.0,  #[1.]*len(features),
+            'length_scale_bounds': (5e-1, 1e+5),
             'noize': 0.1,
+            'noize_bounds': (1e-3, 1e+3),
             'nu_matern': 1.5,
             'nu_stp': 10,
             'bias': 0.,
             'nonstationary': False,
             'test_frac': 0., #0.2,
-            'n_iter': 5,
+            'n_iter': 20,
            }
 
 surrogate = es.methods.GP_Surrogate(
@@ -138,6 +140,8 @@ surrogate.train(features,
                 nonstationary=gp_param['nonstationary'],
                 process_type=gp_param['process_type'],
                 kernel=gp_param['kernel'],
+                length_scale_bounds=gp_param['length_scale_bounds'],
+                noize_bounds=gp_param['noize_bounds'],
                )
 
 print('Time to train the surrogate: {:.3} s'.format(t.time() - time_train_start))

@@ -130,7 +130,11 @@ target_name_selected = target_names
 
 n_samples = 5000
 
-saved_model_file_path = f"model_{code_name}_val_scikit-learngaussianRBF_transp_{index}_{model_date}.pickle"
+backend='scikit-learn'
+likelihood='gaussian'
+kernel='RBF'
+
+saved_model_file_path = f"model_{code_name}_val_{backend}{likelihood}{kernel}_transp_{index}_{model_date}.pickle"
 #saved_model_file_path = f"gem0_es_model_{index}.pickle" ###DEBUG, files copied from HPO
 
 data_file = f"{code_name}_{n_samples}_transp_{index}_{data_date}.hdf5"
