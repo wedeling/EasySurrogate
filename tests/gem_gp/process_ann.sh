@@ -1,16 +1,35 @@
 #!/bin/sh
 
-date=20231217
+datadate=20240110
+datadate=20231208  #checking old pyGEM0-5k data
+
+modeldate=20240110
+modeldate=20240116 #latest model
+
+date=20240116
+
+nfts=8
+
+# update ES package
+cd ../..
+pip install .
+cd tests/gem_gp
 
 # train and test the models
-for((i=0;i<8;i++)); do python train_model_ann.py $i ;done
-for((i=0;i<8;i++)); do python test_model_ann.py $i ${date} ;done
+#for((i=0;i<${nfts};i++)); do python train_model_ann.py $i ${date} ${datadate} ;done
+for((i=0;i<${nfts};i++)); do python test_model_ann.py $i ${modeldate} ${datadate} ;done
 
 # save the results
-for((i=0;i<8;i++)); do cp scan_${i}.csv ../../../MFW/uq/basicda/scan_gem0surr_${date}_ft${i}.csv ;done
-mkdir annscan_${date}
-mv scan* annscan_${date}
-mv loss* annscan_${date}
-tar -czvf annscan_${date}tar.gz annscan_${date}
-mv  ${date}annscan_${date}tar.gz ../../..
+for((i=0;i<${nfts};i++)); do cp scan_${i}.csv ../../../MFW/uq/basicda/scan_gem0ann_${date}_ft${i}.csv ;done
+
+cp scan_gem0ann_remainder_*_${date}_ft[0-9].csv ../../../MFW/uq/basicda/
+
+postfix="_2"
+mkdir annscan_${date}${postfix}
+
+cp scan*csv annscan_${date}${postfix}
+mv scan*pdf annscan_${date}${postfix}
+mv loss* annscan_${date}${postfix}
+tar -czvf annscan_${date}${postfix}.tar.gz annscan_${date}${postfix}
+mv annscan_${date}${postfix}.tar.gz ../../..
 

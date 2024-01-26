@@ -18,7 +18,7 @@ if len(sys.argv) < 3 :
 else:  
     date_gen = sys.argv[2]
 
-code_name = 'gem0'
+code_name = 'gem0py'
 
 np.random.seed(42)
 
@@ -77,9 +77,10 @@ n_samples = 5000
 #data_file_name = f"{code_name}_{n_samples}_transp_{index}.hdf5" #gem/gem0 data
 data_file_name = f"{code_name}_{n_samples}_transp_{index}_{date_gen}.hdf5" #gem/gem0 data
 
-# # 9) Case from 8 flux tube GEM0 8000 runs (4 parameters, 8 flux tubes, 10**3 LHC samples per flux tube)
+# # 9) Case from 8 flux tube GEM0 8000/12000 runs (4 parameters, 8 flux tubes, 10**3 LHC samples per flux tube)
 
-# n_samples = 8000
+# #n_samples = 8000
+# n_samples = 12000
 
 # data_file_name = f"{code_name}_{n_samples}_transp_{index}_{date_gen}.hdf5"
 
@@ -104,7 +105,7 @@ gp_param = {
             'process_type': 'gaussian', #'student_t'
             'kernel': 'RBF', #'Matern'
             'length_scale': 1.0,  #[1.]*len(features),
-            'length_scale_bounds': (5e-1, 1e+5),
+            'length_scale_bounds': (1e-1, 1e+6),
             'noize': 0.1,
             'noize_bounds': (1e-3, 1e+3),
             'nu_matern': 1.5,

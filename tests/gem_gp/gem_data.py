@@ -285,39 +285,47 @@ for i in range(len(data_ft)):
     campaign.store_data_to_hdf5(data_ft[i], file_path=f"gem_uq_648_ti_transp_std_{i}.hdf5")
 """
 
-# # 8) Case from 8 flux tube GEM0 run, having same number of points for every input dimension
+# 8) Case from 8 flux tube GEM0 run, having same number of points for every input dimension
 
-# #datafile = "gem0_new_data_20231101.csv"
-# #datafile = "gem0_new_data_20231208.csv"
-# datafile = 'gem0_new_data_20231215.csv'
+code = 'gem0py'
 
-# runs_per_ft = 5**4
+date_gen = '20240126'
+date_sav = '20240126'
 
-# data = load_csv_to_dict(input_file=datafile,)
+#datafile = "gem0_new_data_20231101.csv"
+#datafile = "gem0_new_data_20231208.csv"
+#datafile = 'gem0_new_data_20231215.csv'
+datafile = f"{code}_new_{date_gen}.csv"
 
-# data_ft = split_flux_tubes(data, ft_len=runs_per_ft)
-
-# campaign.store_data_to_hdf5(data, file_path="gem0_5000_transp_tot_20231216.hdf5")
-# for i in range(len(data_ft)):
-#     campaign.store_data_to_hdf5(data_ft[i], file_path=f"gem0_5000_transp_{i}_20231216.hdf5")
-
-
-# 9) Case from 8 flux tube GEM0 run, genrated as LHC sample
-
-code = 'gem0'
-
-date_sav = "20240110"
-date_gen = "20240110"
-datafile = f"gem0py_lhc_{date_gen}_all.csv"
-
-runs_per_ft = 10**3
+runs_per_ft = 5**4
 n_ft = 8
-n_samples = n_ft * runs_per_ft
+n_samples = n_ft*runs_per_ft
 
-data = load_csv_to_dict(input_file=datafile,)
+data = load_csv_to_dict(input_file=datafile)
 
-data_ft = split_flux_tubes(data, n_ft=n_ft)
+data_ft = split_flux_tubes(data, ft_len=runs_per_ft, n_ft=n_ft)
 
 campaign.store_data_to_hdf5(data, file_path=f"{code}_{n_samples}_transp_tot_{date_sav}.hdf5")
 for i in range(len(data_ft)):
     campaign.store_data_to_hdf5(data_ft[i], file_path=f"{code}_{n_samples}_transp_{i}_{date_sav}.hdf5")
+
+
+# # 9) Case from 8 flux tube GEM0 run, genrated as LHC sample
+
+# code = 'gem0py'
+
+# date_sav = "20240125"
+# date_gen = "20240125"
+# datafile = f"{code}_lhc_{date_gen}_all.csv"
+
+# runs_per_ft = 1500
+# n_ft = 8
+# n_samples = n_ft * runs_per_ft
+
+# data = load_csv_to_dict(input_file=datafile,)
+
+# data_ft = split_flux_tubes(data, n_ft=n_ft)
+
+# campaign.store_data_to_hdf5(data, file_path=f"{code}_{n_samples}_transp_tot_{date_sav}.hdf5")
+# for i in range(len(data_ft)):
+#     campaign.store_data_to_hdf5(data_ft[i], file_path=f"{code}_{n_samples}_transp_{i}_{date_sav}.hdf5")

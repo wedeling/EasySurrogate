@@ -23,9 +23,12 @@ if len(sys.argv) < 4 :
 else:
     data_date = sys.argv[3]
 
-scan_date = '20240110'
+if len(sys.argv) < 5 :
+    scan_date = '20240110'
+else:
+    scan_date = sys.argv[4]
 
-code_name = 'gem0'
+code_name = 'gem0py'
 
 features_names_selected = features_names
 target_name_selected = target_names
@@ -141,7 +144,8 @@ data_file = f"{code_name}_{n_samples}_transp_{index}_{data_date}.hdf5"
 
 # # 9) Case from 8 flux tube GEM0 8000 runs (4 parameters, 8 flux tubes, 10**3 LHC samples per flux tube)
 
-# n_samples = 8000
+# #n_samples = 8000
+# n_samples = 12000
 
 # saved_model_file_path = f"model_{code_name}_val_scikit-learngaussianRBF_transp_{index}_{model_date}.pickle"
 # #saved_model_file_path = f"gem0_es_model_{index}.pickle" ###DEBUG, files copied from HPO
