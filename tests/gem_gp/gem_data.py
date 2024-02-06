@@ -1,9 +1,21 @@
 import numpy as np
 import csv
 import pandas as pd
+import sys
+import datetime
 
 import easysurrogate as es
 
+
+if len(sys.argv) < 2 :
+    date_gen = '20240202'
+else:
+    date_gen = sys.argv[1]
+
+if len(sys.argv) < 3 :
+    date_sav = datetime.now().strftime("%Y%m%d")
+else:  
+    date_sav = sys.argv[2]
 
 features_names = ['te_value', 'ti_value', 'te_ddrho', 'ti_ddrho']
 target_names = ['te_transp_flux', 'ti_transp_flux', 'te_transp_flux_std', 'ti_transp_flux_std']
@@ -66,7 +78,7 @@ def load_csv_file(input_file='gem_data_625.txt', n_runs=625, input_dim=4, output
 
     return data
 
-def split_flux_tubes(data_dict, ft_len=625, n_ft=8):
+def split_flux_tubes(data_dict, ft_len=625, n_ft=8, option='column'):
     """
     Split resulting dictionary into multiple dictionaries, one for each flux tube.
     Data separation between different flux tubes can be defined by:
@@ -105,8 +117,9 @@ def split_flux_tubes(data_dict, ft_len=625, n_ft=8):
         #data_dict_list.append({k:np.array(v[i*ft_len:(i+1)*ft_len]) for (k,v) in data_dict.items()}) #assume that entries are ordered by flux tube number and there is the same number of rows per flux tube
 
         # Option b: there is an 'ft' column in the data
-        mask = [data_dict['ft']==i][0][:][:]
-        data_dict_list.append({k:np.array(v[mask]) for (k,v) in data_dict.items() if k!='ft'})
+        if option == 'column':
+            mask = [data_dict['ft']==i][0][:][:]
+            data_dict_list.append({k:np.array(v[mask]) for (k,v) in data_dict.items() if k!='ft'})
 
     #print(f"dimensions of original arrays: {data_dict['ti_transp_flux_std'].shape} ; and new arrays: {data_dict_list[0]['ti_transp_flux_std'].shape}") ###DEBUG
 
@@ -289,8 +302,8 @@ for i in range(len(data_ft)):
 
 code = 'gem0py'
 
-date_gen = '20240126'
-date_sav = '20240126'
+#date_gen = '20240202'
+#date_sav = '20240202'
 
 #datafile = "gem0_new_data_20231101.csv"
 #datafile = "gem0_new_data_20231208.csv"
@@ -300,6 +313,7 @@ datafile = f"{code}_new_{date_gen}.csv"
 runs_per_ft = 5**4
 n_ft = 8
 n_samples = n_ft*runs_per_ft
+#n_samples = 5010
 
 data = load_csv_to_dict(input_file=datafile)
 

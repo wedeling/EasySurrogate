@@ -14,9 +14,15 @@ else:
     index = sys.argv[1]
 
 if len(sys.argv) < 3 :
-    date_gen = "20231216"
+    #date_gen = "20231216"
+    date_gen = datetime.now().strftime("%Y%m%d")
 else:  
     date_gen = sys.argv[2]
+
+if len(sys.argv) < 4 :
+    model_id = datetime.now().strftime("%Y%m%d")
+else:
+    model_id = sys.argv[3]
 
 code_name = 'gem0py'
 
@@ -74,6 +80,7 @@ campaign = es.Campaign(load_state=False)
 # 8) Case from 8 flux tube GEM0 5000 runs (4 parameters, tensor product of grid with 5 points per DoF)
 
 n_samples = 5000
+#n_samples = 5010
 #data_file_name = f"{code_name}_{n_samples}_transp_{index}.hdf5" #gem/gem0 data
 data_file_name = f"{code_name}_{n_samples}_transp_{index}_{date_gen}.hdf5" #gem/gem0 data
 
@@ -148,8 +155,7 @@ surrogate.train(features,
 print('Time to train the surrogate: {:.3} s'.format(t.time() - time_train_start))
 surrogate.model.print_model_info()
 
-date_str = datetime.now().strftime("%Y%m%d")
-save_model_file_name = f"model_{code_name}_val_{gp_param['backend']}{gp_param['process_type']}{gp_param['kernel']}_transp_{index}_{date_str}.pickle"
+save_model_file_name = f"model_{code_name}_val_{gp_param['backend']}{gp_param['process_type']}{gp_param['kernel']}_transp_{index}_{model_id}.pickle"
 
 campaign.add_app(name='gp_campaign', surrogate=surrogate)
 campaign.save_state(file_path=save_model_file_name)

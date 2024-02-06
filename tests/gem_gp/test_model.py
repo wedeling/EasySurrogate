@@ -132,6 +132,7 @@ target_name_selected = target_names
 # 8) Case from 8 flux tubes GEM0 UQ campaign (4 parameters, tensor product of grid with 5 points per DoF)
 
 n_samples = 5000
+#n_samples = 5010
 
 backend='scikit-learn'
 likelihood='gaussian'
