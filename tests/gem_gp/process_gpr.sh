@@ -74,16 +74,17 @@ for((i=0;i<${nft};i++)); do python train_model.py $i ${data_id} ${model_id} ;don
 
 for((i=0;i<${nft};i++)); do python test_model.py $i ${model_id} ${data_id} ${curr_id} ;done
 
-# save the results
-for((i=0;i<${nft};i++)); do cp scan_${i}.csv ../../../MFW/uq/basicda/scan_${codename}${modeltype}_${curr_id}_ft${i}.csv ;done
+# save the results (of the scan)
+#for((i=0;i<${nft};i++)); do cp scan_${i}.csv ../../../MFW/uq/basicda/scan_${codename}${modeltype}_${curr_id}_ft${i}.csv ;done
 
 # save the cut locations
 # TODO merge scans!
 input_names=('te_value' 'ti_value' 'te_ddrho' 'ti_ddrho')
 for name in ${input_names[@]}; do
     for((i=0;i<${nft};i++)); do
-        #cp scan_${codename}${modeltype}_remainder_*_ft[0-9].csv ../../../MFW/uq/basicda/
-        cp scan_${codenameshort}${modeltype}_remainder_${name}_ft${i}.csv ../../../MFW/uq/basicda/scan_${codename}${modeltype}_remainder_${name}_${curr_id}_ft${i}.csv ;
+        #cp scan_${codename}${modeltype}_remainder_*_ft[0-9].csv ../../../MFW/uq/basicda/ - wrong version!
+ 
+        #cp scan_${codenameshort}${modeltype}_remainder_${name}_ft${i}.csv ../../../MFW/uq/basicda/scan_${codename}${modeltype}_remainder_${name}_${curr_id}_ft${i}.csv ;
     done ;
 done
 
@@ -111,3 +112,4 @@ mv surrogate_for_workflow/gem*es*model*pickle surr_model_bckp_${curr_id}
 for((i=0;i<${nft};i++)); do
     cp ../../EasySurrogate/tests/gem_gp/model_${codename}_val_scikit-learngaussianRBF_transp_${i}_${curr_id}.pickle surrogate_for_workflow/${codenameshort}_es_model_${i}.pickle ;
 done
+

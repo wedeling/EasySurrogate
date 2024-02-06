@@ -90,7 +90,7 @@ def split_flux_tubes(data_dict, ft_len=625, n_ft=8, option='column'):
     if not n_ft:
         n_ft = n_tot // ft_len
 
-    print(data_dict)###DEBUG
+    #print(data_dict)###DEBUG
 
     # Option 1: make a dictionary with keys being differeny flux tube strings and values being dictionaries 
     #    - current storing function does not support tree-like dictionaries
