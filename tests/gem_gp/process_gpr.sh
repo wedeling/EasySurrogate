@@ -70,7 +70,7 @@ cp ../../../MFW/uq/basicda/${codename}_new_${data_id}.csv ./
 python gem_data.py ${data_id} ${data_id}
 
 # train and test the models
-for((i=0;i<${nft};i++)); do python train_model.py $i ${data_id} ${model_id} ;done
+for((i=0;i<${nft};i++)); do python train_model.py $i ${data_id} ${model_id} ; done
 
 for((i=0;i<${nft};i++)); do python test_model.py $i ${model_id} ${data_id} ${curr_id} ;done
 
@@ -80,14 +80,14 @@ for((i=0;i<${nft};i++)); do python test_model.py $i ${model_id} ${data_id} ${cur
 # save the cut locations
 # TODO merge scans!
 input_names=('te_value' 'ti_value' 'te_ddrho' 'ti_ddrho')
-for name in ${input_names[@]}; do
-    for((i=0;i<${nft};i++)); do
-        #cp scan_${codename}${modeltype}_remainder_*_ft[0-9].csv ../../../MFW/uq/basicda/ - wrong version!
- 
-        #cp scan_${codenameshort}${modeltype}_remainder_${name}_ft${i}.csv ../../../MFW/uq/basicda/scan_${codename}${modeltype}_remainder_${name}_${curr_id}_ft${i}.csv ;
-    done ;
-done
+#for name in ${input_names[@]}; do
+#    for((i=0;i<${nft};i++)); do
+#        ##cp scan_${codename}${modeltype}_remainder_*_ft[0-9].csv ../../../MFW/uq/basicda/ - wrong version! 
+#        #cp scan_${codenameshort}${modeltype}_remainder_${name}_ft${i}.csv ../../../MFW/uq/basicda/scan_${codename}${modeltype}_remainder_${name}_${curr_id}_ft${i}.csv ;
+#    done
+#done
 
+# Next line is for example/debugging
 #for name in ${input_names[@]}; do for((i=0;i<8;i++)); do cp scan_gem0gpr_remainder_${name}_20230122_ft${i}.csv gpr_scan_20240122_2/scan_gem0gpr_remainder_${name}_20240122_ft${i}.csv ; done ; done
 
 # save the results of test script
@@ -105,11 +105,10 @@ mv gp_abs_err_.pdf ${savediranme}/
 tar -czvf ${savediranme}.tar.gz ${savediranme}/ 
 mv ${savediranme}.tar.gz ../../..
 
-# save the surrogate for the workflow
+# save the surrogate for the workflow - prepare for M3-WF run
 cd ../../../MFW/workflows/
 mkdir surr_model_bckp_${curr_id}
 mv surrogate_for_workflow/gem*es*model*pickle surr_model_bckp_${curr_id}
 for((i=0;i<${nft};i++)); do
     cp ../../EasySurrogate/tests/gem_gp/model_${codename}_val_scikit-learngaussianRBF_transp_${i}_${curr_id}.pickle surrogate_for_workflow/${codenameshort}_es_model_${i}.pickle ;
 done
-

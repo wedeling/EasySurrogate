@@ -310,6 +310,8 @@ code = 'gem0py'
 #datafile = 'gem0_new_data_20231215.csv'
 datafile = f"{code}_new_{date_gen}.csv"
 
+print(f"for surrogate training reading {datafile}") ###DEBUG
+
 runs_per_ft = 5**4
 n_ft = 8
 n_samples = n_ft*runs_per_ft
