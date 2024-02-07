@@ -371,7 +371,7 @@ class GP_analysis(BaseAnalysis):
             raise ValueError(f"Unknown cut_option: {cut_option}")
         
         # Write (and display) remiander values of the cut location
-        print(f"for {xlabels[i_num]} @ft#{nft} remainder values are: {x_remainder_value}") ###DEBUG
+        #print(f"for {xlabels[i_num]} @ft#{nft} remainder values are: {x_remainder_value}") ###DEBUG
         data_remainder[(f"ft{nft}", xlabels[i_num])] = x_remainder_value
         
         # Training points to be displayed
@@ -615,8 +615,10 @@ class GP_analysis(BaseAnalysis):
             y_std_pred_train = [self.gp_surrogate.predict(
                 X_train[i, :].reshape(-1, 1))[1] for i in range(X_train.shape[0])]
 
-            # Reshape the resulting arrays
-            # TODO: here squeeze should not mix the output components
+            print(f"y_pred_train shape (original) = {len(y_pred_train)} x {y_pred_train[0].shape}") ###DEBUG
+
+            # Reshape the resulting arrays - clean up this mess!
+            # TODO: here squeeze should not mix the output components - squeeze should probably be applied on y_*_plot leater instead
             if not only_train_set:
                 y_pred = np.squeeze(np.array(y_pred), axis=1)
                 y_std_pred = np.squeeze(np.array(y_std_pred), axis=1)
@@ -624,19 +626,20 @@ class GP_analysis(BaseAnalysis):
                 y_pred = np.ones((0, len(y_pred_train[n_out])))
                 y_std_pred = np.ones((0, len(y_pred_train[n_out])))
                 
-                #print('y_pred shape {}'.format(y_pred.shape)) ###DEBUG
+            #print('y_pred.shape {}'.format(y_pred.shape)) ###DEBUG
                 
             y_pred_train = np.squeeze(np.array(y_pred_train), axis=1)
             y_std_pred_train = np.squeeze(np.array(y_std_pred_train), axis=1)
 
+            print(f"y_pred_train shape (after sequeeze) = {len(y_pred_train)} x {y_pred_train[0].shape}") ###DEBUG
             #print(f"y_test: \n{y_test}") ###DEBUG
 
             # Check if we a working with a vector or scalar QoI:
-            #  If it is vector then consider only the first component
+            #  If it is vector then consider only the first component - change!
             y_test_plot = y_test
             y_train_plot = y_train
 
-            if y_pred.shape[1] != 1:
+            if y_pred.shape[1] != 1: # dim should not be (n,m) - chooses and output component
 
                 y_train_plot = y_train[:, [n_out]]
                 y_pred_train = y_pred_train[:, n_out]
@@ -647,12 +650,16 @@ class GP_analysis(BaseAnalysis):
                     y_pred = y_pred[:, n_out]
                     y_std_pred = y_std_pred[:, n_out]
 
-            if len(y_pred.shape) == 1:
+            print(f"y_train_plot shape = {y_train_plot.shape}") ###DEBUG
+
+            if len(y_pred.shape) == 1: # dim should be (n,1)
 
                 y_pred_train = y_pred_train.reshape(-1, 1)
 
                 if not only_train_set:
                     y_pred = y_pred.reshape(-1, 1)
+
+            print(f"y_train_plot shape (after reshape) = {y_train_plot.shape}") ###DEBUG
 
             # Calculate the errors
             # test data appears smaller in length (by 1)
@@ -748,9 +755,10 @@ class GP_analysis(BaseAnalysis):
                     
                     self.plot_res(
                             x_train_inds, 
-                            y_pred_train[:, 0],
+                            y_pred_train[:, 0],  # <- the error due to y e R^2 happens here (squeeze makes array x2 larger than should be)
                             y_train_plot[:, 0],
-                            y_std_pred_train=y_std_pred_train.reshape(y_pred_train[:, 0].shape),
+                            #y_std_pred_train=y_std_pred_train.reshape(y_pred_train[:, 0].shape),
+                            y_std_pred_train=y_std_pred_train[:,n_out],
                             name=r'$Y_i$', num=str(n_out), type_train='rand',
                             train_n=train_n, out_color='b',
                             addit_name=addit_name_new,
