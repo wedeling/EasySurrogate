@@ -18,7 +18,6 @@ else:
     model_date = sys.argv[2]
 
 if len(sys.argv) < 4 :
-    #data_date = '20240110'
     data_date = '20231216'
 else:
     data_date = sys.argv[3]
@@ -36,122 +35,17 @@ target_name_selected = target_names
 # PREPARING MODEL TO USE
 # load pre-trained campaign
 
-# 1) Case for data from single flux tube GEM UQ campaign
-#campaign = es.Campaign(load_state=True, file_path='gp_gem_625.pickle')
-#data_frame = campaign.load_hdf5_data(file_path='gem_data_625.hdf5')
-#data_frame_train = campaign.load_hdf5_data(file_path='gem_data_625.hdf5')
-
-# 2) Case for data from a MFW production run
-#campaign = es.Campaign(load_state=True, file_path='skl_gem_500_wf_1405_opt.pickle')
-#data_frame = campaign.load_hdf5_data(file_path='gem_workflow_500.hdf5')
-#data_frame_train = campaign.load_hdf5_data(file_path='gem_workflow_500.hdf5')
-
-# 3) Case for data generated from single flux tube GEM0 with 4 parameters (LHD, with a wrapper)
-#campaign = es.Campaign(load_state=True, file_path='gem0_lhc.pickle')
-#data_frame = campaign.load_hdf5_data(file_path='gem_workflow_500.hdf5')
-#data_frame_train = campaign.load_hdf5_data(file_path='gem_workflow_500.hdf5')
-
-# 4) Case for from single flux tube GEM0 with 2 parameters (LHD, with a wrapper)
-#features_names_selected = [features_names[2], features_names[3]]
-#target_name_selected = [target_names[1]]
-#campaign = es.Campaign(load_state=True, file_path=
-#                                        #'gp_model_10pperctrset_plus1oseqsamples.pickle'
-#                                         'model_190522.pickle'
-#                      )
-#data_frame = campaign.load_hdf5_data(file_path='gem0_lhc_256.hdf5')
-#data_frame_train = campaign.load_hdf5_data(file_path='gem0_lhc_256.hdf5')
-
-# 5) Case from single flux tube GEM UQ campaign (4 parameters, tensor product of grid with 2 points per DoF)
-
-# saved_model_file_path = 'model_val_10082022.pickle' 
-# #'model_biased_nonst_05train_10062022.pickle' 
-# #TODO: noize+const+dotproduct apparently leads to overfitting - trying to have higher variance of the model is probably more beneficial
-# #'model_nonst_05train_10062022.pickle'
-# #'model_biased_05train_09062022.pickle'
-# #'model_nonst_05train_09062022.pickle'                                        
-# #'mode_gem16_200522.pickle'
-# #'model_05split_230522.pickle'
-# #'model_biased_05train_09062022.pickle'
-
-# features_names_selected = features_names
-# target_name_selected = [target_names[1]]
-# campaign = es.Campaign(load_state=True, file_path=saved_model_file_path)
-
-# data_frame = campaign.load_hdf5_data(file_path='gem_uq_16_std.hdf5')
-# data_frame_train = campaign.load_hdf5_data(file_path='gem_uq_16_std.hdf5')
-
-# 5') Case from single flux tube GEM UQ campaign (4 parameters, tensor product of grid with 3 points per DoF)
-#saved_model_file_path = 'model_val_11102022.pickle' 
-
-# 5'') Case from single flux tube GEM UQ campaign - 81 runs (4 parameters, tensor product of grid with 3 points per DoF)
-# saved_model_file_path = 'model_val_LocStudentMatern_30112022.pickle'
-# saved_model_file_path = 'model_val_LocStudentMatern_30112022.pickle'
-
-# saved_model_file_path = 'model_r40_2tgjrzg_.pickle'
-
-# features_names_selected = features_names
-# target_name_selected = [target_names[1]]
-# campaign = es.Campaign(load_state=True, file_path=saved_model_file_path)
-
-# data_frame = campaign.load_hdf5_data(file_path='gem_uq_81_std.hdf5')
-# data_frame_train = campaign.load_hdf5_data(file_path='gem_uq_81_std.hdf5')
-
-# 6) Cases predicted by AL GPR model, the values should yield results close to 2099023.289881937 
-#saved_model_file_path = 'model_val_LocStudentMatern_30112022.pickle'
-#
-# features_names_selected = features_names
-# target_name_selected = [target_names[1]]
-# campaign = es.Campaign(load_state=True, file_path=saved_model_file_path)
-
-# data_frame = campaign.load_hdf5_data(file_path='gpr_al_6_val.hdf5')
-# data_frame_train = campaign.load_hdf5_data(file_path='gem_uq_81_std.hdf5')
-
-# 6') Case from single flux tube GEM UQ campaign - 81 runs (4 parameters, tensor product of grid with 3 points per DoF)
-#               and 2 outputs - now fictisious (2 are the same)
-#
-# features_names_selected = features_names
-# target_name_selected = [target_names[1], target_names[1]]
-#
-# #saved_model_file_path = 'model_val_LocStudentMatern_10052023.pickle'
-# saved_model_file_path = 'gem_es_model_muscle3_13062023.pickle'
-# data_file = f"gem_uq_81_std.hdf5"
-
-# 7) Case from 8 flux tube GEM UQ campaign (4 parameters, tensor product of grid with 2 points per DoF)
-#                       and 4 outputs -> 8 independent surrogate models
-
-# features_names_selected = features_names
-# target_name_selected = [target_names[0], target_names[1]]
-
-# #saved_model_file_path = f"model_val_SkitGaussianRBF_transp_{index}_20230925.pickle"
-# #saved_model_file_path = f"model_{code_name}_val_SkitGaussianRBF_transp_{index}_{model_date}.pickle"
-# saved_model_file_path = f"model_{code_name}_val_scikit-learngaussianRBF_transp_{index}_{model_date}.pickle"
-
-# #data_file = f"gem_uq_648_transp_std_{index}.hdf5"
-# data_file = f"{code_name}_uq_648_transp_std_{index}.hdf5"
-
-# 8) Case from 8 flux tubes GEM0 UQ campaign (4 parameters, tensor product of grid with 5 points per DoF)
+# -) Case from 8 flux tubes GEM0 UQ campaign (4 parameters, tensor product of grid with 5 points per DoF)
 
 n_samples = 5000
-#n_samples = 5010
 
 backend='scikit-learn'
 likelihood='gaussian'
 kernel='RBF'
 
 saved_model_file_path = f"model_{code_name}_val_{backend}{likelihood}{kernel}_transp_{index}_{model_date}.pickle"
-#saved_model_file_path = f"gem0_es_model_{index}.pickle" ###DEBUG, files copied from HPO
 
 data_file = f"{code_name}_{n_samples}_transp_{index}_{data_date}.hdf5"
-
-# # 9) Case from 8 flux tube GEM0 8000 runs (4 parameters, 8 flux tubes, 10**3 LHC samples per flux tube)
-
-# #n_samples = 8000
-# n_samples = 12000
-
-# saved_model_file_path = f"model_{code_name}_val_scikit-learngaussianRBF_transp_{index}_{model_date}.pickle"
-# #saved_model_file_path = f"gem0_es_model_{index}.pickle" ###DEBUG, files copied from HPO
-
-# data_file = f"{code_name}_{n_samples}_transp_{index}_{data_date}.hdf5"
 
 ###
 features_names_selected = features_names
@@ -175,12 +69,6 @@ target_train = np.concatenate([data_frame_train[k]
 feat_train, targ_train, feat_test, targ_test = campaign.surrogate.feat_eng.\
     get_training_data(features_train, target_train, index=campaign.surrogate.feat_eng.train_indices)
 
-#print(f"target_train: \n{target_train}") ###DEBUG
-#print(f"targ_test: \n{targ_test}") ###DEBUG
-
-#feat_test = feat_train ###DEBUG
-#targ_test = targ_train ###DEBUG
-
 features = [data_frame[k] for k in features_names_selected if k in data_frame]
 target = np.concatenate([data_frame[k] for k in target_name_selected if k in data_frame], axis=1)
 
@@ -194,8 +82,6 @@ analysis = es.analysis.GP_analysis(campaign.surrogate,
 # SEQ DES
 if SEQDES:
     analysis.plot_2d_design_history(x_test=feat_test, y_test=targ_test)
-
-#analysis.get_regression_error(np.concatenate([feat_train, feat_test], axis=0), np.concatenate([targ_train, targ_test], axis=0))
 
 analysis.get_regression_error(feat_test, targ_test, feat_train, targ_train, 
                               #index=[i for i in range(16)] #DEBUG

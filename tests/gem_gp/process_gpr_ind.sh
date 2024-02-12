@@ -28,21 +28,21 @@ codenameshort='gem0'
 codename=${codenameshort}'py'
 
 # reinstall the ES package
-easysurrogatedir='~/code/EasySurrogate'
+easysurrogatedir='~/code/EasySurrogate/'
 cd ${easysurrogatedir}
 pip install .
-cd ${locdir}/easysurrogate
+cd ${locdir}/
 
 # read the CSV files (if needed)
 traindatadir='~/code/MFW/uq/basicda'
-cp ${traindatadir}/${codename}_new_${data_id}.csv ./
+#cp ${traindatadir}/${codename}_new_${data_name_prefix}.csv ./ # NOT NEEDED, SHOULD BE THERE
 python gem_data_ind.py ${data_id} ${data_id}
 
 # train and test the models
-for((i=0;i<${nft};i++)); do python train_model_ind.py $i ${data_id} ${model_id} ; done
+for((i=0;i<${nft};i++)); do python train_model_ind.py ${i} ${data_id} ${model_id} ; done
 
 # Next is not needed here, but ideally should also return some quality quantification for a surrogate
-#for((i=0;i<${nft};i++)); do python test_model_ind.py $i ${model_id} ${data_id} ${curr_id} ; done
+#for((i=0;i<${nft};i++)); do python test_model_ind.py ${i} ${model_id} ${data_id} ${curr_id} ; done
 
 # save the results (of the scan) and the cut locations - not doen here, lookolder script!
 input_names=('te_value' 'ti_value' 'te_ddrho' 'ti_ddrho')
@@ -63,7 +63,8 @@ mv gp_abs_err_.pdf ${savediranme}/
 # mv ${savediranme}.tar.gz ../../..
 
 # save the surrogate for the workflow - prepare for M3-WF run
-simdir='../muscle3'
+simdir=${locdir}'/../muscle3'
+simdir=$( realpath ${simdir} )
 cd ${simdir}
 mkdir forworkflow
 
