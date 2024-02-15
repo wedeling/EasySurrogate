@@ -28,20 +28,24 @@ codenameshort='gem0'
 codename=${codenameshort}'py'
 
 # reinstall the ES package
-easysurrogatedir='~/code/EasySurrogate/'
-cd ${easysurrogatedir}
-pip install .
+RESINSTALLES=0
+#easysurrogatedir='~/code/EasySurrogate/'
+easysurrogatedir='/u/yyudin/code/EasySurrogate/'
+if [ "$RESINSTALLES" -ne 0 ] ; then
+    cd ${easysurrogatedir}
+    pip install -e .
+fi
 cd ${locdir}/
 
 # read the CSV files (if needed)
-traindatadir='~/code/MFW/uq/basicda'
+#traindatadir='~/code/MFW/uq/basicda'
 #cp ${traindatadir}/${codename}_new_${data_name_prefix}.csv ./ # NOT NEEDED, SHOULD BE THERE
 python gem_data_ind.py ${data_id} ${data_id}
 
 # train and test the models
 for((i=0;i<${nft};i++)); do python train_model_ind.py ${i} ${data_id} ${model_id} ; done
 
-# Next is not needed here, but ideally should also return some quality quantification for a surrogate
+# Next is NOT NEEDED here, but ideally should also return some quality quantification for a surrogate
 #for((i=0;i<${nft};i++)); do python test_model_ind.py ${i} ${model_id} ${data_id} ${curr_id} ; done
 
 # save the results (of the scan) and the cut locations - not doen here, lookolder script!
@@ -62,15 +66,15 @@ mv gp_abs_err_.pdf ${savediranme}/
 # tar -czvf ${savediranme}.tar.gz ${savediranme}/ 
 # mv ${savediranme}.tar.gz ../../..
 
-# save the surrogate for the workflow - prepare for M3-WF run
-simdir=${locdir}'/../muscle3'
-simdir=$( realpath ${simdir} )
-cd ${simdir}
+# save the surrogate for the workflow - prepare for M3-WF run (/muscle3/ dir does not exist yet)
+simdirloc=${locdir}'/../'
+simdirloc=$( realpath ${simdirloc} )
+cd ${simdirloc}
 mkdir forworkflow
 
 #mkdir surr_model_bckp_${curr_id}
 #mv surrogate_for_workflow/gem*es*model*pickle surr_model_bckp_${curr_id}
 
 for((i=0;i<${nft};i++)); do
-    cp ../easysurrogate/model_${codename}_val_scikit-learngaussianRBF_transp_${i}_${curr_id}.pickle forworkflow/${codenameshort}_es_model_${i}.pickle ;
+    cp ${locdir}/model_${codename}_val_scikit-learngaussianRBF_transp_${i}_${curr_id}.pickle ${simdirloc}/forworkflow/${codenameshort}_es_model_${i}.pickle ;
 done
