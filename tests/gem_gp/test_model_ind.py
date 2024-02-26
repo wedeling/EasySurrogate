@@ -4,7 +4,7 @@ import sys
 
 import easysurrogate as es
 
-features_names = ['te_value', 'ti_value', 'te_ddrho', 'ti_ddrho']
+features_names = ['te_value', 'ti_value', 'te_ddrho', 'ti_ddrho', 'profiles_1d_q', 'profiles_1d_gm3']
 target_names = ['te_transp_flux', 'ti_transp_flux', 'te_transp_flux_std', 'ti_transp_flux_std']
 
 if len(sys.argv) < 2 :
@@ -27,7 +27,7 @@ if len(sys.argv) < 5 :
 else:
     scan_date = sys.argv[4]
 
-code_name = 'gem0py'
+code_name = sys.argv[5] if len(sys.argv)>5 else'gem0py'
 
 features_names_selected = features_names
 target_name_selected = target_names
@@ -35,10 +35,17 @@ target_name_selected = target_names
 # PREPARING MODEL TO USE
 # load pre-trained campaign
 
-# -) Case from 8 flux tubes GEM0 UQ campaign (4 parameters, tensor product of grid with 5 points per DoF)
+# # I) Case from 8 flux tubes GEM0 UQ campaign (4 parameters, tensor product of grid with 5 points per DoF)
+# n_samples = 5000
+# n_params = 4
 
-n_samples = 5000
+# II) Case w/ 8 f-t-s pyGEM0 runs, possibly equilibrium included, full tensor product
 
+n_samples = int(sys.argv[6]) if len(sys.argv)>6 else 5832
+
+n_params  = int(sys.argv[7]) if len(sys.argv)>7 else 6
+
+###
 backend='scikit-learn'
 likelihood='gaussian'
 kernel='RBF'
@@ -48,7 +55,7 @@ saved_model_file_path = f"model_{code_name}_val_{backend}{likelihood}{kernel}_tr
 data_file = f"{code_name}_{n_samples}_transp_{index}_{data_date}.hdf5"
 
 ###
-features_names_selected = features_names
+features_names_selected = features_names[:n_params]
 target_name_selected = [target_names[0], target_names[1]]
 
 # Creating campaign

@@ -5,8 +5,12 @@ from datetime import datetime
 
 import easysurrogate as es
 
-features_names = ['te_value', 'ti_value', 'te_ddrho', 'ti_ddrho']
+features_names = ['te_value', 'ti_value', 'te_ddrho', 'ti_ddrho', 'profiles_1d_q', 'profiles_1d_gm3']
 target_names = ['te_transp_flux', 'ti_transp_flux', 'te_transp_flux_std', 'ti_transp_flux_std']
+
+np.random.seed(42)
+
+SEQDES = False #True if Sequential Design of Experiments to be used
 
 if len(sys.argv) < 2 :
     index = 0
@@ -23,34 +27,40 @@ if len(sys.argv) < 4 :
 else:
     model_id = sys.argv[3]
 
-code_name = 'gem0py'
-
-np.random.seed(42)
-
-SEQDES = False #True if Sequential Design of Experiments to be used
+code_name = sys.argv[4] if len(sys.argv)>4 else 'gem0py'
 
 campaign = es.Campaign(load_state=False)
 
-# -) Case from 8 flux tube GEM0 5000 runs (4 parameters, tensor product of grid with 5 points per DoF)
+# # I) Case from 8 flux tube GEM0 5000 runs (4 parameters, tensor product of grid with 5 points per DoF)
 
-n_samples = 5000
+# n_samples = sys.argv[5] if len(sys.argv)>5 else 5000
 
-data_file_name = f"{code_name}_{n_samples}_transp_{index}_{date_gen}.hdf5"
+# n_params = 4
+
+# II) Case w/ 8 f-t-s pyGEM0 runs, possibly equilibrium included, full tensor product
+
+n_samples = int(sys.argv[5]) if len(sys.argv)>5 else 5832
+
+n_params  = int(sys.argv[6]) if len(sys.argv)>6 else 6
 
 ###
-features_names_selected = features_names
+data_file_name = f"{code_name}_{n_samples}_transp_{index}_{date_gen}.hdf5"
+
+features_names_selected = features_names[0:n_params]
 target_name_selected = [target_names[0],target_names[1]]
 
-# === Create a surrogate and its model; train and save it
+# === Create a surrogate and its core model behind the object; train and save it
 
 # Create a campaign object
 data_frame = campaign.load_hdf5_data(file_path=data_file_name)
 #print(f">train_model, data_frame={data_frame}") ###DEBUG
+#print(f"{data_frame.keys()}") ###DEBUG
 
 # Prepare lists of features and array of targets
 features = [data_frame[k] for k in features_names_selected if k in data_frame]
 target = np.concatenate([data_frame[k] for k in target_name_selected if k in data_frame], axis=1)
 
+#print(f"len features:\n{len(features)}") ###DEBUG
 time_init_start = t.time()
 
 gp_param = {

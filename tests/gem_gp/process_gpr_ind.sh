@@ -23,6 +23,8 @@ locdir=$(pwd)
 #...
 nft=8
 
+num_p_per_param=5
+
 modeltype='gpr'
 codenameshort='gem0'
 codename=${codenameshort}'py'
@@ -40,10 +42,10 @@ cd ${locdir}/
 # read the CSV files (if needed)
 #traindatadir='~/code/MFW/uq/basicda'
 #cp ${traindatadir}/${codename}_new_${data_name_prefix}.csv ./ # NOT NEEDED, SHOULD BE THERE
-python gem_data_ind.py ${data_id} ${data_id}
+python gem_data_ind.py ${data_id} ${data_id} ${codename} ${num_p_per_param}
 
 # train and test the models
-for((i=0;i<${nft};i++)); do python train_model_ind.py ${i} ${data_id} ${model_id} ; done
+for((i=0;i<${nft};i++)); do python train_model_ind.py ${i} ${data_id} ${model_id} ${codename} ; done
 
 # Next is NOT NEEDED here, but ideally should also return some quality quantification for a surrogate
 #for((i=0;i<${nft};i++)); do python test_model_ind.py ${i} ${model_id} ${data_id} ${curr_id} ; done
