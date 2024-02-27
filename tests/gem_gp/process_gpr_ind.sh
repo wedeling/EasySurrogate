@@ -18,12 +18,13 @@ data_id=${data_id}_${itnum}
 model_id=${model_id}_${itnum}
 curr_id=${curr_id}_${itnum}
 
-locdir=$(pwd)
+locdir=${3:-$(pwd)}
 
 #...
 nft=8
 
-num_p_per_param=5
+# TODO introduce useequil boolean?
+num_p_per_param=3
 
 modeltype='gpr'
 codenameshort='gem0'
@@ -39,19 +40,22 @@ if [ "$RESINSTALLES" -ne 0 ] ; then
 fi
 cd ${locdir}/
 
+input_names=('te_value' 'ti_value' 'te_ddrho' 'ti_ddrho') # 'profiles_1d_q' 'profiles_1d_gm3')
+nparams=${#input_names[@]}
+nsamples=$(( ${nft}*${num_p_per_param}**${nparams} ))
+
 # read the CSV files (if needed)
-#traindatadir='~/code/MFW/uq/basicda'
-#cp ${traindatadir}/${codename}_new_${data_name_prefix}.csv ./ # NOT NEEDED, SHOULD BE THERE
+traindatadir='~/code/MFW/uq/basicda'
+#cp ${traindatadir}/${codename}_new_${data_name_prefix}.csv ./ # NOT NEEDED, SHOULD BE DONE IN PARENT SCRIPT
 python gem_data_ind.py ${data_id} ${data_id} ${codename} ${num_p_per_param}
 
 # train and test the models
-for((i=0;i<${nft};i++)); do python train_model_ind.py ${i} ${data_id} ${model_id} ${codename} ; done
+for((i=0;i<${nft};i++)); do python train_model_ind.py ${i} ${data_id} ${model_id} ${codename} ${nsamples} ${nparams} ; done
 
 # Next is NOT NEEDED here, but ideally should also return some quality quantification for a surrogate
 #for((i=0;i<${nft};i++)); do python test_model_ind.py ${i} ${model_id} ${data_id} ${curr_id} ; done
 
-# save the results (of the scan) and the cut locations - not doen here, lookolder script!
-input_names=('te_value' 'ti_value' 'te_ddrho' 'ti_ddrho')
+# save the results (of the scan) and the cut locations - not done here, look up the older script!
 
 # save the results of test script
 savediranme=${modeltype}_scan_${curr_id}_0
@@ -69,7 +73,7 @@ mv gp_abs_err_.pdf ${savediranme}/
 # mv ${savediranme}.tar.gz ../../..
 
 # save the surrogate for the workflow - prepare for M3-WF run (/muscle3/ dir does not exist yet)
-simdirloc=${locdir}'/../'
+simdirloc=${4:-${locdir}'/../'}
 simdirloc=$( realpath ${simdirloc} )
 cd ${simdirloc}
 mkdir forworkflow

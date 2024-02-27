@@ -38,7 +38,7 @@ campaign = es.Campaign(load_state=False)
 # n_params = 4
 
 # II) Case w/ 8 f-t-s pyGEM0 runs, possibly equilibrium included, full tensor product
-
+# TODO should be deducible from the read data! e.g. from the .hdf5 file
 n_samples = int(sys.argv[5]) if len(sys.argv)>5 else 5832
 
 n_params  = int(sys.argv[6]) if len(sys.argv)>6 else 6

@@ -107,7 +107,7 @@ if __name__ == '__main__':
     # data = load_csv_to_dict(input_file=datafile)
 
     # II) Case from 8 flux tube GEM0 run, same number of points for every input, equilibrium (may be) included
-    features_names = ['te_value', 'ti_value', 'te_ddrho', 'ti_ddrho', 'profiles_1d_q', 'profiles_1d_gm3']
+    features_names = ['te_value', 'ti_value', 'te_ddrho', 'ti_ddrho',] # 'profiles_1d_q', 'profiles_1d_gm3']
 
     data = load_csv_to_dict(input_file=datafile, features_names=features_names)
 
