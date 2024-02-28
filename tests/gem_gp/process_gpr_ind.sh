@@ -40,7 +40,7 @@ if [ "$RESINSTALLES" -ne 0 ] ; then
 fi
 cd ${locdir}/
 
-input_names=('te_value' 'ti_value' 'te_ddrho' 'ti_ddrho') # 'profiles_1d_q' 'profiles_1d_gm3')
+input_names=('te_value' 'ti_value' 'te_ddrho' 'ti_ddrho' 'profiles_1d_q' 'profiles_1d_gm3')
 nparams=${#input_names[@]}
 nsamples=$(( ${nft}*${num_p_per_param}**${nparams} ))
 

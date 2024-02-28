@@ -106,6 +106,7 @@ tar -czvf ${savediranme}.tar.gz ${savediranme}/
 mv ${savediranme}.tar.gz ../../..
 
 # save the surrogate for the workflow - prepare for M3-WF run
+# TODO ideally the conserns should be separated and the surrogate should not know about the next steps
 cd ../../../MFW/workflows/
 mkdir surr_model_bckp_${curr_id}
 mv surrogate_for_workflow/gem*es*model*pickle surr_model_bckp_${curr_id}
