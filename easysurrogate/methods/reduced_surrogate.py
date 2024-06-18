@@ -316,12 +316,16 @@ class Reduced_Surrogate(Campaign):
         src_Q = np.zeros(self.n_qoi)
         tau = np.zeros(self.n_qoi)
 
+        P_hat = np.zeros([self.n_qoi, self.n_model_1d, self.n_model_1d]) + 0.0j
+
         # loop over all QoI
         for i in range(self.n_qoi):
             # compute the fourier coefs of the P_i
             P_hat_i = T_hat[i, 0]
             for j in range(0, self.n_qoi - 1):
                 P_hat_i -= c_ij[i, j] * T_hat[i, j + 1]
+
+            P_hat[i] = P_hat_i
 
             # (V_i, P_i) integral
             src_Q_i = compute_int(V_hat[i], P_hat_i, self.n_model_1d)
@@ -335,7 +339,7 @@ class Reduced_Surrogate(Campaign):
             # compute reduced subgrid-scale source term
             sgs_hat -= tau_i * P_hat_i
 
-        reduced_dict = {'sgs_hat': sgs_hat, 'c_ij': c_ij,
+        reduced_dict = {'sgs_hat': sgs_hat, 'c_ij': c_ij, 'P_hat': P_hat,
                         'inner_prods': np.triu(inner_prods),
                         'src_Q': src_Q, 'tau': tau}
 
