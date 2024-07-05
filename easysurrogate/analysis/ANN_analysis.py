@@ -142,13 +142,57 @@ class ANN_analysis(BaseAnalysis):
         xlabels = ['te_value', 'ti_value', 'te_ddrho', 'ti_ddrho']
         ylabels = ['te_transp_flux', 'ti_transp_flux']
 
+        lookup_names_short = {
+            "ti_value": "$T_{{i}}$",
+            "ti.value": "$T_{{i}}$",
+            "te_value": "$T_{{e}}$",
+            "te.value": "$T_{{e}}$",
+            "ti_ddrho": "$\\nabla T_{{i}}$",
+            "ti.ddrho": "$\\nabla T_{{i}}$",
+            "te_ddrho": "$\\nabla T_{{e}}$",
+            "te.ddrho": "$\\nabla T_{{e}}$",
+            "te_transp_flux": "$Q_{{e}}$",
+            "te_transp.flux": "$Q_{{e}}$",
+            "ti_transp_flux": "$Q_{{i}}$",
+            "ti_transp.flux": "$Q_{{i}}$",
+            "rho": "$\\rho_{{tor}}^{{norm}}$",
+            "profiles_1d_q": "$q$",
+            "profiles_1d_gm3" : "$gm^{{3}}$",
+            }
+     
+        lookup_units = {
+            "ti_value": "$eV$",
+            "ti.value": "$eV$",
+            "te_value": "$eV$",
+            "te.value": "$eV$",
+            "ti_ddrho": "$eV/m$",
+            "te_ddrho": "$eV/m$",
+            "te.ddrho": "$eV/m$",
+            "ti.drho": "$eV/m$",
+            "te_transp_flux": "$W/m^{{2}}$",
+            "ti_transp_flux": "$W/m^{{2}}$",
+            "te_transp.flux": "$W/m^{{2}}$",
+            "ti_transp.flux": "$W/m^{{2}}$",
+            "rho": "",
+            "profiles_1d_q" : "",
+            "profiles_1d_gm3" : "",
+            }
+
         nft = kwargs['nft'] if 'nft' in kwargs else 0
 
         n_in_comps = len(xlabels)
 
-        extend_factor = 0.5
-        n_points_new = 1000
-        fig,ax = plt.subplots(figsize=[7, 7])
+        alpha_t = 0.7
+
+        extend_factor = 0.2
+        n_points_new = 1024
+
+        if 'fig' not in kwargs and 'ax' not in kwargs:
+            fig,ax = plt.subplots(figsize=[7, 7])
+        else:
+            fig = kwargs['fig']
+            ax  = kwargs['ax']
+            col = kwargs['col']
 
         # Take the input component according to input_name
         # Select a range of values for this component
@@ -163,7 +207,7 @@ class ANN_analysis(BaseAnalysis):
         x_values = X_train[:, i_num] # check the order of axis
         #print(x_values) ###DEBUG
 
-        x_values_new = np.linspace(x_values.min() - extend_factor * abs(x_values.min()) , 
+        x_values_new = np.linspace(x_values.min() - extend_factor * abs(x_values.min()), 
                                    x_values.max() + extend_factor * abs(x_values.max()), n_points_new)
         
         data_remainder = {}
@@ -194,7 +238,8 @@ class ANN_analysis(BaseAnalysis):
                 indices.append(int(X_train_unique_vals[-1].shape[0]/2))
                 X_train_mid_vals[i] = X_train_unique_vals[-1][indices[-1]]
             x_remainder_value = np.delete(X_train_mid_vals, i_num)
-            mid_indices = [ np.isclose(X_train[:,1], X_train_mid_vals[1]) & np.isclose(X_train[:,2], X_train_mid_vals[2]) & np.isclose(X_train[:,3], X_train_mid_vals[3]),
+            mid_indices = [ 
+                            np.isclose(X_train[:,1], X_train_mid_vals[1]) & np.isclose(X_train[:,2], X_train_mid_vals[2]) & np.isclose(X_train[:,3], X_train_mid_vals[3]),
                             np.isclose(X_train[:,0], X_train_mid_vals[0]) & np.isclose(X_train[:,2], X_train_mid_vals[2]) & np.isclose(X_train[:,3], X_train_mid_vals[3]),
                             np.isclose(X_train[:,0], X_train_mid_vals[0]) & np.isclose(X_train[:,1], X_train_mid_vals[1]) & np.isclose(X_train[:,3], X_train_mid_vals[3]),
                             np.isclose(X_train[:,0], X_train_mid_vals[0]) & np.isclose(X_train[:,1], X_train_mid_vals[1]) & np.isclose(X_train[:,2], X_train_mid_vals[2]) ]
@@ -223,18 +268,43 @@ class ANN_analysis(BaseAnalysis):
         #print(f"X_new = {X_new}") ###DEBUG
         #print(f"y_new = {self.ann_surrogate.predict(X_new[0,:])}") ###DEBUG
 
-        y = [self.ann_surrogate.predict(
-            X_new[i, :])[output_number] for i in range(X_new.shape[0])]
+        y = np.array([self.ann_surrogate.predict(
+            X_new[i, :])[output_number] for i in range(X_new.shape[0])])
 
-        ax.plot(x_values_new, y, label=f"{input_number}->{output_number}")
+        if 'scale_function' in kwargs:
+            scale_function = kwargs['scale_function']
+            y_avg = scale_function(y_avg)
+            y_train_plot = scale_function(y_train_plot)
+
+        ax.plot(x_values_new, 
+                y, 
+                color=col,
+                alpha=alpha_t,
+                #label=f"{input_number}->{output_number}",
+                label=f"{lookup_names_short[ylabels[output_number]]}, prediction mean",
+                )
            
         # Plot training points
         if 'y_train' in kwargs:
-            ax.plot(X_train_plot, y_train_plot, 'ko', label='training points')
+            ax.scatter(X_train_plot,
+                       y_train_plot,
+                       marker='o',
+                       s=9,
+                       color=col,
+                       alpha=alpha_t, 
+                       label=f"{lookup_names_short[ylabels[output_number]]}, training sample"
+                       )
 
-        ax.set_xlabel(xlabels[input_number])
-        ax.set_ylabel(ylabels[output_number])
-        ax.set_title(f"{xlabels[input_number]}->{ylabels[output_number]}(@ft#{nft})")
+        ax.grid(which='major', linestyle='-')
+        ax.legend(loc='best')
+
+        #ax.set_xlabel(xlabels[input_number])
+        #ax.set_ylabel(ylabels[output_number])
+
+        ax.set_xlabel(f"{lookup_names_short[xlabels[input_number]]}, {lookup_units[xlabels[output_number]]}")
+        ax.set_ylabel(f"$Q_{{e,i}}$, $W/m^{{2}}$")
+
+        #ax.set_title(f"{xlabels[input_number]}->{ylabels[output_number]}(@ft#{nft})")
         fig.savefig('scan_'+'i'+str(input_number)+'o'+str(output_number)+'f'+str(nft)+'.pdf')
 
         # Store and save the remainder input values i.e. the coordinates of the cut
@@ -245,18 +315,26 @@ class ANN_analysis(BaseAnalysis):
         
         return data
 
-    def plot_loss(self, name_sufix=''):
+    def plot_loss(self, name_sufix='', **kwargs):
 
-        fig,ax = plt.subplots(figsize=[7, 7])
+        if "fig" not in kwargs:
+            fig,ax = plt.subplots(figsize=[7, 7])
+        else:
+            fig = kwargs["fig"]
+            ax = kwargs["ax"]
 
         y = self.ann_surrogate.neural_net.loss_vals
         x = np.arange(len(y))
 
-        ax.semilogy(x, y, label='loss')
+        ax.semilogy(x, 
+                    y, 
+                    alpha=0.5,
+                    label=f"f.t. {name_sufix}")
 
         ax.set_xlabel('optimisation step')
-        ax.set_ylabel(self.ann_surrogate.loss)        
+        ax.set_ylabel(f"{self.ann_surrogate.loss} loss of the model")        
 
         fig.savefig(f"loss_{name_sufix}.pdf")
 
         return 0
+    

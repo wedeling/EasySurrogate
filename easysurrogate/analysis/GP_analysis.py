@@ -305,10 +305,55 @@ class GP_analysis(BaseAnalysis):
         xlabels = ['te_value', 'ti_value', 'te_ddrho', 'ti_ddrho']
         ylabels = ['te_transp_flux', 'ti_transp_flux']
 
+        lookup_names_short = {
+            "ti_value": "$T_{{i}}$",
+            "ti.value": "$T_{{i}}$",
+            "te_value": "$T_{{e}}$",
+            "te.value": "$T_{{e}}$",
+            "ti_ddrho": "$\\nabla T_{{i}}$",
+            "ti.ddrho": "$\\nabla T_{{i}}$",
+            "te_ddrho": "$\\nabla T_{{e}}$",
+            "te.ddrho": "$\\nabla T_{{e}}$",
+            "te_transp_flux": "$Q_{{e}}$",
+            "te_transp.flux": "$Q_{{e}}$",
+            "ti_transp_flux": "$Q_{{i}}$",
+            "ti_transp.flux": "$Q_{{i}}$",
+            "rho": "$\\rho_{{tor}}^{{norm}}$",
+            "profiles_1d_q": "$q$",
+            "profiles_1d_gm3" : "$gm^{{3}}$",
+            }
+     
+        lookup_units = {
+            "ti_value": "$eV$",
+            "ti.value": "$eV$",
+            "te_value": "$eV$",
+            "te.value": "$eV$",
+            "ti_ddrho": "$eV/m$",
+            "te_ddrho": "$eV/m$",
+            "te.ddrho": "$eV/m$",
+            "ti.drho": "$eV/m$",
+            "te_transp_flux": "$W/m^{{2}}$",
+            "ti_transp_flux": "$W/m^{{2}}$",
+            "te_transp.flux": "$W/m^{{2}}$",
+            "ti_transp.flux": "$W/m^{{2}}$",
+            "rho": "",
+            "profiles_1d_q" : "",
+            "profiles_1d_gm3" : "",
+            }
+
+        std_scale = 1.96
+        alpha_t = 0.75
+
         nft = kwargs['nft'] if 'nft' in kwargs else 0
 
-        extend_factor = 0.5
-        fig,ax = plt.subplots(figsize=[7, 7])
+        extend_factor = 0.2
+
+        if 'fig' not in kwargs and 'ax' not in kwargs:
+            fig,ax = plt.subplots(figsize=[7, 7])
+        else:
+            fig = kwargs['fig']
+            ax  = kwargs['ax']
+            col = kwargs['col']
 
         # Take the input component according to input_name
         # Select a range of values for this component
@@ -320,12 +365,13 @@ class GP_analysis(BaseAnalysis):
         name_dict = {} #TODO?
         #i_num = name_dict[input_name]
         i_num = input_number
+        #print(f"i_num={i_num}") ###DEBUG
 
         x_values = X_train[:, i_num] # check the order of axis
         #print(x_values) ###DEBUG
 
-        x_values_new = np.linspace(x_values.min() - extend_factor * abs(x_values.min()) , 
-                                   x_values.max() + extend_factor * abs(x_values.max()), 1000)
+        x_values_new = np.linspace(x_values.min() - extend_factor * abs(x_values.mean()) , 
+                                   x_values.max() + extend_factor * abs(x_values.mean()), 1024)
         
         data_remainder = {}
         # Choose place to cut
@@ -360,10 +406,12 @@ class GP_analysis(BaseAnalysis):
             #print(f"X_train_unique_vals={X_train_unique_vals}") ###DEBUG
             #print(f"X_train_mid_vals={X_train_mid_vals}") ###DEBUG
             x_remainder_value = np.delete(X_train_mid_vals, i_num)
-            mid_indices = [ np.isclose(X_train[:,1], X_train_mid_vals[1]) & np.isclose(X_train[:,2], X_train_mid_vals[2]) & np.isclose(X_train[:,3], X_train_mid_vals[3]),
-                            np.isclose(X_train[:,0], X_train_mid_vals[0]) & np.isclose(X_train[:,2], X_train_mid_vals[2]) & np.isclose(X_train[:,3], X_train_mid_vals[3]),
-                            np.isclose(X_train[:,0], X_train_mid_vals[0]) & np.isclose(X_train[:,1], X_train_mid_vals[1]) & np.isclose(X_train[:,3], X_train_mid_vals[3]),
-                            np.isclose(X_train[:,0], X_train_mid_vals[0]) & np.isclose(X_train[:,1], X_train_mid_vals[1]) & np.isclose(X_train[:,2], X_train_mid_vals[2]) ]
+            mid_indices = [ 
+                    np.isclose(X_train[:,1], X_train_mid_vals[1]) & np.isclose(X_train[:,2], X_train_mid_vals[2]) & np.isclose(X_train[:,3], X_train_mid_vals[3]),
+                    np.isclose(X_train[:,0], X_train_mid_vals[0]) & np.isclose(X_train[:,2], X_train_mid_vals[2]) & np.isclose(X_train[:,3], X_train_mid_vals[3]),
+                    np.isclose(X_train[:,0], X_train_mid_vals[0]) & np.isclose(X_train[:,1], X_train_mid_vals[1]) & np.isclose(X_train[:,3], X_train_mid_vals[3]),
+                    np.isclose(X_train[:,0], X_train_mid_vals[0]) & np.isclose(X_train[:,1], X_train_mid_vals[1]) & np.isclose(X_train[:,2], X_train_mid_vals[2]) 
+                            ]
             mid_indices_loc = mid_indices[i_num]
 
         # Fall back option - error
@@ -399,22 +447,63 @@ class GP_analysis(BaseAnalysis):
         
         #print(y) ###DEBUG
 
-        #Sax.plot(x_values_new, y, label=f"{input_number}->{output_number}")
-        ax.errorbar(x_values_new, 
-                    y_avg, 
-                    yerr=1.96 * y_std, 
-                    label=f"{input_number}->{output_number}",
-                    alpha=0.2,
-                    )
+        y_lo = y_avg - std_scale * y_std
+        y_hi = y_avg + std_scale * y_std
+
+        if 'scale_function' in kwargs:
+            scale_function = kwargs['scale_function']
+            y_avg = scale_function(y_avg)
+            y_lo = scale_function(y_lo)
+            y_hi = scale_function(y_hi)
+            y_train_plot = scale_function(y_train_plot)
+            #print(f"y_lo shape : {y_lo.shape}") ###DEBUG
+
+        #ax.plot(x_values_new, y, label=f"{input_number}->{output_number}")
+
+        ax.plot(x_values_new, 
+                y_avg, 
+                color=col,
+                alpha=alpha_t,
+                label=f"{lookup_names_short[ylabels[output_number]]}, prediction mean"
+                )
+
+        # ax.errorbar(x_values_new, 
+        #             y_avg, 
+        #             yerr=1.96 * y_std, 
+        #             label=f"{input_number}->{output_number}",
+        #             alpha=0.2,
+        #             )
+
+        ax.fill_between(x_values_new, 
+                        y_lo, 
+                        y_hi, 
+                        alpha=0.33*alpha_t,
+                        color=col,
+                        label=f"$\\pm {std_scale} \\cdot \\sigma[${lookup_names_short[ylabels[output_number]]}$]$",
+                        )
         
         # Plot training points
         if 'y_train' in kwargs:
             #print(f"Plotting training points for {input_number}->{output_number}") ###DEBUG
-            ax.plot(X_train_plot, y_train_plot, 'ko', label='training points')
+            ax.scatter(X_train_plot,
+                     y_train_plot, 
+                     color=col,
+                     marker='o',
+                     #markersize=3, 
+                     s=6,
+                     alpha=alpha_t,
+                     label=f"{lookup_names_short[ylabels[output_number]]}, training sample"
+                    )
 
-        ax.set_xlabel(xlabels[input_number])
-        ax.set_ylabel(ylabels[output_number])
-        ax.set_title(f"{xlabels[input_number]}->{ylabels[output_number]}(@ft#{file_name_suf})")
+
+        ax.grid(which='major', linestyle='-')
+        ax.legend(loc='best')
+
+        ax.set_xlabel(f"{lookup_names_short[xlabels[input_number]]}, {lookup_units[xlabels[output_number]]}")
+        ax.set_ylabel(f"$Q_{{e,i}}$, $W/m^{{2}}$")
+        #ax.set_ylabel(f"{lookup_names_short[ylabels[output_number]]}, {lookup_units[xlabels[input_number]]}")
+        #ax.set_title(f"Dependency on {xlabels[input_number]}, at f.t. #{file_name_suf}")  
+        ##ax.set_title(f"{xlabels[input_number]}->{ylabels[output_number]}(@ft#{file_name_suf})")
         fig.savefig('scan_'+'i'+str(input_number)+'o'+str(output_number)+'f'+file_name_suf+'.pdf')
 
         # Store and save the remainder input values i.e. the coordinates of the cut
@@ -558,6 +647,13 @@ class GP_analysis(BaseAnalysis):
             X_test = self.gp_surrogate.model.X[index]
             y_test = self.gp_surrogate.model.y[index]
 
+        xlabels = ['te_value', 'ti_value', 'te_ddrho', 'ti_ddrho']
+        ylabels = ['te_transp_flux', 'ti_transp_flux']
+
+        col_dict = {'te_transp_flux': 'r', 'ti_transp_flux': 'b'}
+
+        ft_coords = [0.143587306141853 , 0.309813886880875 , 0.442991137504578 , 0.560640752315521 , 0.668475985527039 , 0.769291400909424 , 0.864721715450287 , 0.955828309059143]
+
         x_test_inds = self.gp_surrogate.feat_eng.test_indices
         x_train_inds = self.gp_surrogate.feat_eng.train_indices
 
@@ -572,20 +668,33 @@ class GP_analysis(BaseAnalysis):
         remainder_file_date = kwargs["remainder_file_date"] if "remainder_file_date" in kwargs else "20240110"
         remainder_file_path = kwargs["remainder_file_path"] if "remainder_file_path" in kwargs else "scan_gem0_remainder_"
         scan_dict = {}
+
+        n_plot_lin = int(np.sqrt(len(xlabels)))
+        fig_scan, ax_scan_s = plt.subplots(n_plot_lin, n_plot_lin, figsize=(18,10))
+
         for output_num in range(y_train.shape[1]):
             for input_num in range(X_train.shape[1]):
                 # Option 1: pick the scan file with the remainder values for the cut
                 # scan_data = self.plot_scan(X_train, input_number=input_num, output_number=output_num, file_name_suf=addit_name,
                 #                            nft=self.nft, remainder_values=f"{remainder_file_path}{self.features_names_selected[input_num]}_{remainder_file_date}.csv",
                 #                            )
-                # Option 2: scan for the middle values of the fulll grid
-                scan_data = self.plot_scan(X_train, input_number=input_num, output_number=output_num, file_name_suf=addit_name,
-                                           nft=self.nft, cut_option='center', y_train=y_train[:,output_num],
+                # Option 2: scan for the middle values of the full grid
+                scan_data = self.plot_scan(X_train, input_number=input_num, 
+                                           output_number=output_num,   
+                                           file_name_suf=addit_name,
+                                           nft=self.nft,
+                                           cut_option='center', 
+                                           y_train=y_train[:,output_num],
+                                           fig=fig_scan, ax=ax_scan_s[input_num//n_plot_lin-1][input_num%n_plot_lin], col=col_dict[ylabels[output_num]],
+                                           scale_function=lambda x: np.exp(x),
                                            )
 
                 scan_dict[f"{self.features_names_selected[input_num]}_{self.target_name_selected[output_num]}"] = scan_data
         scan_dataframe = pd.DataFrame.from_dict({(i,j): scan_dict[i][j] for i in scan_dict.keys() for j in scan_dict[i].keys()})
         scan_dataframe.to_csv(f"scan_{self.nft}.csv")
+
+        fig_scan.suptitle(f"GPR surrogate mean and uncertainty prediction for $Q_{{e,i}}$ \n and its training data for a flux tube at $\\rho_{{tor}}^{{norm}}={ft_coords[int(self.nft)]:.2f}$")
+        fig_scan.savefig(f"GP_scan_tot_{addit_name}.pdf")
         ### ---
 
         print("Prediction of new QoI")
@@ -719,7 +828,7 @@ class GP_analysis(BaseAnalysis):
             if flag_plot and not only_train_set:
     
                 self.plot_err(error=err_rel[:, n_out],
-                            name=f"rel. err. of prediction mean for test dataset in fluxes nu {n_out}",
+                            name=f"rel. err. of prediction mean for test dataset in fluxes number {n_out}",
                             #original=y_test[:, 0],
                             )
                 
