@@ -14,6 +14,7 @@ np.random.seed(rs)
 SEQDES = False
 
 code_name = 'gem0'
+code_name = 'gem'
 
 if len(sys.argv) < 2 :
     index = 0
@@ -29,6 +30,8 @@ if len(sys.argv) < 4 :
     date_data = "20240110"
 else:
     date_data = sys.argv[3]
+
+id = sys.argv[4] if len(sys.argv)>4 else 0
 
 campaign = es.Campaign(load_state=False)
 
@@ -63,8 +66,9 @@ campaign = es.Campaign(load_state=False)
 # 8) Case from 8 flux tube GEM0 5000 runs (4 parameters, tensor product of grid with 5 points per DoF)
 
 n_samples = 5000
+n_samples = 648
 
-data_file_name = f"{code_name}_{n_samples}_transp_{index}_{date_data}.hdf5"
+data_file_name = f"{code_name}_{n_samples}_transp_{index}_{date_data}_{id}.hdf5"
 
 # 9) Case from 8 flux tube GEM0 8000 runs (4 parameters, 8 flux tubes, 10**3 LHC samples per flux tube)
 
@@ -95,10 +99,10 @@ ann_param = {
             #'bias': 0.,
             #'nonstationary': False,
             'test_frac': 0.0, #0.2,
-            'n_iter': 20000,
+            'n_iter': 5000,
             'n_layers': 2,
-            'n_neurons': 16,
-            'batch_size': 16,
+            'n_neurons': 8,
+            'batch_size': 8,
             'activation': 'relu', #'sigmoid', #sigmoid usually gives better RMSE but might be a reason for misfit around constant dependences
            }
 
