@@ -3,16 +3,16 @@
 # -) Generating new full tensor product around a new point (500 samples) pyGEM0 dataset data 
 
 if [[ $# -eq 0 ]] ; then
-    data_id=20240206
-    model_id=20240206
-    curr_id=20240206
+    data_id=20240328
+    model_id=20240607
+    curr_id=20240607
 else
-    data_id=$1
-    model_id=$1
-    curr_id=$1
+    data_id=${1}
+    model_id=${1}
+    curr_id=${1}
 fi
 
-itnum=${2:-1}
+itnum=${2:-0}
 
 data_id=${data_id}_${itnum}
 model_id=${model_id}_${itnum}
@@ -24,40 +24,47 @@ locdir=${3:-$(pwd)}
 nft=8
 
 # TODO introduce useequil boolean?
-num_p_per_param=3
+num_p_per_param=${5:-5}
 
 modeltype='gpr'
-codenameshort='gem0'
+# codenameshort='gem0'
+codenameshort='gem'
 codename=${codenameshort}'py'
 
-# reinstall the ES package
-RESINSTALLES=0
+# codenameshort='gem'
+# codename=${codenameshort}
+
+# Reinstall the ES package
+REINSTALLES=0
 #easysurrogatedir='~/code/EasySurrogate/'
 easysurrogatedir='/u/yyudin/code/EasySurrogate/'
-if [ "$RESINSTALLES" -ne 0 ] ; then
+if [ "$REINSTALLES" -ne 0 ] ; then
     cd ${easysurrogatedir}
     pip install -e .
 fi
 cd ${locdir}/
 
-input_names=('te_value' 'ti_value' 'te_ddrho' 'ti_ddrho' 'profiles_1d_q' 'profiles_1d_gm3')
+input_names=('te_value' 'ti_value' 'te_ddrho' 'ti_ddrho') # 'profiles_1d_q' 'profiles_1d_gm3')
 nparams=${#input_names[@]}
 nsamples=$(( ${nft}*${num_p_per_param}**${nparams} ))
 
-# read the CSV files (if needed)
+# Read the CSV files (if needed)
 traindatadir='~/code/MFW/uq/basicda'
-#cp ${traindatadir}/${codename}_new_${data_name_prefix}.csv ./ # NOT NEEDED, SHOULD BE DONE IN PARENT SCRIPT
-python gem_data_ind.py ${data_id} ${data_id} ${codename} ${num_p_per_param}
+#cp ${traindatadir}/${codename}_new_${data_id}.csv ./ # NOT NEEDED, SHOULD BE DONE IN PARENT SCRIPT
 
-# train and test the models
+#original_data_gen_id=${data_id} # for OLD option 1.1 in gem_data_ind.py
+original_data_gen_id=${codename}_comb_${data_id}.csv
+python gem_data_ind.py ${original_data_gen_id} ${data_id} ${codename} ${num_p_per_param}
+
+# Train and test the models
 for((i=0;i<${nft};i++)); do python train_model_ind.py ${i} ${data_id} ${model_id} ${codename} ${nsamples} ${nparams} ; done
 
 # Next is NOT NEEDED here, but ideally should also return some quality quantification for a surrogate
-#for((i=0;i<${nft};i++)); do python test_model_ind.py ${i} ${model_id} ${data_id} ${curr_id} ; done
+for((i=0;i<${nft};i++)); do python test_model_ind.py ${i} ${model_id} ${data_id} ${curr_id} ${codename} ${nsamples} ${nparams} cd  ; done
 
-# save the results (of the scan) and the cut locations - not done here, look up the older script!
+# Save the results (of the scan) and the cut locations - not done here, look up the older script! (process_gpr.sh)
 
-# save the results of test script
+# Save the results of test script
 savediranme=${modeltype}_scan_${curr_id}_0
 mkdir ${savediranme}/ 
 
@@ -68,11 +75,12 @@ mv pred_vs_orig_[0-9]_o[0-9].pdf ${savediranme}/
 mv GP_prediction_[0-9]_rand_*_[0-9]_o[0-9].pdf ${savediranme}/ 
 mv scan_i[0-9]o[0-9]f[0-9].pdf ${savediranme}/ 
 mv gp_abs_err_.pdf ${savediranme}/ 
+mv GP_scan_tot_*.pdf ${savediranme}/ 
 
 # tar -czvf ${savediranme}.tar.gz ${savediranme}/ 
 # mv ${savediranme}.tar.gz ../../..
 
-# save the surrogate for the workflow - prepare for M3-WF run (/muscle3/ dir does not exist yet)
+# Save the surrogate for the workflow - prepare for M3-WF run (/muscle3/ dir does not exist yet)
 simdirloc=${4:-${locdir}'/../'}
 simdirloc=$( realpath ${simdirloc} )
 cd ${simdirloc}

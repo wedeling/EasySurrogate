@@ -38,6 +38,11 @@ campaign = es.Campaign(load_state=False)
 # n_params = 4
 
 # II) Case w/ 8 f-t-s pyGEM0 runs, possibly equilibrium included, full tensor product
+
+# III) Same as (II) but all quantities are in log (base model is Q = Q_0 * x^G )
+features_names = ['te_value_ln', 'ti_value_ln', 'te_ddrho_ln', 'ti_ddrho_ln',]
+target_names = ['te_transp_flux_ln', 'ti_transp_flux_ln']
+
 # TODO should be deducible from the read data! e.g. from the .hdf5 file
 n_samples = int(sys.argv[5]) if len(sys.argv)>5 else 5832
 

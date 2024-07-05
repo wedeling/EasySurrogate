@@ -31,7 +31,7 @@ def split_flux_tubes(data_dict, ft_len=625, n_ft=8, option='column'):
         - array of first runs for each flux tube
     """
 
-    n_tot = data['ti_value'].size # unhardcode key
+    n_tot = len( [*data_dict][0] )
     if not n_ft:
         n_ft = n_tot // ft_len
 
@@ -73,24 +73,24 @@ def split_flux_tubes(data_dict, ft_len=625, n_ft=8, option='column'):
 
 if __name__ == '__main__':
 
-    if len(sys.argv) < 2 :
-        gen_id = '20240202'
-    else:
-        gen_id = sys.argv[1]
+    gen_id = sys.argv[1] if len(sys.argv) > 1 else '20240202'
+    #print(f"gen_id={gen_id}") ###DEBUG
 
-    if len(sys.argv) < 3 :
-        sav_id = datetime.now().strftime("%Y%m%d")
-    else:  
-        sav_id = sys.argv[2]
+    sav_id = sys.argv[2] if len(sys.argv) > 2 else datetime.now().strftime("%Y%m%d")
+    #print(f"sav_id={sav_id}") ###DEBUG
 
-    code = sys.argv[3] if len(sys.argv)>3 else 'gem0py'
+    code = sys.argv[3] if len(sys.argv) > 3 else 'gem0py'
+    #print(f"code={code}") ###DEBUG
 
     ### Get data to a hfd5
 
     # Create an ES campaign
     campaign = es.Campaign(load_state=False)
 
-    datafile = f"{code}_new_{gen_id}.csv"
+    # # - option 1.1 - OLD: compose a file name from 'code' and 'gen_id'
+    # datafile = f"{code}_new_{gen_id}.csv"
+    # option 1.2 - argument num.1 is data file name
+    datafile = f"{gen_id}"
 
     #print(f"For surrogate training we are reading reading {datafile}") ###DEBUG
 
@@ -107,17 +107,21 @@ if __name__ == '__main__':
     # data = load_csv_to_dict(input_file=datafile)
 
     # II) Case from 8 flux tube GEM0 run, same number of points for every input, equilibrium (may be) included
-    features_names = ['te_value', 'ti_value', 'te_ddrho', 'ti_ddrho', 'profiles_1d_q', 'profiles_1d_gm3']
+    # features_names = ['te_value', 'ti_value', 'te_ddrho', 'ti_ddrho',] # 'profiles_1d_q', 'profiles_1d_gm3']
+    
+    # III) Same as (II) but all quantities are in log (base model is Q = Q_0 * x^G )
+    features_names = ['te_value_ln', 'ti_value_ln', 'te_ddrho_ln', 'ti_ddrho_ln',]
+    target_names = ['te_transp_flux_ln', 'ti_transp_flux_ln']
 
-    data = load_csv_to_dict(input_file=datafile, features_names=features_names)
+    col_names_exception = ['transp', 'ft']
+
+    data = load_csv_to_dict(input_file=datafile, features_names=features_names, target_names=target_names)
 
     data_cols = data.keys()
-    col_names_exception = ['tansp', 'ft']
-
     #features_names = [feat for feat in data_cols if all([x not in feat for x in col_names_exception])]
 
     n_params = len(features_names)
-    n_p_p_p = int(sys.argv[4]) if len(sys.argv)>4 else 5 # could be done via the DataFrame
+    n_p_p_p = int(sys.argv[4]) if len(sys.argv)>4 else 5 # TODO: could be done via the DataFrame
 
     n_ft = len(np.unique(data['ft']))
     runs_per_ft = n_p_p_p**n_params
@@ -125,8 +129,8 @@ if __name__ == '__main__':
 
     ###
     data_ft = split_flux_tubes(data, ft_len=runs_per_ft, n_ft=n_ft)
+    #print(data) ###DEBUG
 
-    print()
     campaign.store_data_to_hdf5(data, file_path=f"{code}_{n_samples}_transp_tot_{sav_id}.hdf5")
     for i in range(len(data_ft)):
         campaign.store_data_to_hdf5(data_ft[i], file_path=f"{code}_{n_samples}_transp_{i}_{sav_id}.hdf5")
