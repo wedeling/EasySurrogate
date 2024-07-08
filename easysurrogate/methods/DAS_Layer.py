@@ -20,7 +20,7 @@ class DAS_Layer(Layer):
         American Society of Mechanical Engineers Digital Collection, 2019.
     """
 
-    def __init__(self, d, n_layers, bias, activation='linear', batch_size=1):
+    def __init__(self, d, D, activation='linear', bias=False, batch_size=1):
         """
         Initialize the DAS_layer oject.
 
@@ -28,11 +28,10 @@ class DAS_Layer(Layer):
         ----------
         d : int
             The dimension of the active subspace.
+        activation : string, optional
+            The activation function used. The default is 'linear'.
         bias : boolean, optional
-            Add a bias neuron to the DAS layer.
-            The default is False.
-        lamb : float, optional
-            L2 weight regularization parameter. The default is 0.0.
+            Add a bias neuron to the DAS layer. The default is False.
         batch_size : int, optional
             The batch size. The default is 1.
 
@@ -41,31 +40,31 @@ class DAS_Layer(Layer):
         None.
 
         """
-        super().__init__(d, 1, n_layers, activation, 'none',
+        super().__init__(d, activation, 'none',
                          bias=bias, batch_size=batch_size)
         self.d = d
+        self.D = D
         self.name = 'DAS_layer'
         # do not use batch normalization
         self.batch_norm = False
 
-    def meet_the_neighbors(self, layer_rm1, layer_rp1):
-        """
-        Connect this layer to its neighbors
+    # def meet_the_neighbors(self, layer_rm1, layer_rp1):
+    #     """
+    #     Connect this layer to its neighbors
 
-        Parameters
-        ----------
-        layer_rm1 : Layer object or None
-            The layer before at index r - 1.
-        layer_rp1 : Layer object or None
-            The layer after at index r + 1.
+    #     Parameters
+    #     ----------
+    #     layer_rm1 : Layer object or None
+    #         The layer before at index r - 1.
+    #     layer_rp1 : Layer object or None
+    #         The layer after at index r + 1.
 
-        Returns
-        -------
-        None.
+    #     Returns
+    #     -------
+    #     None.
 
-        """
-        super().meet_the_neighbors(layer_rm1, layer_rp1)
-        self.D = layer_rm1.n_neurons + self.layer_rm1.n_bias
+    #     """
+    #     super().meet_the_neighbors(layer_rm1, layer_rp1)
 
     def init_weights(self):
         """

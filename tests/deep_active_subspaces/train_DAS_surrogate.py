@@ -15,7 +15,7 @@ ID = 'func'
 DB_LOCATION = "sqlite:///" + WORK_DIR + "/campaign%s.db" % ID
 
 # reload easyvvuq campaign
-campaign = uq.Campaign(name=ID, db_location=DB_LOCATION)
+campaign = uq.Campaign(name='test', db_location=DB_LOCATION)
 print("===========================================")
 print("Reloaded campaign {}".format(ID))
 print("===========================================")

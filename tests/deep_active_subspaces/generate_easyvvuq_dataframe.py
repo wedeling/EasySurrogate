@@ -61,7 +61,7 @@ encoder = uq.encoders.GenericEncoder(template_fname=HOME + '/model/func.template
 decoder = uq.decoders.SimpleCSV(target_filename=output_filename,
                                 output_columns=output_columns)
 execute = ExecuteLocal('{}/model/func.py in.json'.format(os.getcwd()))
-actions = Actions(CreateRunDirectory(root=WORK_DIR),
+actions = Actions(CreateRunDirectory(root=WORK_DIR, flatten=True),
                   Encode(encoder), execute, Decode(decoder))
 
 # uncertain variables
@@ -73,7 +73,7 @@ for i in range(D):
 my_sampler = uq.sampling.quasirandom.LHCSampler(vary=vary, max_num=1000)
 
 # EasyVVUQ Campaign
-campaign = uq.Campaign(name='func', params=params, actions=actions,
+campaign = uq.Campaign(name='test', params=params, actions=actions,
                        work_dir=WORK_DIR, db_location=DB_LOCATION)
 
 # Associate the sampler with the campaign
