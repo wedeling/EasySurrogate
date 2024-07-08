@@ -137,12 +137,16 @@ class Concatenate:
     def back_prop(self, y_i):
         """
         Back propagate the loss through Concatenate. This simply copies the
-        loss gradient from the layer after Concatenate.
+        loss gradient from the layer after Concatenate. It also splits the
+        weight matrix of the next layer along the rows (axis=0) according
+        to the size of the concatenated layers. This ensures that the 
+        correct parts of the loss gradient are passed back to the
+        concatenated layers (see also get_weights).
 
         Parameters
         ----------
-        y_i : TYPE
-            DESCRIPTION.
+        y_i : array
+            The target data.
 
         Returns
         -------

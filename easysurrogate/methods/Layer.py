@@ -479,6 +479,15 @@ class Layer:
         self.delta_ho = np.dot(W_rp1, delta_ho_rp1 * grad_Phi_rp1)[0:self.n_neurons, :]
 
     def get_weights_next_layer(self):
+        """
+        Get the weights of the next layer. 
+
+        Returns
+        -------
+        array
+            The weights if the next layer.
+
+        """
 
         if isinstance(self.layer_rp1, Concatenate):
             return self.layer_rp1.get_weights(self.r)
