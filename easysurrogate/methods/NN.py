@@ -770,7 +770,7 @@ class ANN:
         if self.dropout:
             # scale all weight matrices by dropout prob after training
             for i in range(1, self.n_layers + 1):
-                self.layers[1].W *= self.dropout_prob[i - 1]
+                self.layers[i].W *= self.dropout_prob[i - 1]
 
             # turn off dropout after training
             self.dropout = False
